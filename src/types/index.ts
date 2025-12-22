@@ -1,6 +1,5 @@
 // src/types/index.ts
 
-// Benutzer
 export type UserRole = 'employee' | 'admin';
 
 export interface User {
@@ -8,118 +7,72 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   role: UserRole;
   avatar?: string;
-  phone?: string;
+  location?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// Arbeitszeit
-export interface TimeEntry {
-  id: string;
-  userId: string;
-  startTime: string;
-  endTime?: string;
-  startLocation: GpsLocation;
-  endLocation?: GpsLocation;
-  shiftId?: string;
-  status: 'active' | 'completed' | 'cancelled';
-  createdAt: string;
-}
-
-export interface GpsLocation {
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-  timestamp: string;
-  address?: string;
-}
-
-// Dienstplan
 export interface Shift {
   id: string;
-  userId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   location: string;
-  description?: string;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
-  createdAt: string;
+  notes?: string;
 }
 
-// Abwesenheit
-export type AbsenceType = 'vacation' | 'sick' | 'other';
-export type AbsenceStatus = 'pending' | 'approved' | 'rejected';
-
-export interface Absence {
+export interface VacationRequest {
   id: string;
   userId: string;
-  type: AbsenceType;
+  type: 'vacation' | 'sick' | 'other';
   startDate: string;
   endDate: string;
   days: number;
   reason?: string;
-  status: AbsenceStatus;
-  approvedBy?: string;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 }
 
-// Chat
 export interface ChatMessage {
   id: string;
+  chatId: string;
   userId: string;
   userName: string;
-  userAvatar?: string;
-  content: string;
-  imageUrl?: string;
-  createdAt: string;
-  isDeleted: boolean;
+  text: string;
+  timestamp: number;
+  readBy: string[];
 }
 
 export interface ChatRoom {
   id: string;
   name: string;
-  memberCount: number;
+  type: 'team' | 'direct';
+  members: string[];
   lastMessage?: ChatMessage;
   createdAt: string;
 }
 
-// Kontakt & Bewerbung
-export interface ContactRequest {
+export interface Location {
   id: string;
   name: string;
-  email: string;
-  subject: string;
-  message: string;
-  status: 'new' | 'read' | 'replied';
-  createdAt: string;
+  address: string;
+  latitude: number;
+  longitude: number;
 }
 
-export interface Application {
+export interface NotificationPayload {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  message?: string;
-  resumeUrl?: string;
-  status: 'new' | 'reviewing' | 'interview' | 'rejected' | 'hired';
+  type: 'shift' | 'vacation' | 'chat' | 'system';
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
   createdAt: string;
-}
-
-// Stats
-export interface EmployeeStats {
-  hoursThisMonth: number;
-  remainingVacation: number;
-  pendingRequests: number;
-}
-
-export interface AdminStats {
-  activeEmployees: number;
-  offDuty: number;
-  onSickLeave: number;
-  onVacation: number;
-  pendingRequests: number;
+  read: boolean;
 }

@@ -1,136 +1,255 @@
 // app/(employee)/vacation.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, useColorScheme, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Sun, AlertCircle, ChevronLeft, X } from 'lucide-react-native';
+import { Sun, Thermometer, Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
-const mockAbsences = [
-  { id: '1', type: 'vacation', startDate: '2024-12-23', endDate: '2024-12-27', days: 5, status: 'approved' },
-  { id: '2', type: 'sick', startDate: '2024-11-05', endDate: '2024-11-05', days: 1, status: 'approved' },
-  { id: '3', type: 'vacation', startDate: '2025-01-15', endDate: '2025-01-17', days: 3, status: 'pending' },
-];
+type RequestType = 'vacation' | 'sick';
+type RequestStatus = 'pending' | 'approved' | 'rejected';
+
+interface Request {
+  id: string;
+  type: RequestType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status: RequestStatus;
+  createdAt: string;
+}
 
 export default function VacationScreen() {
-  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const theme = colors[colorScheme];
-  const [showVacationModal, setShowVacationModal] = useState(false);
-  const [showSickModal, setShowSickModal] = useState(false);
 
-  const getStatusPill = (status: string) => {
+  const [activeTab, setActiveTab] = useState<'request' | 'history'>('request');
+  const [requestType, setRequestType] = useState<RequestType>('vacation');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
+
+  // Mock-Daten
+  const stats = { remainingVacation: 18, usedVacation: 12, sickDays: 3 };
+  const requests: Request[] = [
+    { id: '1', type: 'vacation', startDate: '2025-01-15', endDate: '2025-01-20', status: 'approved', createdAt: '2025-01-02' },
+    { id: '2', type: 'sick', startDate: '2025-01-08', endDate: '2025-01-09', reason: 'Erkältung', status: 'approved', createdAt: '2025-01-08' },
+    { id: '3', type: 'vacation', startDate: '2025-02-10', endDate: '2025-02-14', status: 'pending', createdAt: '2025-01-10' },
+  ];
+
+  const handleSubmit = () => {
+    if (!startDate || !endDate) {
+      Alert.alert('Fehler', 'Bitte Start- und Enddatum angeben.');
+      return;
+    }
+    Alert.alert('Erfolg', `${requestType === 'vacation' ? 'Urlaubsantrag' : 'Krankmeldung'} wurde eingereicht.`);
+    setStartDate('');
+    setEndDate('');
+    setReason('');
+  };
+
+  const getStatusConfig = (status: RequestStatus) => {
     switch (status) {
-      case 'approved': return { bg: theme.pillSuccess, text: theme.pillSuccessText, label: 'Genehmigt' };
-      case 'pending': return { bg: theme.pillWarning, text: theme.pillWarningText, label: 'Ausstehend' };
-      default: return { bg: theme.pillInfo, text: theme.pillInfoText, label: 'Bestätigt' };
+      case 'approved': return { icon: CheckCircle, color: '#4ade80', bg: 'rgba(34,197,94,0.1)', label: 'Genehmigt' };
+      case 'rejected': return { icon: XCircle, color: '#f87171', bg: 'rgba(239,68,68,0.1)', label: 'Abgelehnt' };
+      default: return { icon: AlertCircle, color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', label: 'Ausstehend' };
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <ChevronLeft size={24} color={theme.text} />
-      </TouchableOpacity>
-
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Verwalten</Text>
-          <Text style={[styles.headerLarge, { color: theme.text }]}>Urlaub & Krankheit</Text>
+          <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Abwesenheit</Text>
+          <Text style={[styles.headerLarge, { color: theme.text }]}>Urlaub & Krankmeldung</Text>
         </View>
 
-        <View style={[styles.statsCard, { backgroundColor: 'rgba(14,165,233,0.12)', borderColor: 'rgba(14,165,233,0.2)' }]}>
-          <View style={styles.statRow}>
-            <View><Text style={[styles.statLabel, { color: theme.textMuted }]}>Resturlaub 2024</Text><Text style={[styles.statValue, { color: theme.text }]}>18 Tage</Text></View>
-            <View style={styles.statRight}><Text style={[styles.statLabel, { color: theme.textMuted }]}>Genommen</Text><Text style={[styles.statValue, { color: theme.text }]}>12</Text></View>
+        {/* Stats */}
+        <View style={[styles.statsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.statItem}>
+            <Sun size={20} color="#4ade80" />
+            <Text style={[styles.statValue, { color: theme.text }]}>{stats.remainingVacation}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Resturlaub</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+          <View style={styles.statItem}>
+            <Calendar size={20} color={theme.primary} />
+            <Text style={[styles.statValue, { color: theme.text }]}>{stats.usedVacation}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Genommen</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+          <View style={styles.statItem}>
+            <Thermometer size={20} color="#f87171" />
+            <Text style={[styles.statValue, { color: theme.text }]}>{stats.sickDays}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Krankheit</Text>
           </View>
         </View>
 
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.vacationButton} onPress={() => setShowVacationModal(true)} activeOpacity={0.8}>
-            <Sun size={16} color="#fff" /><Text style={styles.actionButtonText}>Urlaub</Text>
+        {/* Tabs */}
+        <View style={[styles.tabContainer, { backgroundColor: theme.surface }]}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'request' && { backgroundColor: theme.primary }]}
+            onPress={() => setActiveTab('request')}
+          >
+            <Text style={[styles.tabText, { color: activeTab === 'request' ? '#fff' : theme.textMuted }]}>
+              Neuer Antrag
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.sickButton, { borderColor: 'rgba(239,68,68,0.3)' }]} onPress={() => setShowSickModal(true)} activeOpacity={0.8}>
-            <AlertCircle size={16} color="#f87171" /><Text style={[styles.actionButtonText, { color: '#f87171' }]}>Krank</Text>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'history' && { backgroundColor: theme.primary }]}
+            onPress={() => setActiveTab('history')}
+          >
+            <Text style={[styles.tabText, { color: activeTab === 'history' ? '#fff' : theme.textMuted }]}>
+              Verlauf
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>MEINE ANTRÄGE</Text>
-        {mockAbsences.map((absence) => {
-          const status = getStatusPill(absence.status);
-          const isSingle = absence.startDate === absence.endDate;
-          return (
-            <View key={absence.id} style={[styles.absenceCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-              <View style={styles.absenceInfo}>
-                <Text style={[styles.absenceDate, { color: theme.text }]}>
-                  {isSingle ? format(new Date(absence.startDate), 'dd.MM.yyyy') : `${format(new Date(absence.startDate), 'dd.MM.')} – ${format(new Date(absence.endDate), 'dd.MM.yyyy')}`}
+        {activeTab === 'request' ? (
+          <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            {/* Type Selection */}
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Art der Abwesenheit</Text>
+            <View style={styles.typeRow}>
+              <TouchableOpacity
+                style={[styles.typeButton, {
+                  backgroundColor: requestType === 'vacation' ? 'rgba(34,197,94,0.1)' : theme.surface,
+                  borderColor: requestType === 'vacation' ? '#4ade80' : theme.border,
+                }]}
+                onPress={() => setRequestType('vacation')}
+              >
+                <Sun size={18} color={requestType === 'vacation' ? '#4ade80' : theme.textMuted} />
+                <Text style={[styles.typeText, { color: requestType === 'vacation' ? '#4ade80' : theme.textMuted }]}>
+                  Urlaub
                 </Text>
-                <Text style={[styles.absenceType, { color: theme.textMuted }]}>{absence.type === 'vacation' ? 'Urlaub' : 'Krankmeldung'} · {absence.days} {absence.days === 1 ? 'Tag' : 'Tage'}</Text>
-              </View>
-              <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-                <View style={[styles.statusDot, { backgroundColor: status.text }]} />
-                <Text style={[styles.statusText, { color: status.text }]}>{status.label}</Text>
-              </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.typeButton, {
+                  backgroundColor: requestType === 'sick' ? 'rgba(239,68,68,0.1)' : theme.surface,
+                  borderColor: requestType === 'sick' ? '#f87171' : theme.border,
+                }]}
+                onPress={() => setRequestType('sick')}
+              >
+                <Thermometer size={18} color={requestType === 'sick' ? '#f87171' : theme.textMuted} />
+                <Text style={[styles.typeText, { color: requestType === 'sick' ? '#f87171' : theme.textMuted }]}>
+                  Krank
+                </Text>
+              </TouchableOpacity>
             </View>
-          );
-        })}
+
+            {/* Date Inputs */}
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Zeitraum</Text>
+            <View style={styles.dateRow}>
+              <TextInput
+                style={[styles.dateInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                placeholder="TT.MM.JJJJ"
+                placeholderTextColor={theme.textMuted}
+                value={startDate}
+                onChangeText={setStartDate}
+              />
+              <Text style={[styles.dateSeparator, { color: theme.textMuted }]}>bis</Text>
+              <TextInput
+                style={[styles.dateInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                placeholder="TT.MM.JJJJ"
+                placeholderTextColor={theme.textMuted}
+                value={endDate}
+                onChangeText={setEndDate}
+              />
+            </View>
+
+            {/* Reason */}
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Bemerkung (optional)</Text>
+            <TextInput
+              style={[styles.textArea, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              placeholder="Zusätzliche Informationen..."
+              placeholderTextColor={theme.textMuted}
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              numberOfLines={3}
+            />
+
+            {/* Submit */}
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Text style={styles.submitText}>Antrag einreichen</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.historyList}>
+            {requests.map((req) => {
+              const status = getStatusConfig(req.status);
+              return (
+                <View key={req.id} style={[styles.historyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                  <View style={styles.historyHeader}>
+                    <View style={styles.historyType}>
+                      {req.type === 'vacation' ? <Sun size={16} color="#4ade80" /> : <Thermometer size={16} color="#f87171" />}
+                      <Text style={[styles.historyTypeName, { color: theme.text }]}>
+                        {req.type === 'vacation' ? 'Urlaub' : 'Krankmeldung'}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+                      <status.icon size={12} color={status.color} />
+                      <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.historyDates, { color: theme.textSecondary }]}>
+                    {req.startDate} – {req.endDate}
+                  </Text>
+                  {req.reason && <Text style={[styles.historyReason, { color: theme.textMuted }]}>{req.reason}</Text>}
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
-
-      <Modal visible={showVacationModal} transparent animationType="slide" onRequestClose={() => setShowVacationModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-            <View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: theme.text }]}>Urlaub beantragen</Text><TouchableOpacity onPress={() => setShowVacationModal(false)}><X size={24} color={theme.textMuted} /></TouchableOpacity></View>
-            <Text style={[styles.modalText, { color: theme.textMuted }]}>Urlaubsanträge werden in einer zukünftigen Version verfügbar sein.</Text>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowVacationModal(false)}><Text style={styles.modalButtonText}>Verstanden</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showSickModal} transparent animationType="slide" onRequestClose={() => setShowSickModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-            <View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: theme.text }]}>Krankmeldung</Text><TouchableOpacity onPress={() => setShowSickModal(false)}><X size={24} color={theme.textMuted} /></TouchableOpacity></View>
-            <Text style={[styles.modalText, { color: theme.textMuted }]}>Krankmeldungen werden in einer zukünftigen Version verfügbar sein.</Text>
-            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#ef4444' }]} onPress={() => setShowSickModal(false)}><Text style={styles.modalButtonText}>Verstanden</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  backButton: { padding: spacing.base, paddingBottom: 0 },
   content: { padding: spacing.base },
-  header: { marginBottom: spacing.xl },
+  header: { marginBottom: spacing.lg },
   headerSmall: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
   headerLarge: { fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
-  statsCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.base },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statRight: { alignItems: 'flex-end' },
-  statLabel: { fontSize: 12 },
-  statValue: { fontSize: 28, fontWeight: '700' },
-  actionRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
-  vacationButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: 14, borderRadius: borderRadius.button, backgroundColor: '#3b82f6' },
-  sickButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: 14, borderRadius: borderRadius.button, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1 },
-  actionButtonText: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  sectionTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: spacing.md },
-  absenceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.md },
-  absenceInfo: { flex: 1 },
-  absenceDate: { fontSize: 14, fontWeight: '600' },
-  absenceType: { fontSize: 12, marginTop: 2 },
-  statusPill: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, gap: 6 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statsCard: { flexDirection: 'row', borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.lg },
+  statItem: { flex: 1, alignItems: 'center', gap: 4 },
+  statValue: { fontSize: 22, fontWeight: '700' },
+  statLabel: { fontSize: 11 },
+  statDivider: { width: 1, marginVertical: 8 },
+  tabContainer: { flexDirection: 'row', borderRadius: borderRadius.button, padding: 4, marginBottom: spacing.lg },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: borderRadius.button - 2, alignItems: 'center' },
+  tabText: { fontSize: 14, fontWeight: '600' },
+  formCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: spacing.sm, marginTop: spacing.md },
+  typeRow: { flexDirection: 'row', gap: spacing.sm },
+  typeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14, borderRadius: borderRadius.button, borderWidth: 1 },
+  typeText: { fontSize: 14, fontWeight: '600' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  dateInput: { flex: 1, padding: 12, borderRadius: borderRadius.button, borderWidth: 1, fontSize: 14 },
+  dateSeparator: { fontSize: 14 },
+  textArea: { padding: 12, borderRadius: borderRadius.button, borderWidth: 1, fontSize: 14, textAlignVertical: 'top', minHeight: 80 },
+  submitButton: { backgroundColor: '#3b82f6', padding: 16, borderRadius: borderRadius.button, alignItems: 'center', marginTop: spacing.lg },
+  submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  historyList: { gap: spacing.md },
+  historyCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base },
+  historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  historyType: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  historyTypeName: { fontSize: 14, fontWeight: '600' },
+  statusPill: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12, gap: 4 },
   statusText: { fontSize: 11, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  modalTitle: { fontSize: 18, fontWeight: '700' },
-  modalText: { fontSize: 14, lineHeight: 22, marginBottom: spacing.xl },
-  modalButton: { padding: 14, borderRadius: borderRadius.button, backgroundColor: '#3b82f6', alignItems: 'center' },
-  modalButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  historyDates: { fontSize: 13 },
+  historyReason: { fontSize: 12, marginTop: 4, fontStyle: 'italic' },
 });

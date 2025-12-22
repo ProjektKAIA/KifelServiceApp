@@ -1,69 +1,163 @@
 // app/(employee)/chat.tsx
 
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { Send, Users } from 'lucide-react-native';
 import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 
-const mockMessages = [
-  { id: '1', userId: '2', userName: 'Thomas M.', content: 'Guten Morgen zusammen! Wer ist heute in Forst?', createdAt: '2024-12-12T09:15:00' },
-  { id: '2', userId: '1', userName: 'Max Mustermann', content: 'Ich bin da! Gerade angekommen 👍', createdAt: '2024-12-12T09:18:00' },
-  { id: '3', userId: '3', userName: 'Sandra K.', content: 'Perfekt! Ich komme um 10 Uhr nach.', createdAt: '2024-12-12T09:20:00' },
-  { id: '4', userId: '4', userName: 'Chef', content: 'Kurze Teambesprechung um 15 Uhr. Bitte alle dabei sein!', createdAt: '2024-12-12T09:25:00' },
-];
-
-const avatarColors: Record<string, string> = { '1': '#22c55e', '2': '#3b82f6', '3': '#f59e0b', '4': '#8b5cf6' };
+interface Message {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: number;
+  isOwn: boolean;
+}
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const theme = colors[colorScheme];
   const { user } = useAuthStore();
-  const flatListRef = useRef<FlatList>(null);
-  const [messages, setMessages] = useState(mockMessages);
-  const [inputText, setInputText] = useState('');
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', userId: '2', userName: 'Max Müller', text: 'Guten Morgen zusammen! 👋', timestamp: Date.now() - 3600000, isOwn: false },
+    { id: '2', userId: '3', userName: 'Anna Schmidt', text: 'Morgen! Wer ist heute am Standort Forst?', timestamp: Date.now() - 3500000, isOwn: false },
+    { id: '3', userId: '1', userName: 'Ich', text: 'Ich bin heute dort, ab 8 Uhr.', timestamp: Date.now() - 3400000, isOwn: true },
+    { id: '4', userId: '2', userName: 'Max Müller', text: 'Super, ich komme auch gegen 8:30.', timestamp: Date.now() - 3300000, isOwn: false },
+    { id: '5', userId: '4', userName: 'Lisa Weber', text: 'Kann jemand morgen meine Schicht übernehmen? Habe einen Arzttermin.', timestamp: Date.now() - 1800000, isOwn: false },
+  ]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    const newMessage = { id: Date.now().toString(), userId: user?.id || '1', userName: `${user?.firstName || 'Max'} ${user?.lastName || 'Mustermann'}`, content: inputText.trim(), createdAt: new Date().toISOString() };
-    setMessages([...messages, newMessage]);
-    setInputText('');
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  const formatTime = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderMessage = ({ item }: { item: typeof mockMessages[0] }) => {
-    const isOwn = item.userId === (user?.id || '1');
-    const messageTime = format(new Date(item.createdAt), 'HH:mm');
-    return (
-      <View style={[styles.messageRow, isOwn && styles.messageRowSent]}>
-        {!isOwn && <View style={[styles.avatar, { backgroundColor: avatarColors[item.userId] || '#3b82f6' }]}><Text style={styles.avatarText}>{getInitials(item.userName)}</Text></View>}
-        <View style={isOwn ? styles.sentContainer : styles.receivedContainer}>
-          <Text style={[styles.messageMeta, { color: theme.textMuted }]}>{isOwn ? 'Du' : item.userName} · {messageTime}</Text>
-          <View style={[styles.bubble, isOwn ? styles.bubbleSent : styles.bubbleReceived, !isOwn && { backgroundColor: theme.surface }]}>
-            <Text style={[styles.messageText, { color: isOwn ? '#fff' : theme.text }]}>{item.content}</Text>
-          </View>
-        </View>
-        {isOwn && <View style={[styles.avatar, { backgroundColor: avatarColors[item.userId] || '#22c55e' }]}><Text style={styles.avatarText}>{getInitials(item.userName)}</Text></View>}
-      </View>
-    );
+  const handleSend = () => {
+    if (!message.trim()) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      userId: user?.id || '1',
+      userName: 'Ich',
+      text: message.trim(),
+      timestamp: Date.now(),
+      isOwn: true,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    setMessage('');
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const getInitials = (name: string): string => {
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>12 Mitglieder</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>Team-Chat</Text>
-      </View>
-      <FlatList ref={flatListRef} data={messages} renderItem={renderMessage} keyExtractor={item => item.id} contentContainerStyle={styles.messagesList} showsVerticalScrollIndicator={false} onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={90}
+      >
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
+          <View style={[styles.groupIcon, { backgroundColor: theme.surface }]}>
+            <Users size={20} color={theme.primary} />
+          </View>
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Team-Chat</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
+              5 Mitglieder online
+            </Text>
+          </View>
+        </View>
+
+        {/* Messages */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messageList}
+          contentContainerStyle={styles.messageListContent}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+        >
+          {messages.map((msg, index) => {
+            const showAvatar = !msg.isOwn && (index === 0 || messages[index - 1].userId !== msg.userId);
+            const showName = showAvatar;
+
+            return (
+              <View
+                key={msg.id}
+                style={[
+                  styles.messageRow,
+                  msg.isOwn ? styles.messageRowOwn : styles.messageRowOther,
+                ]}
+              >
+                {!msg.isOwn && (
+                  <View style={styles.avatarContainer}>
+                    {showAvatar ? (
+                      <View style={[styles.avatar, { backgroundColor: theme.surface }]}>
+                        <Text style={[styles.avatarText, { color: theme.textSecondary }]}>
+                          {getInitials(msg.userName)}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.avatarPlaceholder} />
+                    )}
+                  </View>
+                )}
+
+                <View style={[styles.messageBubble, msg.isOwn ? styles.bubbleOwn : [styles.bubbleOther, { backgroundColor: theme.surface }]]}>
+                  {showName && (
+                    <Text style={[styles.messageName, { color: theme.primary }]}>
+                      {msg.userName}
+                    </Text>
+                  )}
+                  <Text style={[styles.messageText, { color: msg.isOwn ? '#fff' : theme.text }]}>
+                    {msg.text}
+                  </Text>
+                  <Text style={[styles.messageTime, { color: msg.isOwn ? 'rgba(255,255,255,0.7)' : theme.textMuted }]}>
+                    {formatTime(msg.timestamp)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Input */}
         <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-          <TextInput style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]} placeholder="Nachricht..." placeholderTextColor={theme.textMuted} value={inputText} onChangeText={setInputText} multiline maxLength={500} />
-          <TouchableOpacity style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]} onPress={handleSend} disabled={!inputText.trim()} activeOpacity={0.8}>
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.surface, color: theme.text }]}
+            placeholder="Nachricht schreiben..."
+            placeholderTextColor={theme.textMuted}
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!message.trim()}
+          >
             <Send size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -74,23 +168,28 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: spacing.base, paddingBottom: spacing.md },
-  headerSmall: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  headerLarge: { fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
-  messagesList: { padding: spacing.base, paddingBottom: spacing.xl },
-  messageRow: { flexDirection: 'row', marginBottom: spacing.base, alignItems: 'flex-start' },
-  messageRowSent: { flexDirection: 'row-reverse' },
-  avatar: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  receivedContainer: { marginLeft: spacing.sm, flex: 1, maxWidth: '75%' },
-  sentContainer: { marginRight: spacing.sm, flex: 1, maxWidth: '75%', alignItems: 'flex-end' },
-  messageMeta: { fontSize: 10, marginBottom: 4 },
-  bubble: { padding: spacing.md, borderRadius: 18 },
-  bubbleReceived: { borderBottomLeftRadius: 4 },
-  bubbleSent: { backgroundColor: '#3b82f6', borderBottomRightRadius: 4 },
-  messageText: { fontSize: 13, lineHeight: 18 },
-  inputContainer: { flexDirection: 'row', padding: spacing.base, paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.base, borderTopWidth: 1, gap: spacing.sm },
-  input: { flex: 1, padding: spacing.md, borderRadius: borderRadius.input, borderWidth: 1, fontSize: 14, maxHeight: 100 },
-  sendButton: { width: 48, height: 48, borderRadius: borderRadius.button, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center' },
+  keyboardView: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base, borderBottomWidth: 1 },
+  groupIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '600' },
+  headerSubtitle: { fontSize: 12 },
+  messageList: { flex: 1 },
+  messageListContent: { padding: spacing.base, gap: spacing.xs },
+  messageRow: { flexDirection: 'row', marginBottom: 2 },
+  messageRowOwn: { justifyContent: 'flex-end' },
+  messageRowOther: { justifyContent: 'flex-start' },
+  avatarContainer: { width: 32, marginRight: 8 },
+  avatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 10, fontWeight: '600' },
+  avatarPlaceholder: { width: 28 },
+  messageBubble: { maxWidth: '75%', padding: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 16 },
+  bubbleOwn: { backgroundColor: '#3b82f6', borderBottomRightRadius: 4 },
+  bubbleOther: { borderBottomLeftRadius: 4 },
+  messageName: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
+  messageText: { fontSize: 15, lineHeight: 20 },
+  messageTime: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
+  inputContainer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.base, borderTopWidth: 1 },
+  input: { flex: 1, padding: 12, paddingTop: 12, borderRadius: 20, fontSize: 15, maxHeight: 100 },
+  sendButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center' },
   sendButtonDisabled: { opacity: 0.5 },
 });

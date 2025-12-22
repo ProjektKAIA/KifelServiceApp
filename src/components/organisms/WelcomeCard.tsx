@@ -1,0 +1,55 @@
+// src/components/organisms/WelcomeCard.tsx
+
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { LucideIcon } from 'lucide-react-native';
+import { Card } from '@/components/molecules/Card';
+import { IconBox } from '@/components/atoms/IconBox';
+import { Typography } from '@/components/atoms/Typography';
+import { useTheme } from '@/hooks/useTheme';
+import { spacing } from '@/constants/spacing';
+
+interface WelcomeCardProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  style?: ViewStyle;
+}
+
+export const WelcomeCard: React.FC<WelcomeCardProps> = ({
+  icon,
+  title,
+  description,
+  style,
+}) => {
+  const { theme } = useTheme();
+
+  return (
+    <Card style={[styles.card, style]}>
+      <View style={styles.content}>
+        <IconBox icon={icon} size="lg" />
+        <Typography variant="label" style={styles.title}>{title}</Typography>
+        <Typography variant="caption" color="muted" style={styles.description}>
+          {description}
+        </Typography>
+      </View>
+    </Card>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing.base,
+  },
+  content: {
+    alignItems: 'center',
+  },
+  title: {
+    marginTop: spacing.base,
+    marginBottom: spacing.sm,
+  },
+  description: {
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+});

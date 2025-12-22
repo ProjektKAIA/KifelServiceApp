@@ -1,163 +1,171 @@
 // app/(admin)/schedules.tsx
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  useColorScheme,
-} from 'react-native';
+import { ScrollView, View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User } from 'lucide-react-native';
-import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react-native';
+import { format, addWeeks, subWeeks, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { colors } from '@/src/theme/colors';
-import { spacing, borderRadius } from '@/src/theme/spacing';
+
+import { Typography, Avatar } from '@/src/components/atoms';
+import { Card, Modal } from '@/src/components/molecules';
+import { ScreenHeader } from '@/src/components/organisms';
+
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface Shift {
   id: string;
   employeeId: string;
   employeeName: string;
-  date: string;
+  date: Date;
   startTime: string;
   endTime: string;
-  location: string;
 }
 
-export default function SchedulesScreen() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+interface Employee {
+  id: string;
+  name: string;
+}
 
+const mockEmployees: Employee[] = [
+  { id: '1', name: 'Max Mustermann' },
+  { id: '2', name: 'Thomas Müller' },
+  { id: '3', name: 'Sandra Klein' },
+];
+
+const mockShifts: Shift[] = [
+  { id: '1', employeeId: '1', employeeName: 'Max Mustermann', date: new Date(), startTime: '08:00', endTime: '16:00' },
+  { id: '2', employeeId: '2', employeeName: 'Thomas Müller', date: new Date(), startTime: '09:00', endTime: '17:00' },
+];
+
+export default function ScheduleManagementScreen() {
+  const { theme } = useTheme();
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [shifts, setShifts] = useState(mockShifts);
+
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-
-  const shifts: Shift[] = [
-    { id: '1', employeeId: '1', employeeName: 'Max M.', date: format(addDays(weekStart, 0), 'yyyy-MM-dd'), startTime: '08:00', endTime: '16:00', location: 'Standort Forst' },
-    { id: '2', employeeId: '2', employeeName: 'Anna S.', date: format(addDays(weekStart, 0), 'yyyy-MM-dd'), startTime: '09:00', endTime: '17:00', location: 'Standort Mitte' },
-    { id: '3', employeeId: '3', employeeName: 'Tom W.', date: format(addDays(weekStart, 1), 'yyyy-MM-dd'), startTime: '07:00', endTime: '15:00', location: 'Standort Nord' },
-    { id: '4', employeeId: '1', employeeName: 'Max M.', date: format(addDays(weekStart, 2), 'yyyy-MM-dd'), startTime: '08:00', endTime: '16:00', location: 'Standort Forst' },
-    { id: '5', employeeId: '4', employeeName: 'Lisa K.', date: format(addDays(weekStart, 3), 'yyyy-MM-dd'), startTime: '10:00', endTime: '18:00', location: 'Standort Süd' },
-  ];
-
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const getShiftsForDay = (date: Date): Shift[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return shifts.filter(s => s.date === dateStr);
+  const getShiftsForDay = (day: Date): Shift[] => shifts.filter((s) => isSameDay(s.date, day));
+
+  const handleAddShift = (employeeId: string) => {
+    if (!selectedDate) return;
+    const employee = mockEmployees.find((e) => e.id === employeeId);
+    if (!employee) return;
+
+    const newShift: Shift = {
+      id: Date.now().toString(),
+      employeeId,
+      employeeName: employee.name,
+      date: selectedDate,
+      startTime: '08:00',
+      endTime: '16:00',
+    };
+
+    setShifts([...shifts, newShift]);
+    setShowAddModal(false);
+    Alert.alert('Erfolg', 'Schicht wurde hinzugefügt.');
+  };
+
+  const handleDeleteShift = (shiftId: string) => {
+    Alert.alert('Schicht löschen', 'Möchten Sie diese Schicht wirklich löschen?', [
+      { text: 'Abbrechen', style: 'cancel' },
+      { text: 'Löschen', style: 'destructive', onPress: () => setShifts(shifts.filter((s) => s.id !== shiftId)) },
+    ]);
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Planung</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>Dienstpläne</Text>
-      </View>
-
-      <View style={styles.weekNav}>
-        <TouchableOpacity onPress={() => setCurrentWeek(subWeeks(currentWeek, 1))} style={styles.navButton}>
-          <ChevronLeft size={24} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.weekLabel, { color: theme.text }]}>
-          {format(weekStart, 'dd. MMM', { locale: de })} – {format(addDays(weekStart, 6), 'dd. MMM yyyy', { locale: de })}
-        </Text>
-        <TouchableOpacity onPress={() => setCurrentWeek(addWeeks(currentWeek, 1))} style={styles.navButton}>
-          <ChevronRight size={24} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
+        <ScreenHeader overline="VERWALTUNG" title="Dienstplan bearbeiten" />
+
+        {/* Week Navigation */}
+        <View style={styles.weekNav}>
+          <TouchableOpacity style={[styles.navButton, { backgroundColor: theme.surface }]} onPress={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
+            <ChevronLeft size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+          <Typography variant="label">
+            {format(weekStart, 'd. MMM', { locale: de })} - {format(addDays(weekStart, 6), 'd. MMM yyyy', { locale: de })}
+          </Typography>
+          <TouchableOpacity style={[styles.navButton, { backgroundColor: theme.surface }]} onPress={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
+            <ChevronRight size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Days */}
         {weekDays.map((day, index) => {
           const dayShifts = getShiftsForDay(day);
-          const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+          const isToday = isSameDay(day, new Date());
 
           return (
-            <View key={index} style={styles.daySection}>
+            <View key={index} style={styles.dayContainer}>
               <View style={styles.dayHeader}>
-                <View style={[styles.dayBadge, isToday && { backgroundColor: theme.primary }]}>
-                  <Text style={[styles.dayNumber, { color: isToday ? '#fff' : theme.text }]}>
-                    {format(day, 'd')}
-                  </Text>
+                <View>
+                  <Typography variant="label" style={isToday ? { color: theme.primary } : undefined}>
+                    {format(day, 'EEEE', { locale: de })}
+                  </Typography>
+                  <Typography variant="caption" color="muted">{format(day, 'd. MMM', { locale: de })}</Typography>
                 </View>
-                <Text style={[styles.dayName, { color: theme.textSecondary }]}>
-                  {format(day, 'EEEE', { locale: de })}
-                </Text>
-                <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.surface }]}>
-                  <Plus size={16} color={theme.textMuted} />
+                <TouchableOpacity style={[styles.addDayButton, { backgroundColor: theme.surface }]} onPress={() => { setSelectedDate(day); setShowAddModal(true); }}>
+                  <Plus size={16} color={theme.primary} />
                 </TouchableOpacity>
               </View>
 
-              {dayShifts.length === 0 ? (
-                <View style={[styles.emptyDay, { borderColor: theme.borderLight }]}>
-                  <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Schichten</Text>
-                </View>
-              ) : (
+              {dayShifts.length > 0 ? (
                 dayShifts.map((shift) => (
-                  <TouchableOpacity
-                    key={shift.id}
-                    style={[styles.shiftCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.shiftMain}>
-                      <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-                        <Text style={styles.avatarText}>{shift.employeeName.split(' ').map(n => n[0]).join('')}</Text>
-                      </View>
+                  <Card key={shift.id} style={styles.shiftCard}>
+                    <View style={styles.shiftContent}>
+                      <Avatar name={shift.employeeName} size="sm" />
                       <View style={styles.shiftInfo}>
-                        <Text style={[styles.employeeName, { color: theme.text }]}>{shift.employeeName}</Text>
-                        <View style={styles.shiftMeta}>
-                          <Clock size={12} color={theme.textMuted} />
-                          <Text style={[styles.shiftTime, { color: theme.textSecondary }]}>
-                            {shift.startTime} – {shift.endTime}
-                          </Text>
-                        </View>
+                        <Typography variant="label">{shift.employeeName}</Typography>
+                        <Typography variant="caption" color="muted">{shift.startTime} - {shift.endTime}</Typography>
                       </View>
+                      <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
+                        <Trash2 size={18} color="#ef4444" />
+                      </TouchableOpacity>
                     </View>
-                    <View style={styles.shiftLocation}>
-                      <MapPin size={12} color={theme.textMuted} />
-                      <Text style={[styles.locationText, { color: theme.textMuted }]}>{shift.location}</Text>
-                    </View>
-                  </TouchableOpacity>
+                  </Card>
                 ))
+              ) : (
+                <Card style={styles.emptyCard}>
+                  <Typography variant="caption" color="muted">Keine Schichten geplant</Typography>
+                </Card>
               )}
             </View>
           );
         })}
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab}>
-        <Plus size={24} color="#fff" />
-      </TouchableOpacity>
+      {/* Add Modal */}
+      <Modal visible={showAddModal} onClose={() => setShowAddModal(false)} title="Schicht hinzufügen" subtitle={selectedDate ? format(selectedDate, 'EEEE, d. MMMM yyyy', { locale: de }) : ''}>
+        <Typography variant="overline" color="muted" style={styles.modalLabel}>MITARBEITER AUSWÄHLEN</Typography>
+        {mockEmployees.map((emp) => (
+          <TouchableOpacity key={emp.id} style={[styles.employeeOption, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={() => handleAddShift(emp.id)}>
+            <Avatar name={emp.name} size="sm" />
+            <Typography variant="body" style={styles.employeeOptionText}>{emp.name}</Typography>
+          </TouchableOpacity>
+        ))}
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: spacing.base, paddingTop: spacing.md, marginBottom: spacing.md },
-  headerSmall: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  headerLarge: { fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
-  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.base, marginBottom: spacing.md },
-  navButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  weekLabel: { fontSize: 15, fontWeight: '600' },
-  content: { padding: spacing.base, paddingBottom: 100 },
-  daySection: { marginBottom: spacing.lg },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm },
-  dayBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  dayNumber: { fontSize: 14, fontWeight: '700' },
-  dayName: { flex: 1, fontSize: 14, fontWeight: '500' },
-  addButton: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  emptyDay: { borderWidth: 1, borderStyle: 'dashed', borderRadius: borderRadius.card, padding: spacing.base, alignItems: 'center' },
-  emptyText: { fontSize: 13 },
-  shiftCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.md, marginBottom: spacing.sm },
-  shiftMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  avatar: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  shiftInfo: {},
-  employeeName: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  shiftMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  shiftTime: { fontSize: 12 },
-  shiftLocation: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { fontSize: 11 },
-  fab: { position: 'absolute', bottom: 100, right: spacing.base, width: 56, height: 56, borderRadius: 16, backgroundColor: '#8b5cf6', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  content: { padding: spacing.base, paddingBottom: spacing['3xl'] },
+  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xl },
+  navButton: { padding: spacing.sm, borderRadius: 10 },
+  dayContainer: { marginBottom: spacing.lg },
+  dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  addDayButton: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  shiftCard: { marginBottom: spacing.sm },
+  shiftContent: { flexDirection: 'row', alignItems: 'center' },
+  shiftInfo: { flex: 1, marginLeft: spacing.md },
+  emptyCard: { alignItems: 'center', paddingVertical: spacing.md },
+  modalLabel: { marginBottom: spacing.sm },
+  employeeOption: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderRadius: 12, borderWidth: 1, marginBottom: spacing.sm },
+  employeeOptionText: { marginLeft: spacing.md },
 });

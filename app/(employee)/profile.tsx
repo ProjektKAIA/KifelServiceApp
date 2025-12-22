@@ -1,13 +1,15 @@
 // app/(employee)/profile.tsx
 
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, MapPin, Bell, Moon, Shield, HelpCircle, LogOut } from 'lucide-react-native';
+import { User, Mail, Phone, MapPin, Bell, Shield, HelpCircle, LogOut } from 'lucide-react-native';
 
 import { Typography, Button } from '@/src/components/atoms';
 import { ScreenHeader, ProfileCard, MenuSection } from '@/src/components/organisms';
+import { ThemeToggle } from '@/src/components/molecules/ThemeToggle';
+import { Card } from '@/src/components/molecules/Card';
 
 import { useTheme } from '@/src/hooks/useTheme';
 import { useAuthStore } from '@/src/store/authStore';
@@ -15,7 +17,7 @@ import { spacing } from '@/src/constants/spacing';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { user, logout } = useAuthStore();
   const [notifications, setNotifications] = useState(true);
 
@@ -31,7 +33,6 @@ export default function ProfileScreen() {
 
   const settingsItems = [
     { icon: Bell, label: 'Benachrichtigungen', value: notifications, isToggle: true, onToggle: setNotifications },
-    { icon: Moon, label: 'Dark Mode', value: isDark, isToggle: true, onToggle: toggleTheme },
   ];
 
   const supportItems = [
@@ -61,7 +62,21 @@ export default function ProfileScreen() {
         <ProfileCard name={fullName} role={role} email={user?.email} />
 
         <MenuSection title="PERSÖNLICHE DATEN" items={personalItems} />
-        <MenuSection title="EINSTELLUNGEN" items={settingsItems} />
+        <MenuSection title="BENACHRICHTIGUNGEN" items={settingsItems} />
+
+        {/* Theme Selection */}
+        <View style={styles.themeSection}>
+          <Typography variant="overline" color="muted" style={styles.themeTitle}>
+            ERSCHEINUNGSBILD
+          </Typography>
+          <Card>
+            <Typography variant="body" style={styles.themeLabel}>Farbschema</Typography>
+            <View style={styles.themeToggleWrapper}>
+              <ThemeToggle />
+            </View>
+          </Card>
+        </View>
+
         <MenuSection title="SUPPORT" items={supportItems} />
 
         <Button
@@ -88,6 +103,19 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.base,
     paddingBottom: spacing['3xl'],
+  },
+  themeSection: {
+    marginBottom: spacing.lg,
+  },
+  themeTitle: {
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+  },
+  themeLabel: {
+    marginBottom: spacing.md,
+  },
+  themeToggleWrapper: {
+    marginTop: spacing.xs,
   },
   logoutButton: {
     marginTop: spacing.lg,

@@ -2,30 +2,32 @@
 
 import { useColorScheme } from 'react-native';
 import { colors, ColorTheme } from '@/src/theme/colors';
+import { useThemeStore, ThemePreference } from '@/src/store/themeStore';
 
 interface UseThemeReturn {
   theme: ColorTheme;
   isDark: boolean;
   colorScheme: 'light' | 'dark';
-  toggleTheme: () => void;
+  themePreference: ThemePreference;
+  setThemePreference: (preference: ThemePreference) => void;
 }
 
 export const useTheme = (): UseThemeReturn => {
-  const colorScheme = useColorScheme() ?? 'dark';
+  const systemColorScheme = useColorScheme() ?? 'dark';
+  const { themePreference, setThemePreference } = useThemeStore();
+
+  // Bestimme das aktive Color Scheme basierend auf Präferenz
+  const colorScheme: 'light' | 'dark' =
+    themePreference === 'system' ? systemColorScheme : themePreference;
+
   const isDark = colorScheme === 'dark';
   const theme = colors[colorScheme];
-
-  // Toggle würde normalerweise einen State ändern
-  // Für jetzt folgt es dem System
-  const toggleTheme = () => {
-    // TODO: Implement theme persistence with AsyncStorage
-    console.log('Theme toggle - would switch to:', isDark ? 'light' : 'dark');
-  };
 
   return {
     theme,
     isDark,
     colorScheme,
-    toggleTheme,
+    themePreference,
+    setThemePreference,
   };
 };

@@ -9,12 +9,10 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  User,
   Bell,
   Shield,
   MapPin,
@@ -23,20 +21,18 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  Moon,
 } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
+import { ThemeToggle } from '@/src/components/molecules/ThemeToggle';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
   const { user, logout } = useAuthStore();
 
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(colorScheme === 'dark');
   const [gpsTracking, setGpsTracking] = useState(true);
 
   const handleLogout = () => {
@@ -63,7 +59,6 @@ export default function SettingsScreen() {
       title: 'APP-EINSTELLUNGEN',
       items: [
         { icon: Bell, label: 'Benachrichtigungen', toggle: true, value: notifications, onToggle: setNotifications },
-        { icon: Moon, label: 'Dunkler Modus', toggle: true, value: darkMode, onToggle: setDarkMode },
         { icon: MapPin, label: 'GPS-Tracking aktiv', toggle: true, value: gpsTracking, onToggle: setGpsTracking },
       ],
     },
@@ -102,6 +97,13 @@ export default function SettingsScreen() {
             <Text style={[styles.profileRole, { color: theme.textMuted }]}>Administrator</Text>
           </View>
           <ChevronRight size={20} color={theme.textMuted} />
+        </View>
+
+        {/* Theme Selection */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>ERSCHEINUNGSBILD</Text>
+        <View style={[styles.themeCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+          <Text style={[styles.themeLabel, { color: theme.text }]}>Farbschema</Text>
+          <ThemeToggle />
         </View>
 
         {menuSections.map((section, sectionIndex) => (
@@ -163,6 +165,8 @@ const styles = StyleSheet.create({
   profileName: { fontSize: 16, fontWeight: '600' },
   profileRole: { fontSize: 13, marginTop: 2 },
   sectionTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: spacing.sm, marginTop: spacing.md },
+  themeCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.md },
+  themeLabel: { fontSize: 15, fontWeight: '500', marginBottom: spacing.md },
   menuCard: { borderRadius: borderRadius.card, borderWidth: 1, overflow: 'hidden' },
   menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.base },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

@@ -1,20 +1,20 @@
 // app/(auth)/login.tsx
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, useColorScheme, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Lock, LogIn } from 'lucide-react-native';
-
-import { Typography, Button, Input, IconBox } from '@/src/components/atoms';
-
-import { useTheme } from '@/src/hooks/useTheme';
+import { User, X } from 'lucide-react-native';
+// LinearGradient benötigt: npx expo install expo-linear-gradient
+// Fallback: einfache Box mit Primärfarbe
+import { colors } from '@/src/theme/colors';
+import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
-import { spacing } from '@/src/constants/spacing';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = colors[colorScheme];
   const { login, isLoading } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -22,80 +22,118 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Fehler', 'Bitte E-Mail und Passwort eingeben.');
+      Alert.alert('Fehler', 'Bitte füllen Sie alle Felder aus.');
       return;
     }
 
-    try {
-      await login(email.trim(), password);
+    const success = await login(email, password);
+    if (success) {
       router.replace('/(employee)');
-    } catch (error) {
-      Alert.alert('Fehler', 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.');
+    } else {
+      Alert.alert('Fehler', 'Ungültige Anmeldedaten.');
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <IconBox icon={User} size="xl" backgroundColor="#3b82f6" color="#fff" />
-            <Typography variant="h2" style={styles.title}>Anmelden</Typography>
-            <Typography variant="caption" color="muted">
-              Zugang zum Mitarbeiterbereich
-            </Typography>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            <Input
-              icon={User}
-              placeholder="E-Mail oder Benutzername"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={email}
-              onChangeText={setEmail}
-              editable={!isLoading}
-              containerStyle={styles.inputSpacing}
-            />
-
-            <Input
-              icon={Lock}
-              placeholder="Passwort"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              editable={!isLoading}
-              containerStyle={styles.inputSpacing}
-            />
-
-            <Button
-              title="Einloggen"
-              icon={LogIn}
-              onPress={handleLogin}
-              loading={isLoading}
-              disabled={isLoading}
-              fullWidth
-              style={styles.loginButton}
-            />
-          </View>
-
-          {/* Help */}
-          <View style={styles.helpContainer}>
-            <Typography variant="caption" color="muted" style={styles.helpText}>
-              Passwort vergessen?
-            </Typography>
-            <Typography variant="caption" color="muted" style={styles.helpText}>
-              Bitte an die Personalabteilung wenden.
-            </Typography>
+      <View style={styles.content}>
+        {/* Header with Close Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+            <X size={24} color={theme.text} />
+          </TouchableOpacity>
+          <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
+            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>LOGIN</Text>
           </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Icon */}
+        <View style={styles.iconContainer}>
+          <View style={styles.iconBox}>
+            <User size={32} color="#fff" strokeWidth={1.5} />
+          </View>
+        </View>
+
+        {/* Header */}
+        <Text style={[styles.title, { color: theme.text }]}>Anmelden</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>Zugang zum Mitarbeiterbereich</Text>
+
+        {/* Form */}
+        <View style={styles.form}>
+          <TextInput
+            style={[styles.input, { 
+              backgroundColor: theme.inputBackground, 
+              borderColor: theme.inputBorder,
+              color: theme.text 
+            }]}
+            placeholder="E-Mail oder Benutzername"
+            placeholderTextColor={theme.textMuted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+
+          <TextInput
+            style={[styles.input, { 
+              backgroundColor: theme.inputBackground, 
+              borderColor: theme.inputBorder,
+              color: theme.text 
+            }]}
+            placeholder="Passwort"
+            placeholderTextColor={theme.textMuted}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.8}
+            disabled={isLoading}
+          >
+            <Text style={styles.loginButtonText}>
+              {isLoading ? 'Wird angemeldet...' : 'Einloggen'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.helpText, { color: theme.textMuted }]}>
+            Passwort vergessen?{'\n'}Bitte an die Personalabteilung wenden.
+          </Text>
+
+          {/* Dev Access */}
+          <View style={[styles.devSection, { borderTopColor: theme.borderLight }]}>
+            <Text style={[styles.devLabel, { color: theme.textMuted }]}>ENTWICKLER-ZUGANG</Text>
+            <View style={styles.devButtons}>
+              <TouchableOpacity
+                style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                onPress={async () => {
+                  try {
+                    await login('max@kifel.de', 'max123');
+                    router.replace('/(employee)');
+                  } catch {}
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.devButtonText, { color: theme.text }]}>Mitarbeiter</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.devButton, { backgroundColor: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.3)' }]}
+                onPress={async () => {
+                  try {
+                    await login('admin@kifel.de', 'admin123');
+                    router.replace('/(admin)');
+                  } catch {}
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.devButtonText, { color: '#a855f7' }]}>Admin</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -104,36 +142,119 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardView: {
-    flex: 1,
-  },
   content: {
     flex: 1,
     padding: spacing.base,
+    paddingTop: spacing.md,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  logoContainer: {
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  iconContainer: {
     alignItems: 'center',
-    marginBottom: spacing['3xl'],
+    marginBottom: spacing.lg,
+  },
+  iconBox: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366f1',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: spacing.xl,
   },
   form: {
-    marginBottom: spacing['2xl'],
+    gap: spacing.md,
   },
-  inputSpacing: {
-    marginBottom: spacing.md,
+  input: {
+    height: 52,
+    borderRadius: borderRadius.input,
+    borderWidth: 1,
+    paddingHorizontal: spacing.base,
+    fontSize: 15,
   },
   loginButton: {
+    height: 52,
+    borderRadius: borderRadius.input,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.sm,
   },
-  helpContainer: {
-    alignItems: 'center',
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   helpText: {
+    fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
+    marginTop: spacing.lg,
+  },
+  devSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+  },
+  devLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  devButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  devButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+  },
+  devButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

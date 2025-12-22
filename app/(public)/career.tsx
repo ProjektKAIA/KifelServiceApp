@@ -1,97 +1,105 @@
 // app/(public)/career.tsx
 
 import React from 'react';
-import { ScrollView, View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Briefcase, Euro, Clock, ChevronRight } from 'lucide-react-native';
-
-import { Typography, Button } from '@/src/components/atoms';
-import { Card } from '@/src/components/molecules';
-import { WelcomeCard, FeatureCard } from '@/src/components/organisms';
-
-import { useTheme } from '@/src/hooks/useTheme';
-import { spacing } from '@/src/constants/spacing';
-
-interface JobPosition {
-  id: string;
-  title: string;
-  location: string;
-  type: string;
-  salary?: string;
-}
-
-const openPositions: JobPosition[] = [
-  { id: '1', title: 'Servicemitarbeiter (m/w/d)', location: 'Berlin', type: 'Vollzeit', salary: '2.500 - 3.000€' },
-  { id: '2', title: 'Teamleiter (m/w/d)', location: 'Berlin', type: 'Vollzeit', salary: '3.500 - 4.000€' },
-  { id: '3', title: 'Aushilfe (m/w/d)', location: 'Berlin', type: 'Teilzeit' },
-];
+import { ArrowLeft, Briefcase, MapPin, Clock, ChevronRight, Heart, TrendingUp, Users } from 'lucide-react-native';
+import { colors } from '@/src/theme/colors';
+import { spacing, borderRadius } from '@/src/theme/spacing';
 
 const benefits = [
-  { icon: Euro, title: 'Faire Bezahlung', description: 'Übertarifliche Vergütung und Bonussystem' },
-  { icon: Clock, title: 'Flexible Arbeitszeiten', description: 'Work-Life-Balance ist uns wichtig' },
-  { icon: Briefcase, title: 'Weiterbildung', description: 'Regelmäßige Schulungen und Aufstiegschancen' },
+  { icon: Heart, title: 'Work-Life-Balance', desc: 'Flexible Arbeitszeiten' },
+  { icon: TrendingUp, title: 'Entwicklung', desc: 'Weiterbildungsmöglichkeiten' },
+  { icon: Users, title: 'Teamgeist', desc: 'Tolles Arbeitsklima' },
+];
+
+const jobs = [
+  { id: '1', title: 'Servicetechniker (m/w/d)', location: 'Forst', type: 'Vollzeit' },
+  { id: '2', title: 'Reinigungskraft (m/w/d)', location: 'Cottbus', type: 'Teilzeit' },
+  { id: '3', title: 'Teamleiter (m/w/d)', location: 'Forst', type: 'Vollzeit' },
 ];
 
 export default function CareerScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
-
-  const handleApply = (position: JobPosition) => {
-    Alert.alert('Bewerbung', `Bewerbung für "${position.title}" wird in einer zukünftigen Version verfügbar sein.`);
-  };
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = colors[colorScheme];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header Nav */}
-      <View style={styles.headerNav}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
-        <Typography variant="label">Karriere</Typography>
-        <View style={{ width: 40 }} />
+        <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Intro */}
-        <WelcomeCard
-          icon={Briefcase}
-          title="Wir suchen Verstärkung!"
-          description="Starten Sie Ihre Karriere bei uns. Wir bieten spannende Aufgaben und ein tolles Team."
-        />
+        <Text style={[styles.title, { color: theme.text }]}>Karriere</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+          Werden Sie Teil unseres Teams
+        </Text>
 
         {/* Benefits */}
-        <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          IHRE VORTEILE
-        </Typography>
+        <View style={styles.benefitsRow}>
+          {benefits.map((benefit, index) => (
+            <View
+              key={index}
+              style={[styles.benefitCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+            >
+              <View style={[styles.benefitIcon, { backgroundColor: theme.surface }]}>
+                <benefit.icon size={20} color={theme.primary} />
+              </View>
+              <Text style={[styles.benefitTitle, { color: theme.text }]}>{benefit.title}</Text>
+              <Text style={[styles.benefitDesc, { color: theme.textMuted }]}>{benefit.desc}</Text>
+            </View>
+          ))}
+        </View>
 
-        {benefits.map((benefit, index) => (
-          <FeatureCard key={index} icon={benefit.icon} title={benefit.title} description={benefit.description} />
+        {/* Jobs */}
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>OFFENE STELLEN</Text>
+
+        {jobs.map((job) => (
+          <TouchableOpacity
+            key={job.id}
+            style={[styles.jobCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+            activeOpacity={0.7}
+          >
+            <View style={styles.jobContent}>
+              <View style={[styles.jobIcon, { backgroundColor: theme.surface }]}>
+                <Briefcase size={20} color={theme.primary} />
+              </View>
+              <View style={styles.jobInfo}>
+                <Text style={[styles.jobTitle, { color: theme.text }]}>{job.title}</Text>
+                <View style={styles.jobMeta}>
+                  <View style={styles.jobMetaItem}>
+                    <MapPin size={12} color={theme.textMuted} />
+                    <Text style={[styles.jobMetaText, { color: theme.textMuted }]}>{job.location}</Text>
+                  </View>
+                  <View style={styles.jobMetaItem}>
+                    <Clock size={12} color={theme.textMuted} />
+                    <Text style={[styles.jobMetaText, { color: theme.textMuted }]}>{job.type}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+            <ChevronRight size={20} color={theme.textMuted} />
+          </TouchableOpacity>
         ))}
 
-        {/* Open Positions */}
-        <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          OFFENE STELLEN ({openPositions.length})
-        </Typography>
-
-        {openPositions.map((position) => (
-          <Card key={position.id} onPress={() => handleApply(position)} style={styles.positionCard}>
-            <Typography variant="label">{position.title}</Typography>
-            <Typography variant="caption" color="muted" style={styles.positionMeta}>
-              {position.location} · {position.type}
-              {position.salary && ` · ${position.salary}`}
-            </Typography>
-            <Button
-              title="Jetzt bewerben"
-              icon={ChevronRight}
-              iconPosition="right"
-              variant="secondary"
-              size="sm"
-              onPress={() => handleApply(position)}
-              style={styles.applyButton}
-            />
-          </Card>
-        ))}
+        {/* CTA */}
+        <View style={[styles.ctaCard, { backgroundColor: 'rgba(59,130,246,0.1)', borderColor: 'rgba(99,102,241,0.2)' }]}>
+          <Text style={[styles.ctaTitle, { color: theme.text }]}>Initiativbewerbung</Text>
+          <Text style={[styles.ctaText, { color: theme.textMuted }]}>
+            Keine passende Stelle dabei? Bewerben Sie sich initiativ!
+          </Text>
+          <TouchableOpacity style={styles.ctaButton} activeOpacity={0.8}>
+            <Text style={styles.ctaButtonText}>Jetzt bewerben</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,12 +109,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerNav: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    padding: spacing.base,
   },
   backButton: {
     width: 40,
@@ -114,22 +121,132 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
   content: {
     padding: spacing.base,
-    paddingBottom: spacing['3xl'],
   },
-  sectionTitle: {
-    marginTop: spacing.xl,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    marginBottom: spacing.lg,
+  },
+  benefitsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  benefitCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+  },
+  benefitIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  benefitTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  benefitDesc: {
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
     marginBottom: spacing.md,
   },
-  positionCard: {
-    marginBottom: spacing.md,
+  jobCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
   },
-  positionMeta: {
-    marginTop: 4,
-    marginBottom: spacing.md,
+  jobContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
   },
-  applyButton: {
-    alignSelf: 'flex-start',
+  jobIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jobInfo: {
+    flex: 1,
+  },
+  jobTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  jobMeta: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  jobMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  jobMetaText: {
+    fontSize: 12,
+  },
+  ctaCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  ctaTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  ctaText: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: spacing.base,
+  },
+  ctaButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: borderRadius.button,
+    backgroundColor: '#3b82f6',
+  },
+  ctaButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

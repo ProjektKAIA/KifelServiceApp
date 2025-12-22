@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Play, Square, CheckCircle } from 'lucide-react-native';
+import { MapPin, Square, CheckCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -15,8 +15,24 @@ export default function TimeTrackingScreen() {
   const theme = colors[colorScheme];
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuthStore();
-  const { isTracking, elapsedSeconds, currentLocation, locationError, isLocationLoading, clockIn, clockOut, updateLocation, updateElapsedTime, setLocationError, setLocationLoading } = useTimeStore();
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  const {
+    isTracking,
+    elapsedSeconds,
+    currentLocation,
+    locationError,
+    isLocationLoading,
+    clockIn,
+    clockOut,
+    updateLocation,
+    updateElapsedTime,
+    setLocationError,
+    setLocationLoading,
+    startTime,
+  } = useTimeStore();
+
+  const [currentTime, setCurrentTime] = useState(
+    new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
 
   const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
@@ -25,99 +41,168 @@ export default function TimeTrackingScreen() {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatStartTime = (): string => {
+    if (!startTime) return '';
+    return new Date(startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  };
+
   const getCurrentLocation = async (): Promise<LocationData | null> => {
     setLocationLoading(true);
     setLocationError(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setLocationError('Standortberechtigung nicht erteilt'); return null; }
+      if (status !== 'granted') {
+        setLocationError('Standortberechtigung nicht erteilt');
+        return null;
+      }
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const locationData: LocationData = { latitude: location.coords.latitude, longitude: location.coords.longitude, accuracy: location.coords.accuracy, timestamp: location.timestamp };
+      const locationData: LocationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy,
+        timestamp: location.timestamp,
+      };
       try {
-        const [address] = await Location.reverseGeocodeAsync({ latitude: location.coords.latitude, longitude: location.coords.longitude });
-        if (address) locationData.address = `${address.city || ''}, ${address.street || ''} ${address.streetNumber || ''}`.trim();
+        const [address] = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        if (address) {
+          locationData.address = `${address.city || ''}, ${address.street || ''} ${address.streetNumber || ''}`.trim();
+        }
       } catch {}
       updateLocation(locationData);
       return locationData;
-    } catch { setLocationError('Standort konnte nicht ermittelt werden'); return null; }
-    finally { setLocationLoading(false); }
+    } catch {
+      setLocationError('Standort konnte nicht ermittelt werden');
+      return null;
+    } finally {
+      setLocationLoading(false);
+    }
   };
 
   const handleClockIn = async () => {
     const location = await getCurrentLocation();
-    if (!location) { Alert.alert('Fehler', 'Standort erforderlich für Arbeitsbeginn.'); return; }
+    if (!location) {
+      Alert.alert('Fehler', 'Standort erforderlich für Arbeitsbeginn.');
+      return;
+    }
     if (user) clockIn(user.id, location);
   };
 
   const handleClockOut = async () => {
     Alert.alert('Arbeitsende', 'Möchten Sie Ihre Arbeitszeit jetzt beenden?', [
       { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Beenden', style: 'destructive', onPress: async () => { const location = await getCurrentLocation(); if (location) clockOut(location); } },
+      {
+        text: 'Beenden',
+        style: 'destructive',
+        onPress: async () => {
+          const location = await getCurrentLocation();
+          if (location) clockOut(location);
+        },
+      },
     ]);
   };
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })), 1000);
+    const timer = setInterval(() => {
+      setCurrentTime(
+        new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      );
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (isTracking) { intervalRef.current = setInterval(() => updateElapsedTime(), 1000); }
-    else if (intervalRef.current) clearInterval(intervalRef.current);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (isTracking) {
+      intervalRef.current = setInterval(() => updateElapsedTime(), 1000);
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [isTracking]);
 
-  useEffect(() => { getCurrentLocation(); }, []);
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const hasLocation = currentLocation && !locationError;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={[styles.headerSmall, { color: theme.textMuted }]}>GPS-gestützt</Text>
-          <Text style={[styles.headerLarge, { color: theme.text }]}>Zeiterfassung</Text>
+        {/* Badge */}
+        <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
+          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>ZEITERFASSUNG</Text>
         </View>
 
+        {/* Header */}
+        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>GPS-gestützt</Text>
+        <Text style={[styles.headerLarge, { color: theme.text }]}>Zeiterfassung</Text>
+
+        {/* Big Time Display */}
         <Text style={[styles.timeDisplay, { color: theme.text }]}>{currentTime}</Text>
 
+        {/* GPS Status */}
         <View style={styles.gpsStatus}>
-          <View style={[styles.gpsDot, { backgroundColor: currentLocation && !locationError ? '#22c55e' : '#ef4444' }]} />
-          <Text style={[styles.gpsText, { color: currentLocation && !locationError ? '#4ade80' : '#f87171' }]}>
-            {isLocationLoading ? 'Standort wird ermittelt...' : currentLocation && !locationError ? 'GPS aktiv · Standort erkannt' : locationError || 'GPS nicht verfügbar'}
+          <View style={[styles.gpsDot, { backgroundColor: hasLocation ? '#22c55e' : '#ef4444' }]} />
+          <Text style={[styles.gpsText, { color: hasLocation ? '#4ade80' : '#f87171' }]}>
+            {isLocationLoading
+              ? 'Standort wird ermittelt...'
+              : hasLocation
+              ? 'GPS aktiv · Standort erkannt'
+              : locationError || 'GPS nicht verfügbar'}
           </Text>
         </View>
 
-        <View style={[styles.workCard, { backgroundColor: 'rgba(59,130,246,0.1)', borderColor: 'rgba(99,102,241,0.2)' }]}>
+        {/* Work Time Card */}
+        <View
+          style={[
+            styles.workCard,
+            {
+              backgroundColor: isTracking ? 'rgba(59,130,246,0.1)' : theme.cardBackground,
+              borderColor: isTracking ? 'rgba(99,102,241,0.2)' : theme.cardBorder,
+            },
+          ]}
+        >
           <Text style={[styles.workLabel, { color: theme.textMuted }]}>Heutige Arbeitszeit</Text>
           <Text style={[styles.workTime, { color: theme.text }]}>{formatTime(elapsedSeconds)}</Text>
           {isTracking && (
             <View style={[styles.statusPill, { backgroundColor: theme.pillSuccess }]}>
               <View style={[styles.statusDot, { backgroundColor: theme.pillSuccessText }]} />
-              <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>Aktiv</Text>
+              <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>
+                Aktiv seit {formatStartTime()}
+              </Text>
             </View>
           )}
         </View>
 
+        {/* Action Button */}
         {!isTracking ? (
-          <TouchableOpacity style={styles.clockInButton} onPress={handleClockIn} activeOpacity={0.8} disabled={isLocationLoading}>
-            <Play size={20} color="#fff" fill="#fff" />
-            <Text style={styles.clockButtonText}>Arbeitsbeginn</Text>
+          <TouchableOpacity style={styles.clockInButton} onPress={handleClockIn} activeOpacity={0.8}>
+            <Text style={styles.clockButtonText}>▶ Arbeitsbeginn</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.clockOutButton} onPress={handleClockOut} activeOpacity={0.8}>
-            <Square size={20} color="#fff" fill="#fff" />
+            <Square size={18} color="#fff" fill="#fff" />
             <Text style={styles.clockButtonText}>Arbeitsende</Text>
           </TouchableOpacity>
         )}
 
+        {/* Location Card */}
         <View style={[styles.locationCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           <View style={styles.locationHeader}>
-            <MapPin size={16} color={theme.primary} />
+            <MapPin size={18} color={theme.textSecondary} />
             <Text style={[styles.locationTitle, { color: theme.text }]}>Aktueller Standort</Text>
           </View>
-          <Text style={[styles.locationAddress, { color: theme.textMuted }]}>{currentLocation?.address || 'Adresse wird ermittelt...'}</Text>
-          {currentLocation && !locationError && (
+          <Text style={[styles.locationAddress, { color: theme.textMuted }]}>
+            {currentLocation?.address || 'Standort wird ermittelt...'}
+          </Text>
+          {hasLocation && (
             <View style={styles.locationStatus}>
-              <CheckCircle size={12} color="#4ade80" />
+              <CheckCircle size={14} color="#4ade80" />
               <Text style={styles.locationStatusText}>Im Einsatzgebiet</Text>
             </View>
           )}
@@ -128,28 +213,146 @@ export default function TimeTrackingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, padding: spacing.base },
-  header: { marginBottom: spacing.lg },
-  headerSmall: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  headerLarge: { fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
-  timeDisplay: { fontSize: 42, fontWeight: '700', textAlign: 'center', letterSpacing: -2, marginVertical: spacing.lg },
-  gpsStatus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: spacing.xl },
-  gpsDot: { width: 8, height: 8, borderRadius: 4 },
-  gpsText: { fontSize: 13 },
-  workCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.xl, alignItems: 'center', marginBottom: spacing.lg },
-  workLabel: { fontSize: 12, marginBottom: 4 },
-  workTime: { fontSize: 32, fontWeight: '700', marginBottom: spacing.sm },
-  statusPill: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, gap: 6 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: '600' },
-  clockInButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: 20, borderRadius: borderRadius.button, backgroundColor: '#22c55e', marginBottom: spacing.lg },
-  clockOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: 20, borderRadius: borderRadius.button, backgroundColor: '#ef4444', marginBottom: spacing.lg },
-  clockButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  locationCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base },
-  locationHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: spacing.sm },
-  locationTitle: { fontSize: 14, fontWeight: '500' },
-  locationAddress: { fontSize: 12, marginLeft: 26 },
-  locationStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 26, marginTop: 4 },
-  locationStatusText: { fontSize: 12, color: '#4ade80' },
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    padding: spacing.base,
+    paddingTop: spacing.lg,
+  },
+  badge: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: spacing.md,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  headerSmall: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  headerLarge: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: spacing.xl,
+  },
+  timeDisplay: {
+    fontSize: 56,
+    fontWeight: '700',
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -1,
+  },
+  gpsStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  gpsDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  gpsText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  workCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  workLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  workTime: {
+    fontSize: 40,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    marginTop: spacing.md,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  clockInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: 20,
+    borderRadius: borderRadius.card,
+    backgroundColor: '#22c55e',
+    marginBottom: spacing.lg,
+  },
+  clockOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: 20,
+    borderRadius: borderRadius.card,
+    backgroundColor: '#ef4444',
+    marginBottom: spacing.lg,
+  },
+  clockButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  locationCard: {
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    padding: spacing.base,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: spacing.sm,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  locationAddress: {
+    fontSize: 13,
+    marginLeft: 28,
+  },
+  locationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 28,
+    marginTop: 6,
+  },
+  locationStatusText: {
+    fontSize: 12,
+    color: '#4ade80',
+  },
 });

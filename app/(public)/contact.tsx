@@ -1,86 +1,103 @@
 // app/(public)/contact.tsx
 
-import React from 'react';
-import { ScrollView, View, TouchableOpacity, Linking, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, useColorScheme, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Phone, MapPin, Clock, Send } from 'lucide-react-native';
-
-import { Typography, Button, Input } from '@/src/components/atoms';
-import { Card } from '@/src/components/molecules';
-import { FeatureCard } from '@/src/components/organisms';
-
-import { useTheme } from '@/src/hooks/useTheme';
-import { spacing } from '@/src/constants/spacing';
-import { activeBrand } from '@/src/config';
+import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react-native';
+import { colors } from '@/src/theme/colors';
+import { spacing, borderRadius } from '@/src/theme/spacing';
 
 export default function ContactScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = colors[colorScheme];
 
-  const contactItems = [
-    {
-      icon: Phone,
-      title: 'Telefon',
-      description: activeBrand.contact.phone,
-      onPress: () => Linking.openURL(`tel:${activeBrand.contact.phone}`),
-    },
-    {
-      icon: Mail,
-      title: 'E-Mail',
-      description: activeBrand.contact.email,
-      onPress: () => Linking.openURL(`mailto:${activeBrand.contact.email}`),
-    },
-    {
-      icon: MapPin,
-      title: 'Adresse',
-      description: activeBrand.contact.address,
-    },
-    {
-      icon: Clock,
-      title: 'Öffnungszeiten',
-      description: 'Mo-Fr: 08:00 - 17:00 Uhr',
-    },
-  ];
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSubmit = () => {
-    Alert.alert('Info', 'Kontaktformular wird in einer zukünftigen Version verfügbar sein.');
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      Alert.alert('Fehler', 'Bitte füllen Sie alle Felder aus.');
+      return;
+    }
+    Alert.alert('Gesendet', 'Vielen Dank für Ihre Nachricht. Wir melden uns in Kürze.');
+    setName('');
+    setEmail('');
+    setMessage('');
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header Nav */}
-      <View style={styles.headerNav}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
-        <Typography variant="label">Kontakt</Typography>
-        <View style={{ width: 40 }} />
+        <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: theme.text }]}>Kontakt</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+          Wir freuen uns auf Ihre Nachricht
+        </Text>
+
         {/* Contact Info */}
-        {contactItems.map((item, index) => (
-          <FeatureCard
-            key={index}
-            icon={item.icon}
-            title={item.title}
-            description={item.description}
-            onPress={item.onPress}
-          />
-        ))}
+        <View style={[styles.infoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+          <View style={styles.infoRow}>
+            <Mail size={18} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.text }]}>info@kifel-service.de</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Phone size={18} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.text }]}>+49 3562 123456</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <MapPin size={18} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.text }]}>Hauptstraße 15, 03149 Forst</Text>
+          </View>
+        </View>
 
         {/* Contact Form */}
-        <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          NACHRICHT SENDEN
-        </Typography>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>NACHRICHT SENDEN</Text>
 
-        <Card style={styles.formCard}>
-          <Input placeholder="Ihr Name" containerStyle={styles.inputSpacing} />
-          <Input placeholder="E-Mail Adresse" keyboardType="email-address" containerStyle={styles.inputSpacing} />
-          <Input placeholder="Ihre Nachricht..." multiline numberOfLines={4} containerStyle={styles.inputSpacing} />
-          <Button title="Nachricht senden" icon={Send} onPress={handleSubmit} fullWidth />
-        </Card>
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+          placeholder="Ihr Name"
+          placeholderTextColor={theme.textMuted}
+          value={name}
+          onChangeText={setName}
+        />
+
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+          placeholder="Ihre E-Mail"
+          placeholderTextColor={theme.textMuted}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+          placeholder="Ihre Nachricht"
+          placeholderTextColor={theme.textMuted}
+          value={message}
+          onChangeText={setMessage}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
+          <Send size={18} color="#fff" />
+          <Text style={styles.submitButtonText}>Nachricht senden</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -90,12 +107,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerNav: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    padding: spacing.base,
   },
   backButton: {
     width: 40,
@@ -103,18 +119,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
   content: {
     padding: spacing.base,
-    paddingBottom: spacing['3xl'],
   },
-  sectionTitle: {
-    marginTop: spacing.xl,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    marginBottom: spacing.lg,
+  },
+  infoCard: {
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.xl,
+    gap: spacing.md,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoText: {
+    fontSize: 14,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
     marginBottom: spacing.md,
   },
-  formCard: {
-    padding: spacing.lg,
-  },
-  inputSpacing: {
+  input: {
+    height: 52,
+    borderRadius: borderRadius.input,
+    borderWidth: 1,
+    paddingHorizontal: spacing.base,
+    fontSize: 15,
     marginBottom: spacing.md,
+  },
+  textArea: {
+    height: 120,
+    paddingTop: spacing.md,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 52,
+    borderRadius: borderRadius.input,
+    backgroundColor: '#3b82f6',
+    marginTop: spacing.sm,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

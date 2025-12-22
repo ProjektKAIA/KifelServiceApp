@@ -1,70 +1,68 @@
 // app/(public)/about.tsx
 
 import React from 'react';
-import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Building2, Shield, Clock, Users, Award } from 'lucide-react-native';
+import { ArrowLeft, Shield, Clock, Users, Award } from 'lucide-react-native';
+import { colors } from '@/src/theme/colors';
+import { spacing, borderRadius } from '@/src/theme/spacing';
 
-import { Typography } from '@/src/components/atoms';
-import { Card } from '@/src/components/molecules';
-import { ScreenHeader, FeatureCard, WelcomeCard } from '@/src/components/organisms';
-
-import { useTheme } from '@/src/hooks/useTheme';
-import { spacing } from '@/src/constants/spacing';
-import { activeBrand } from '@/src/config';
+const features = [
+  { icon: Shield, title: 'Qualität', desc: 'Höchste Standards in allem was wir tun' },
+  { icon: Clock, title: 'Zuverlässigkeit', desc: 'Pünktlich und verlässlich seit 2010' },
+  { icon: Users, title: 'Team', desc: 'Über 50 erfahrene Mitarbeiter' },
+  { icon: Award, title: 'Erfahrung', desc: 'Mehr als 1.000 zufriedene Kunden' },
+];
 
 export default function AboutScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
-
-  const features = [
-    { icon: Shield, title: 'Zuverlässigkeit', description: 'Pünktlich und professionell bei jedem Einsatz.' },
-    { icon: Clock, title: 'Flexibilität', description: 'Individuelle Lösungen für Ihre Anforderungen.' },
-    { icon: Users, title: 'Erfahrenes Team', description: 'Qualifizierte Mitarbeiter mit langjähriger Erfahrung.' },
-    { icon: Award, title: 'Qualität', description: 'Höchste Standards in allen Bereichen.' },
-  ];
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = colors[colorScheme];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header Nav */}
-      <View style={styles.headerNav}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
-        <Typography variant="label">Über uns</Typography>
-        <View style={{ width: 40 }} />
+        <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* About Card */}
-        <WelcomeCard
-          icon={Building2}
-          title={activeBrand.name}
-          description="Ihr zuverlässiger Partner für professionelle Dienstleistungen. Wir setzen auf Qualität, Pünktlichkeit und Kundenzufriedenheit."
-        />
+        <Text style={[styles.title, { color: theme.text }]}>Über uns</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+          Lernen Sie Kifel Service kennen
+        </Text>
+
+        {/* Intro Card */}
+        <View style={[styles.introCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+          <Text style={[styles.introText, { color: theme.textSecondary }]}>
+            Kifel Service ist Ihr verlässlicher Partner für professionelle Dienstleistungen in der Region. 
+            Seit über 10 Jahren stehen wir für Qualität, Zuverlässigkeit und Kundenzufriedenheit.
+          </Text>
+        </View>
 
         {/* Features */}
-        <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          WAS UNS AUSZEICHNET
-        </Typography>
-
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>UNSERE STÄRKEN</Text>
+        
         {features.map((feature, index) => (
-          <FeatureCard
+          <View
             key={index}
-            icon={feature.icon}
-            title={feature.title}
-            description={feature.description}
-          />
+            style={[styles.featureCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+          >
+            <View style={[styles.featureIcon, { backgroundColor: theme.surface }]}>
+              <feature.icon size={22} color={theme.primary} />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: theme.text }]}>{feature.title}</Text>
+              <Text style={[styles.featureDesc, { color: theme.textMuted }]}>{feature.desc}</Text>
+            </View>
+          </View>
         ))}
-
-        {/* Contact Info */}
-        <Card style={styles.infoCard}>
-          <Typography variant="label">Standort</Typography>
-          <Typography variant="bodySmall" color="muted" style={styles.infoText}>
-            {activeBrand.contact.address}
-          </Typography>
-        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -74,12 +72,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerNav: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    padding: spacing.base,
   },
   backButton: {
     width: 40,
@@ -87,17 +84,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
   content: {
     padding: spacing.base,
   },
-  sectionTitle: {
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    marginBottom: spacing.lg,
+  },
+  introCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.xl,
+  },
+  introText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
   },
-  infoCard: {
-    marginTop: spacing.md,
+  featureCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
-  infoText: {
-    marginTop: 4,
+  featureIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  featureDesc: {
+    fontSize: 13,
   },
 });

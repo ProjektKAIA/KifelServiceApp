@@ -1,12 +1,12 @@
 // app/(admin)/index.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Calendar, Users, Check, X } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
 
 interface OpenRequest {
   id: string;
@@ -21,8 +21,7 @@ const mockOpenRequests: OpenRequest[] = [
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>

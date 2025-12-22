@@ -1,17 +1,16 @@
 // app/(public)/index.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Info, Mail, Users, Lock, Monitor } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>

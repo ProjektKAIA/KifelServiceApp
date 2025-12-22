@@ -1,17 +1,16 @@
 // app/(public)/contact.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, useColorScheme, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function ContactScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

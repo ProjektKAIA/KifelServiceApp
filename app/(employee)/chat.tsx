@@ -10,13 +10,12 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/hooks/useTheme';
 
 interface Message {
   id: string;
@@ -42,8 +41,7 @@ const avatarColors: Record<string, string> = {
 };
 
 export default function ChatScreen() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
   const currentUserId = user?.id || '1';

@@ -1,20 +1,19 @@
 // app/(auth)/login.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, useColorScheme, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, X } from 'lucide-react-native';
 // LinearGradient benötigt: npx expo install expo-linear-gradient
 // Fallback: einfache Box mit Primärfarbe
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
   const { login, isLoading } = useAuthStore();
 
   const [email, setEmail] = useState('');

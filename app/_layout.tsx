@@ -3,14 +3,14 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { isDark } = useTheme();
   const { user, isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function RootLayout() {
         <Stack.Screen name="(employee)" />
         <Stack.Screen name="(admin)" />
       </Stack>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
     </SafeAreaProvider>
   );
 }

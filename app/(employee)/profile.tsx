@@ -1,22 +1,30 @@
 // app/(employee)/profile.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useColorScheme, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
+import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/hooks/useTheme';
+import { ThemePreference } from '@/src/store/themeStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme, themePreference, setThemePreference, colorScheme } = useTheme();
   const { user, logout } = useAuthStore();
+
+  const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const userName = `${user?.firstName || 'Max'} ${user?.lastName || 'Mustermann'}`;
   const userInitials = `${user?.firstName?.[0] || 'M'}${user?.lastName?.[0] || 'M'}`;
+
+  const themeOptions: { value: ThemePreference; label: string; icon: any }[] = [
+    { value: 'light', label: 'Hell', icon: Sun },
+    { value: 'system', label: 'System', icon: Smartphone },
+    { value: 'dark', label: 'Dunkel', icon: Moon },
+  ];
 
   const handleLogout = () => {
     Alert.alert('Abmelden', 'Möchten Sie sich wirklich abmelden?', [
@@ -86,6 +94,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+          onPress={() => setShowAppearanceModal(true)}
           activeOpacity={0.7}
         >
           <View style={styles.menuButtonLeft}>
@@ -98,7 +107,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.menuButtonRight}>
             <Text style={[styles.menuButtonValue, { color: theme.textMuted }]}>
-              {colorScheme === 'dark' ? 'Dunkel' : 'Hell'}
+              {themePreference === 'system' ? 'System' : themePreference === 'dark' ? 'Dunkel' : 'Hell'}
             </Text>
             <ChevronRight size={18} color={theme.textMuted} />
           </View>
@@ -106,6 +115,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+          onPress={() => Alert.alert('Persönliche Daten', 'Diese Funktion wird in einer zukünftigen Version verfügbar sein.')}
           activeOpacity={0.7}
         >
           <View style={styles.menuButtonLeft}>
@@ -125,6 +135,57 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Abmelden</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Appearance Modal */}
+      <Modal
+        visible={showAppearanceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAppearanceModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAppearanceModal(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Erscheinungsbild</Text>
+            
+            <View style={styles.themeOptions}>
+              {themeOptions.map((option) => {
+                const isActive = themePreference === option.value;
+                const Icon = option.icon;
+                
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.themeOption,
+                      { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder },
+                      isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    ]}
+                    onPress={() => setThemePreference(option.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Icon size={24} color={isActive ? '#fff' : theme.textSecondary} />
+                    <Text style={[styles.themeOptionText, { color: isActive ? '#fff' : theme.text }]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              onPress={() => setShowAppearanceModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modalButtonText, { color: theme.text }]}>Fertig</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -258,5 +319,54 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#ef4444',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.base,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+  },
+  themeOptions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  themeOption: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    gap: 8,
+  },
+  themeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  modalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: borderRadius.button,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

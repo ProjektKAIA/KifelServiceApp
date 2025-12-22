@@ -1,18 +1,17 @@
 // app/(employee)/time.tsx
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Square, CheckCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
-import { colors } from '@/src/theme/colors';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTimeStore, LocationData } from '@/src/store/timeStore';
 import { useAuthStore } from '@/src/store/authStore';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function TimeTrackingScreen() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuthStore();
   const {

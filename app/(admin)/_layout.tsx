@@ -1,13 +1,11 @@
 // app/(admin)/_layout.tsx
 
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
-import { BarChart3, Users, Calendar, FileText, Settings } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
+import { BarChart3, Users, Calendar, MessageCircle, Settings } from 'lucide-react-native';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function AdminLayout() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   return (
     <Tabs
@@ -52,10 +50,10 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="requests"
+        name="chat"
         options={{
-          title: 'Anträge',
-          tabBarIcon: ({ color, size }) => <FileText size={size} color={color} />,
+          title: 'Chat',
+          tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -63,6 +61,12 @@ export default function AdminLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="employees"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

@@ -1,13 +1,11 @@
 // app/(employee)/_layout.tsx
 
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
 import { Home, Calendar, Clock, MessageCircle, User } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 
 export default function EmployeeLayout() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   return (
     <Tabs
@@ -68,7 +66,7 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="vacation"
         options={{
-          href: null, // Nicht in der Tab-Bar anzeigen
+          href: null,
         }}
       />
     </Tabs>

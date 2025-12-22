@@ -3,8 +3,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
-import { useTheme } from '@/hooks/useTheme';
-import { borderRadius, spacing } from '@/constants/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
+import { borderRadius, spacing } from '@/src/constants/spacing';
 
 interface MenuButtonProps {
   icon: LucideIcon;

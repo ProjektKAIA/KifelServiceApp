@@ -1,15 +1,15 @@
 // src/components/organisms/EmployeeCard.tsx
 
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { MapPin, ChevronRight } from 'lucide-react-native';
-import { Avatar } from '@/components/atoms/Avatar';
-import { Badge } from '@/components/atoms/Badge';
-import { Typography } from '@/components/atoms/Typography';
-import { Card } from '@/components/molecules/Card';
-import { StatusPill } from '@/components/molecules/StatusPill';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Avatar } from '@/src/components/atoms/Avatar';
+import { Badge } from '@/src/components/atoms/Badge';
+import { Typography } from '@/src/components/atoms/Typography';
+import { Card } from '@/src/components/molecules/Card';
+import { StatusPill } from '@/src/components/molecules/StatusPill';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface Employee {
   id: string;

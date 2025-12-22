@@ -10,8 +10,8 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Send } from 'lucide-react-native';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing, borderRadius } from '@/constants/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing, borderRadius } from '@/src/constants/spacing';
 
 interface ChatInputProps {
   value: string;

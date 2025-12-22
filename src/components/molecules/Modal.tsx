@@ -9,9 +9,9 @@ import {
   ViewStyle,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import { Typography } from '@/components/atoms/Typography';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Typography } from '@/src/components/atoms/Typography';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface ModalProps {
   visible: boolean;

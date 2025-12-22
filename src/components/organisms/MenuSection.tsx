@@ -3,10 +3,10 @@
 import React from 'react';
 import { View, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import { ChevronRight, LucideIcon } from 'lucide-react-native';
-import { Card } from '@/components/molecules/Card';
-import { Typography } from '@/components/atoms/Typography';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Card } from '@/src/components/molecules/Card';
+import { Typography } from '@/src/components/atoms/Typography';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface MenuItem {
   icon: LucideIcon;
@@ -46,7 +46,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({ title, items }) => {
               activeOpacity={item.isToggle ? 1 : 0.7}
               disabled={item.isToggle}
             >
-              <View style={[styles.iconContainer, { backgroundColor: theme.surfaceLight }]}>
+              <View style={[styles.iconContainer, { backgroundColor: theme.surface }]}>
                 <IconComponent size={16} color={theme.textSecondary} />
               </View>
               <Typography variant="body" style={styles.label}>{item.label}</Typography>

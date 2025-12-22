@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/src/hooks/useTheme';
 
 type IconBoxSize = 'sm' | 'md' | 'lg' | 'xl';
 

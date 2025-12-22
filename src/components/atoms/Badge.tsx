@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/src/hooks/useTheme';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple';
 

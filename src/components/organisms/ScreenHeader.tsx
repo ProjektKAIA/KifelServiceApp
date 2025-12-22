@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Typography } from '@/components/atoms/Typography';
-import { spacing } from '@/constants/spacing';
+import { Typography } from '@/src/components/atoms/Typography';
+import { spacing } from '@/src/constants/spacing';
 
 interface ScreenHeaderProps {
   overline?: string;

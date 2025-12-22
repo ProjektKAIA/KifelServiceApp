@@ -3,12 +3,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
-import { Card } from '@/components/molecules/Card';
-import { StatusPill } from '@/components/molecules/StatusPill';
-import { Typography } from '@/components/atoms/Typography';
-import { Divider } from '@/components/atoms/Divider';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Card } from '@/src/components/molecules/Card';
+import { StatusPill } from '@/src/components/molecules/StatusPill';
+import { Typography } from '@/src/components/atoms/Typography';
+import { Divider } from '@/src/components/atoms/Divider';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface ShiftCardProps {
   label?: string;

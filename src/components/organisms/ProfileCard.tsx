@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Card } from '@/components/molecules/Card';
-import { Avatar } from '@/components/atoms/Avatar';
-import { Typography } from '@/components/atoms/Typography';
-import { spacing } from '@/constants/spacing';
+import { Card } from '@/src/components/molecules/Card';
+import { Avatar } from '@/src/components/atoms/Avatar';
+import { Typography } from '@/src/components/atoms/Typography';
+import { spacing } from '@/src/constants/spacing';
 
 interface ProfileCardProps {
   name: string;

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Avatar } from '@/components/atoms/Avatar';
-import { Typography } from '@/components/atoms/Typography';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Avatar } from '@/src/components/atoms/Avatar';
+import { Typography } from '@/src/components/atoms/Typography';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 interface MessageBubbleProps {
   userName: string;

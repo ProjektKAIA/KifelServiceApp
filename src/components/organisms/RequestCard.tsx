@@ -3,12 +3,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Palmtree, Thermometer, Check, X } from 'lucide-react-native';
-import { Card } from '@/components/molecules/Card';
-import { StatusPill } from '@/components/molecules/StatusPill';
-import { Button } from '@/components/atoms/Button';
-import { Typography } from '@/components/atoms/Typography';
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/spacing';
+import { Card } from '@/src/components/molecules/Card';
+import { StatusPill } from '@/src/components/molecules/StatusPill';
+import { Button } from '@/src/components/atoms/Button';
+import { Typography } from '@/src/components/atoms/Typography';
+import { useTheme } from '@/src/hooks/useTheme';
+import { spacing } from '@/src/constants/spacing';
 
 type RequestType = 'vacation' | 'sick';
 type RequestStatus = 'pending' | 'approved' | 'rejected';

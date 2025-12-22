@@ -4,7 +4,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { StatCard } from './StatCard';
-import { spacing } from '@/constants/spacing';
+import { spacing } from '@/src/constants/spacing';
 
 interface StatItem {
   value: string | number;

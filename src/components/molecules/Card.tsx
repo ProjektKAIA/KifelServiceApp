@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/hooks/useTheme';
-import { borderRadius, spacing } from '@/constants/spacing';
+import { useTheme } from '@/src/hooks/useTheme';
+import { borderRadius, spacing } from '@/src/constants/spacing';
 
 interface CardProps {
   children: React.ReactNode;

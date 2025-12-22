@@ -15,13 +15,14 @@ export interface LocationData {
 export interface TimeEntry {
   id: string;
   userId: string;
-  date: string; // YYYY-MM-DD
-  clockIn: number | null; // Unix timestamp
-  clockOut: number | null; // Unix timestamp
+  date: string;
+  clockIn: number | null;
+  clockOut: number | null;
   clockInLocation: LocationData | null;
   clockOutLocation: LocationData | null;
   locationHistory: LocationData[];
   breakMinutes: number;
+  breakStart: number | null;
   notes?: string;
   status: 'active' | 'completed' | 'pending_review';
   shiftId?: string;
@@ -31,14 +32,19 @@ interface TimeState {
   currentEntry: TimeEntry | null;
   entries: TimeEntry[];
   isTracking: boolean;
+  isWorking: boolean;
+  isOnBreak: boolean;
   elapsedSeconds: number;
+  todayHours: number;
   currentLocation: LocationData | null;
   locationError: string | null;
   isLocationLoading: boolean;
 
   // Actions
-  clockIn: (userId: string, location: LocationData, shiftId?: string) => void;
-  clockOut: (location: LocationData) => void;
+  clockIn: (userId?: string, location?: LocationData, shiftId?: string) => void;
+  clockOut: (location?: LocationData) => void;
+  startBreak: () => void;
+  endBreak: () => void;
   updateLocation: (location: LocationData) => void;
   setLocationError: (error: string | null) => void;
   setLocationLoading: (loading: boolean) => void;
@@ -49,6 +55,7 @@ interface TimeState {
   getEntriesForMonth: (year: number, month: number) => TimeEntry[];
   getTotalHoursForMonth: (year: number, month: number) => number;
   resetCurrentEntry: () => void;
+  calculateTodayHours: () => void;
 }
 
 const generateId = (): string => {
@@ -60,18 +67,25 @@ const formatDate = (timestamp: number): string => {
   return date.toISOString().split('T')[0];
 };
 
+const getTodayDateString = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
+
 export const useTimeStore = create<TimeState>()(
   persist(
     (set, get) => ({
       currentEntry: null,
       entries: [],
       isTracking: false,
+      isWorking: false,
+      isOnBreak: false,
       elapsedSeconds: 0,
+      todayHours: 0,
       currentLocation: null,
       locationError: null,
       isLocationLoading: false,
 
-      clockIn: (userId, location, shiftId) => {
+      clockIn: (userId = 'default-user', location, shiftId) => {
         const now = Date.now();
         const newEntry: TimeEntry = {
           id: generateId(),
@@ -79,10 +93,11 @@ export const useTimeStore = create<TimeState>()(
           date: formatDate(now),
           clockIn: now,
           clockOut: null,
-          clockInLocation: location,
+          clockInLocation: location || null,
           clockOutLocation: null,
-          locationHistory: [location],
+          locationHistory: location ? [location] : [],
           breakMinutes: 0,
+          breakStart: null,
           status: 'active',
           shiftId,
         };
@@ -90,22 +105,35 @@ export const useTimeStore = create<TimeState>()(
         set({
           currentEntry: newEntry,
           isTracking: true,
+          isWorking: true,
+          isOnBreak: false,
           elapsedSeconds: 0,
-          currentLocation: location,
+          currentLocation: location || null,
           locationError: null,
         });
       },
 
       clockOut: (location) => {
-        const { currentEntry, entries } = get();
+        const { currentEntry, entries, isOnBreak } = get();
         if (!currentEntry) return;
+
+        // Falls noch in Pause, diese beenden
+        let finalBreakMinutes = currentEntry.breakMinutes;
+        if (isOnBreak && currentEntry.breakStart) {
+          const breakDuration = Math.floor((Date.now() - currentEntry.breakStart) / 1000 / 60);
+          finalBreakMinutes += breakDuration;
+        }
 
         const now = Date.now();
         const completedEntry: TimeEntry = {
           ...currentEntry,
           clockOut: now,
-          clockOutLocation: location,
-          locationHistory: [...currentEntry.locationHistory, location],
+          clockOutLocation: location || null,
+          locationHistory: location 
+            ? [...currentEntry.locationHistory, location] 
+            : currentEntry.locationHistory,
+          breakMinutes: finalBreakMinutes,
+          breakStart: null,
           status: 'completed',
         };
 
@@ -113,8 +141,41 @@ export const useTimeStore = create<TimeState>()(
           currentEntry: null,
           entries: [...entries, completedEntry],
           isTracking: false,
+          isWorking: false,
+          isOnBreak: false,
           elapsedSeconds: 0,
-          currentLocation: null,
+        });
+
+        // Heute-Stunden neu berechnen
+        get().calculateTodayHours();
+      },
+
+      startBreak: () => {
+        const { currentEntry } = get();
+        if (!currentEntry || !currentEntry.clockIn) return;
+
+        set({
+          isOnBreak: true,
+          currentEntry: {
+            ...currentEntry,
+            breakStart: Date.now(),
+          },
+        });
+      },
+
+      endBreak: () => {
+        const { currentEntry } = get();
+        if (!currentEntry || !currentEntry.breakStart) return;
+
+        const breakDuration = Math.floor((Date.now() - currentEntry.breakStart) / 1000 / 60);
+
+        set({
+          isOnBreak: false,
+          currentEntry: {
+            ...currentEntry,
+            breakMinutes: currentEntry.breakMinutes + breakDuration,
+            breakStart: null,
+          },
         });
       },
 
@@ -139,11 +200,21 @@ export const useTimeStore = create<TimeState>()(
       setLocationLoading: (loading) => set({ isLocationLoading: loading }),
 
       updateElapsedTime: () => {
-        const { currentEntry, isTracking } = get();
+        const { currentEntry, isTracking, isOnBreak } = get();
         if (!isTracking || !currentEntry?.clockIn) return;
 
-        const elapsed = Math.floor((Date.now() - currentEntry.clockIn) / 1000);
-        set({ elapsedSeconds: elapsed });
+        let elapsed = Math.floor((Date.now() - currentEntry.clockIn) / 1000);
+        
+        // Pausenzeit abziehen
+        elapsed -= currentEntry.breakMinutes * 60;
+        
+        // Aktuelle Pause abziehen
+        if (isOnBreak && currentEntry.breakStart) {
+          const currentBreakSeconds = Math.floor((Date.now() - currentEntry.breakStart) / 1000);
+          elapsed -= currentBreakSeconds;
+        }
+
+        set({ elapsedSeconds: Math.max(0, elapsed) });
       },
 
       addBreakTime: (minutes) => {
@@ -194,10 +265,27 @@ export const useTimeStore = create<TimeState>()(
         return Math.round((totalMinutes / 60) * 10) / 10;
       },
 
+      calculateTodayHours: () => {
+        const today = getTodayDateString();
+        const todayEntries = get().entries.filter((e) => e.date === today);
+        
+        let totalMinutes = 0;
+        for (const entry of todayEntries) {
+          if (entry.clockIn && entry.clockOut) {
+            const durationMinutes = (entry.clockOut - entry.clockIn) / 1000 / 60;
+            totalMinutes += durationMinutes - entry.breakMinutes;
+          }
+        }
+
+        set({ todayHours: Math.round((totalMinutes / 60) * 10) / 10 });
+      },
+
       resetCurrentEntry: () => {
         set({
           currentEntry: null,
           isTracking: false,
+          isWorking: false,
+          isOnBreak: false,
           elapsedSeconds: 0,
         });
       },
@@ -209,6 +297,9 @@ export const useTimeStore = create<TimeState>()(
         entries: state.entries,
         currentEntry: state.currentEntry,
         isTracking: state.isTracking,
+        isWorking: state.isWorking,
+        isOnBreak: state.isOnBreak,
+        todayHours: state.todayHours,
       }),
     }
   )

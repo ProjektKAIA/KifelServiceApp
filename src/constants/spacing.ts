@@ -1,25 +1,7 @@
 // src/constants/spacing.ts
 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  base: 16,
-  lg: 20,
-  xl: 24,
-  '2xl': 32,
-  '3xl': 40,
-} as const;
+// Re-export aus theme für Konsistenz
+export { spacing, borderRadius } from '@/src/theme/spacing';
 
-export const borderRadius = {
-  sm: 6,
-  md: 8,
-  lg: 12,
-  card: 16,
-  button: 10,
-  input: 10,
-  full: 9999,
-} as const;
-
-export type Spacing = keyof typeof spacing;
-export type BorderRadius = keyof typeof borderRadius;
+export type Spacing = keyof typeof import('@/src/theme/spacing').spacing;
+export type BorderRadius = keyof typeof import('@/src/theme/spacing').borderRadius;

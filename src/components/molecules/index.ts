@@ -6,3 +6,4 @@ export { MenuButton } from './MenuButton';
 export { MessageBubble } from './MessageBubble';
 export { Modal } from './Modal';
 export { FilterTabs } from './FilterTabs';
+export { BackHeader } from './BackHeader';

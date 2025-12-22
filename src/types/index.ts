@@ -17,7 +17,9 @@ export interface User {
 
 export interface Shift {
   id: string;
-  employeeId: string;
+  userId: string;
+  employeeId?: string; // Alias für Kompatibilität
+  employeeName?: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
@@ -45,9 +47,12 @@ export interface ChatMessage {
   chatId: string;
   userId: string;
   userName: string;
-  text: string;
+  content: string;
+  text?: string; // Alias
   timestamp: number;
+  createdAt?: string;
   readBy: string[];
+  isDeleted?: boolean;
 }
 
 export interface ChatRoom {
@@ -75,4 +80,19 @@ export interface NotificationPayload {
   data?: Record<string, unknown>;
   createdAt: string;
   read: boolean;
+}
+
+export interface EmployeeStats {
+  hoursThisMonth: number;
+  hoursThisWeek: number;
+  remainingVacationDays: number;
+  usedVacationDays: number;
+}
+
+export interface AdminStats {
+  totalEmployees: number;
+  activeToday: number;
+  onVacation: number;
+  sick: number;
+  pendingRequests: number;
 }

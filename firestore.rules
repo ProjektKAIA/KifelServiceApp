@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is accessing their own data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+
+    match /users/{userId} {
+      // Users can read their own profile, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can update their own profile (except role), admins can update all
+      allow update: if (isOwner(userId) && !('role' in request.resource.data)) || isAdmin();
+
+      // Only admins can create/delete users
+      allow create, delete: if isAdmin();
+    }
+
+    // ============================================
+    // SHIFTS COLLECTION
+    // ============================================
+
+    match /shifts/{shiftId} {
+      // Users can read their own shifts, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can create/update/delete shifts
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // TIME ENTRIES COLLECTION
+    // ============================================
+
+    match /timeEntries/{entryId} {
+      // Users can read their own entries, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Users can create their own entries
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own entries, admins can update all
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can delete entries
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // VACATION REQUESTS COLLECTION
+    // ============================================
+
+    match /vacationRequests/{requestId} {
+      // Users can read their own requests, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Users can create their own requests
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+
+      // Users can update their own pending requests, admins can update all
+      allow update: if isAuthenticated() &&
+        ((resource.data.userId == request.auth.uid && resource.data.status == 'pending') || isAdmin());
+
+      // Users can delete their own pending requests, admins can delete all
+      allow delete: if isAuthenticated() &&
+        ((resource.data.userId == request.auth.uid && resource.data.status == 'pending') || isAdmin());
+    }
+
+    // ============================================
+    // CHAT ROOMS COLLECTION
+    // ============================================
+
+    match /chatRooms/{roomId} {
+      // All authenticated users can read team rooms
+      allow read: if isAuthenticated() &&
+        (resource.data.type == 'team' || request.auth.uid in resource.data.members);
+
+      // Only admins can create/update/delete rooms
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // CHAT MESSAGES COLLECTION
+    // ============================================
+
+    match /chatMessages/{messageId} {
+      // All authenticated users can read messages (team chat)
+      allow read: if isAuthenticated();
+
+      // Users can create their own messages
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can update their own messages (soft delete)
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can delete messages
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // LOCATIONS COLLECTION
+    // ============================================
+
+    match /locations/{locationId} {
+      // All authenticated users can read locations
+      allow read: if isAuthenticated();
+
+      // Only admins can manage locations
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

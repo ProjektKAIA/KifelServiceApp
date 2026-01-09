@@ -11,6 +11,8 @@ export interface User {
   role: UserRole;
   avatar?: string;
   location?: string;
+  vacationDaysTotal?: number;
+  vacationDaysUsed?: number;
   createdAt: string;
   updatedAt: string;
 }

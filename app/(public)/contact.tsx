@@ -1,12 +1,23 @@
 // app/(public)/contact.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react-native';
+import { ArrowLeft, Mail, Phone, MapPin, Send, Clock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+
+// Contact Data
+const CONTACT = {
+  phone: '+49 2131 2945497',
+  email: 'info@kifel-service.de',
+  address: 'Justus-Liebig-Straße 3, 41564 Kaarst',
+  hours: {
+    weekdays: 'Mo – Do: 08:00 – 17:00 Uhr',
+    friday: 'Fr: 08:00 – 15:00 Uhr',
+  },
+};
 
 export default function ContactScreen() {
   const router = useRouter();
@@ -47,17 +58,32 @@ export default function ContactScreen() {
 
         {/* Contact Info */}
         <View style={[styles.infoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-          <View style={styles.infoRow}>
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() => Linking.openURL(`mailto:${CONTACT.email}`)}
+            activeOpacity={0.7}
+          >
             <Mail size={18} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.text }]}>info@kifel-service.de</Text>
-          </View>
-          <View style={styles.infoRow}>
+            <Text style={[styles.infoText, { color: theme.text }]}>{CONTACT.email}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() => Linking.openURL(`tel:${CONTACT.phone.replace(/\s/g, '')}`)}
+            activeOpacity={0.7}
+          >
             <Phone size={18} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.text }]}>+49 3562 123456</Text>
-          </View>
+            <Text style={[styles.infoText, { color: theme.text }]}>{CONTACT.phone}</Text>
+          </TouchableOpacity>
           <View style={styles.infoRow}>
             <MapPin size={18} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.text }]}>Hauptstraße 15, 03149 Forst</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>{CONTACT.address}</Text>
+          </View>
+          <View style={[styles.infoRow, { marginTop: spacing.sm }]}>
+            <Clock size={18} color={theme.primary} />
+            <View>
+              <Text style={[styles.infoText, { color: theme.text }]}>{CONTACT.hours.weekdays}</Text>
+              <Text style={[styles.infoText, { color: theme.text }]}>{CONTACT.hours.friday}</Text>
+            </View>
           </View>
         </View>
 
@@ -93,9 +119,13 @@ export default function ContactScreen() {
           textAlignVertical="top"
         />
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
-          <Send size={18} color="#fff" />
-          <Text style={styles.submitButtonText}>Nachricht senden</Text>
+        <TouchableOpacity
+          style={[styles.submitButton, { backgroundColor: theme.primary }]}
+          onPress={handleSubmit}
+          activeOpacity={0.8}
+        >
+          <Send size={18} color={theme.textInverse} />
+          <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>Nachricht senden</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -180,12 +210,10 @@ const styles = StyleSheet.create({
     gap: 10,
     height: 52,
     borderRadius: borderRadius.input,
-    backgroundColor: '#3b82f6',
     marginTop: spacing.sm,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
 });

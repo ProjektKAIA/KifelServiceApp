@@ -1,19 +1,42 @@
 // app/(public)/about.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Shield, Clock, Users, Award } from 'lucide-react-native';
+import { ArrowLeft, Shield, Sparkles, Users, Leaf, Globe, Building, Lock, Truck } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
 
+// Company Data
+const COMPANY = {
+  website: 'https://kifel-service.com',
+  description: 'Kifel Service ist Ihr Partner für professionelle Reinigungsdienstleistungen und Sicherheitsdienst in Kaarst und Umgebung.',
+  environmentNote: 'Wir setzen auf gründliche Reinigungsmethoden, die Ihre Räumlichkeiten strahlen lassen, ohne dabei die Umwelt zu belasten.',
+};
+
 const features = [
-  { icon: Shield, title: 'Qualität', desc: 'Höchste Standards in allem was wir tun' },
-  { icon: Clock, title: 'Zuverlässigkeit', desc: 'Pünktlich und verlässlich seit 2010' },
-  { icon: Users, title: 'Team', desc: 'Über 50 erfahrene Mitarbeiter' },
-  { icon: Award, title: 'Erfahrung', desc: 'Mehr als 1.000 zufriedene Kunden' },
+  { icon: Shield, title: 'Sicherheit', desc: 'Objektschutz, Revierschutz, Bewachung & Pfortendienst' },
+  { icon: Sparkles, title: 'Reinigung', desc: 'Gebäude-, Büro- & Gewerbereinigung' },
+  { icon: Users, title: 'Eigenes Team', desc: 'Festangestellte Mitarbeiter, keine Subunternehmer' },
+  { icon: Leaf, title: 'Umweltbewusst', desc: 'Umweltfreundliche Reinigungsmethoden' },
 ];
+
+const services = {
+  reinigung: [
+    'Gebäudereinigung',
+    'Büroreinigung',
+    'Gewerbeimmobilien',
+    'Hausmeisterservice',
+    'Gartenpflege',
+  ],
+  sicherheit: [
+    'Objektschutz',
+    'Revierschutzfahrten',
+    'Bewachung',
+    'Pfortendienst',
+  ],
+};
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -40,14 +63,16 @@ export default function AboutScreen() {
         {/* Intro Card */}
         <View style={[styles.introCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           <Text style={[styles.introText, { color: theme.textSecondary }]}>
-            Kifel Service ist Ihr verlässlicher Partner für professionelle Dienstleistungen in der Region. 
-            Seit über 10 Jahren stehen wir für Qualität, Zuverlässigkeit und Kundenzufriedenheit.
+            {COMPANY.description}
+          </Text>
+          <Text style={[styles.introText, { color: theme.textSecondary, marginTop: spacing.sm }]}>
+            {COMPANY.environmentNote}
           </Text>
         </View>
 
         {/* Features */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>UNSERE STÄRKEN</Text>
-        
+
         {features.map((feature, index) => (
           <View
             key={index}
@@ -62,6 +87,47 @@ export default function AboutScreen() {
             </View>
           </View>
         ))}
+
+        {/* Services */}
+        <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>UNSERE DIENSTLEISTUNGEN</Text>
+
+        <View style={[styles.servicesRow, { gap: spacing.sm }]}>
+          {/* Reinigung */}
+          <View style={[styles.serviceCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            <View style={[styles.serviceHeader, { borderBottomColor: theme.borderLight }]}>
+              <Sparkles size={18} color={theme.primary} />
+              <Text style={[styles.serviceTitle, { color: theme.text }]}>Reinigung</Text>
+            </View>
+            {services.reinigung.map((service, index) => (
+              <Text key={index} style={[styles.serviceItem, { color: theme.textSecondary }]}>
+                • {service}
+              </Text>
+            ))}
+          </View>
+
+          {/* Sicherheit */}
+          <View style={[styles.serviceCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            <View style={[styles.serviceHeader, { borderBottomColor: theme.borderLight }]}>
+              <Shield size={18} color={theme.primary} />
+              <Text style={[styles.serviceTitle, { color: theme.text }]}>Sicherheit</Text>
+            </View>
+            {services.sicherheit.map((service, index) => (
+              <Text key={index} style={[styles.serviceItem, { color: theme.textSecondary }]}>
+                • {service}
+              </Text>
+            ))}
+          </View>
+        </View>
+
+        {/* Website Link */}
+        <TouchableOpacity
+          style={[styles.websiteButton, { backgroundColor: theme.primary }]}
+          onPress={() => Linking.openURL(COMPANY.website)}
+          activeOpacity={0.8}
+        >
+          <Globe size={18} color={theme.textInverse} />
+          <Text style={[styles.websiteButtonText, { color: theme.textInverse }]}>Zur Website</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,5 +213,44 @@ const styles = StyleSheet.create({
   },
   featureDesc: {
     fontSize: 13,
+  },
+  servicesRow: {
+    flexDirection: 'row',
+  },
+  serviceCard: {
+    flex: 1,
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+  },
+  serviceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  serviceItem: {
+    fontSize: 12,
+    lineHeight: 20,
+  },
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: borderRadius.card,
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  websiteButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

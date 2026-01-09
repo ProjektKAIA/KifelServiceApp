@@ -51,7 +51,7 @@ export default function ProfileScreen() {
         {/* Avatar & Name */}
         <View style={styles.profileHeader}>
           <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-            <Text style={styles.avatarText}>{userInitials}</Text>
+            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{userInitials}</Text>
           </View>
           <Text style={[styles.userName, { color: theme.text }]}>{userName}</Text>
           <Text style={[styles.userRole, { color: theme.textMuted }]}>Mitarbeiter</Text>
@@ -127,12 +127,12 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }]}
+          style={[styles.logoutButton, { backgroundColor: theme.pillDanger, borderColor: theme.danger }]}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <LogOut size={20} color="#ef4444" />
-          <Text style={styles.logoutText}>Abmelden</Text>
+          <LogOut size={20} color={theme.danger} />
+          <Text style={[styles.logoutText, { color: theme.danger }]}>Abmelden</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -167,8 +167,8 @@ export default function ProfileScreen() {
                     onPress={() => setThemePreference(option.value)}
                     activeOpacity={0.7}
                   >
-                    <Icon size={24} color={isActive ? '#fff' : theme.textSecondary} />
-                    <Text style={[styles.themeOptionText, { color: isActive ? '#fff' : theme.text }]}>
+                    <Icon size={24} color={isActive ? theme.textInverse : theme.textSecondary} />
+                    <Text style={[styles.themeOptionText, { color: isActive ? theme.textInverse : theme.text }]}>
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -223,7 +223,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   avatarText: {
-    color: '#fff',
     fontSize: 28,
     fontWeight: '700',
   },
@@ -318,7 +317,6 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#ef4444',
   },
   modalOverlay: {
     flex: 1,

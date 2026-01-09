@@ -2,10 +2,11 @@
 
 import { Tabs } from 'expo-router';
 import { Home, Calendar, Clock, MessageCircle, User } from 'lucide-react-native';
-import { useTheme } from '@/src/hooks/useTheme';
+import { useTheme, useFeatures } from '@/src/hooks';
 
 export default function EmployeeLayout() {
   const { theme } = useTheme();
+  const { scheduleEnabled, timeTrackingEnabled, chatEnabled } = useFeatures();
 
   return (
     <Tabs
@@ -40,6 +41,7 @@ export default function EmployeeLayout() {
         options={{
           title: 'Plan',
           tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+          href: scheduleEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -47,6 +49,7 @@ export default function EmployeeLayout() {
         options={{
           title: 'Zeit',
           tabBarIcon: ({ color, size }) => <Clock size={size} color={color} />,
+          href: timeTrackingEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -54,6 +57,7 @@ export default function EmployeeLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
+          href: chatEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -65,6 +69,12 @@ export default function EmployeeLayout() {
       />
       <Tabs.Screen
         name="vacation"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="timetracking"
         options={{
           href: null,
         }}

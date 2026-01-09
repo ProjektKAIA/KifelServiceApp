@@ -50,9 +50,9 @@ export default function VacationScreen() {
         <Text style={[styles.headerLarge, { color: theme.text }]}>Urlaub & Krankheit</Text>
 
         {/* Vacation Balance Card */}
-        <View style={[styles.balanceCard, { 
-          backgroundColor: 'rgba(59,130,246,0.1)', 
-          borderColor: 'rgba(99,102,241,0.2)' 
+        <View style={[styles.balanceCard, {
+          backgroundColor: theme.pillInfo,
+          borderColor: theme.primary
         }]}>
           <View style={styles.balanceRow}>
             <View style={styles.balanceItem}>
@@ -72,15 +72,15 @@ export default function VacationScreen() {
             style={[styles.actionButton, { backgroundColor: theme.primary }]}
             activeOpacity={0.8}
           >
-            <Sun size={18} color="#fff" />
-            <Text style={styles.actionButtonTextWhite}>Urlaub</Text>
+            <Sun size={18} color={theme.textInverse} />
+            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>Urlaub</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder, borderWidth: 1 }]}
             activeOpacity={0.7}
           >
-            <AlertCircle size={18} color="#ef4444" />
-            <Text style={[styles.actionButtonText, { color: '#ef4444' }]}>Krank</Text>
+            <AlertCircle size={18} color={theme.danger} />
+            <Text style={[styles.actionButtonText, { color: theme.danger }]}>Krank</Text>
           </TouchableOpacity>
         </View>
 
@@ -181,11 +181,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  actionButtonTextWhite: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
   },
   sectionLabel: {
     fontSize: 11,

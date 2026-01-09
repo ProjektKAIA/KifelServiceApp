@@ -68,10 +68,10 @@ export default function TeamManagementScreen() {
             containerStyle={styles.searchInput}
           />
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => Alert.alert('Info', 'Mitarbeiter hinzufügen wird implementiert.')}
           >
-            <Plus size={22} color="#fff" />
+            <Plus size={22} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.base, paddingBottom: spacing['3xl'] },
   searchRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
   searchInput: { flex: 1 },
-  addButton: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center' },
+  addButton: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { marginBottom: spacing.md },
   modalHeader: { alignItems: 'center', marginBottom: spacing.lg },
   modalName: { marginTop: spacing.sm, marginBottom: 4 },

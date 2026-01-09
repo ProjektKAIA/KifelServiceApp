@@ -9,6 +9,7 @@ interface ChatState {
   messages: ChatMessage[];
   isLoading: boolean;
   isSending: boolean;
+  error: string | null;
 
   setRooms: (rooms: ChatRoom[]) => void;
   setActiveRoom: (room: ChatRoom | null) => void;
@@ -18,6 +19,8 @@ interface ChatState {
   deleteMessage: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setSending: (sending: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
   reset: () => void;
 }
 
@@ -27,6 +30,7 @@ const initialState = {
   messages: [],
   isLoading: false,
   isSending: false,
+  error: null as string | null,
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -58,6 +62,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   setSending: (isSending) => set({ isSending }),
+
+  setError: (error) => set({ error }),
+
+  clearError: () => set({ error: null }),
 
   reset: () => set(initialState),
 }));

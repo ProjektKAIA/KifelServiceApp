@@ -39,6 +39,8 @@ interface TimeState {
   currentLocation: LocationData | null;
   locationError: string | null;
   isLocationLoading: boolean;
+  error: string | null;
+  isLoading: boolean;
 
   // Actions
   clockIn: (userId?: string, location?: LocationData, shiftId?: string) => void;
@@ -48,6 +50,9 @@ interface TimeState {
   updateLocation: (location: LocationData) => void;
   setLocationError: (error: string | null) => void;
   setLocationLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  setLoading: (loading: boolean) => void;
   updateElapsedTime: () => void;
   addBreakTime: (minutes: number) => void;
   addNote: (note: string) => void;
@@ -84,6 +89,8 @@ export const useTimeStore = create<TimeState>()(
       currentLocation: null,
       locationError: null,
       isLocationLoading: false,
+      error: null,
+      isLoading: false,
 
       clockIn: (userId = 'default-user', location, shiftId) => {
         const now = Date.now();
@@ -198,6 +205,12 @@ export const useTimeStore = create<TimeState>()(
       setLocationError: (error) => set({ locationError: error }),
 
       setLocationLoading: (loading) => set({ isLocationLoading: loading }),
+
+      setError: (error) => set({ error }),
+
+      clearError: () => set({ error: null }),
+
+      setLoading: (loading) => set({ isLoading: loading }),
 
       updateElapsedTime: () => {
         const { currentEntry, isTracking, isOnBreak } = get();

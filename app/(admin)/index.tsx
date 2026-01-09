@@ -27,8 +27,8 @@ export default function AdminDashboardScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
-          <Text style={[styles.badgeText, { color: '#a855f7' }]}>ADMIN</Text>
+        <View style={[styles.badge, { backgroundColor: theme.pillSecondary }]}>
+          <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>ADMIN</Text>
         </View>
 
         {/* Header */}
@@ -36,27 +36,27 @@ export default function AdminDashboardScreen() {
         <Text style={[styles.headerLarge, { color: theme.text }]}>Admin Dashboard</Text>
 
         {/* Live Status Card */}
-        <View style={[styles.statusCard, { 
-          backgroundColor: 'rgba(139,92,246,0.1)', 
-          borderColor: 'rgba(139,92,246,0.2)' 
+        <View style={[styles.statusCard, {
+          backgroundColor: theme.pillSecondary,
+          borderColor: theme.secondary
         }]}>
           <Text style={[styles.statusLabel, { color: theme.textMuted }]}>Live-Status</Text>
-          
+
           <View style={styles.statusRow}>
             <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Aktiv arbeitend</Text>
-            <Text style={[styles.statusItemValue, { color: '#4ade80' }]}>8</Text>
+            <Text style={[styles.statusItemValue, { color: theme.statusActive }]}>8</Text>
           </View>
-          
+
           <View style={styles.statusRow}>
             <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Nicht im Dienst</Text>
             <Text style={[styles.statusItemValue, { color: theme.text }]}>4</Text>
           </View>
-          
+
           <View style={styles.statusRow}>
             <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Krank gemeldet</Text>
-            <Text style={[styles.statusItemValue, { color: '#fbbf24' }]}>1</Text>
+            <Text style={[styles.statusItemValue, { color: theme.statusPending }]}>1</Text>
           </View>
-          
+
           <View style={styles.statusRow}>
             <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Im Urlaub</Text>
             <Text style={[styles.statusItemValue, { color: theme.primary }]}>2</Text>
@@ -106,10 +106,10 @@ export default function AdminDashboardScreen() {
                 <Check size={16} color={theme.pillSuccessText} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionIcon, { backgroundColor: 'rgba(239,68,68,0.15)' }]}
+                style={[styles.actionIcon, { backgroundColor: theme.pillDanger }]}
                 activeOpacity={0.7}
               >
-                <X size={16} color="#ef4444" />
+                <X size={16} color={theme.pillDangerText} />
               </TouchableOpacity>
             </View>
           </View>

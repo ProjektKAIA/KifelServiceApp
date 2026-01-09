@@ -2,10 +2,11 @@
 
 import { Tabs } from 'expo-router';
 import { BarChart3, Users, Calendar, MessageCircle, Settings } from 'lucide-react-native';
-import { useTheme } from '@/src/hooks/useTheme';
+import { useTheme, useFeatures } from '@/src/hooks';
 
 export default function AdminLayout() {
   const { theme } = useTheme();
+  const { adminDashboardEnabled, scheduleEnabled, chatEnabled } = useFeatures();
 
   return (
     <Tabs
@@ -19,7 +20,7 @@ export default function AdminLayout() {
           paddingBottom: 24,
           height: 80,
         },
-        tabBarActiveTintColor: '#8b5cf6',
+        tabBarActiveTintColor: theme.secondary,
         tabBarInactiveTintColor: theme.navInactive,
         tabBarLabelStyle: {
           fontSize: 10,
@@ -33,6 +34,7 @@ export default function AdminLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
+          href: adminDashboardEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -47,6 +49,7 @@ export default function AdminLayout() {
         options={{
           title: 'Pläne',
           tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+          href: scheduleEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -54,6 +57,7 @@ export default function AdminLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
+          href: chatEnabled ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -65,6 +69,12 @@ export default function AdminLayout() {
       />
       <Tabs.Screen
         name="employees"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="requests"
         options={{
           href: null,
         }}

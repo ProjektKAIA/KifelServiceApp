@@ -3,14 +3,25 @@
 export const colors = {
   light: {
     primary: '#3b82f6',
+    primaryLight: '#60a5fa',
     primaryGradient: ['#3b82f6', '#6366f1'],
     secondary: '#8b5cf6',
+    secondaryLight: '#a78bfa',
     success: '#22c55e',
+    successLight: '#4ade80',
     successGradient: ['#22c55e', '#10b981'],
     danger: '#ef4444',
+    dangerLight: '#f87171',
     dangerGradient: ['#ef4444', '#dc2626'],
     warning: '#f59e0b',
+    warningLight: '#fbbf24',
     info: '#0ea5e9',
+    infoLight: '#38bdf8',
+
+    // Semantic colors for status indicators
+    statusActive: '#4ade80',
+    statusInactive: '#f87171',
+    statusPending: '#fbbf24',
 
     background: '#ffffff',
     backgroundSecondary: '#f8fafc',
@@ -41,18 +52,33 @@ export const colors = {
     pillWarningText: '#b45309',
     pillInfo: 'rgba(59,130,246,0.12)',
     pillInfoText: '#2563eb',
+    pillDanger: 'rgba(239,68,68,0.12)',
+    pillDangerText: '#dc2626',
+    pillSecondary: 'rgba(139,92,246,0.12)',
+    pillSecondaryText: '#7c3aed',
   },
 
   dark: {
     primary: '#3b82f6',
+    primaryLight: '#60a5fa',
     primaryGradient: ['#3b82f6', '#6366f1'],
     secondary: '#8b5cf6',
+    secondaryLight: '#a78bfa',
     success: '#22c55e',
+    successLight: '#4ade80',
     successGradient: ['#22c55e', '#10b981'],
     danger: '#ef4444',
+    dangerLight: '#f87171',
     dangerGradient: ['#ef4444', '#dc2626'],
     warning: '#fbbf24',
+    warningLight: '#fcd34d',
     info: '#0ea5e9',
+    infoLight: '#38bdf8',
+
+    // Semantic colors for status indicators
+    statusActive: '#4ade80',
+    statusInactive: '#f87171',
+    statusPending: '#fbbf24',
 
     background: '#0a0a0f',
     backgroundSecondary: '#1a1a2e',
@@ -83,6 +109,10 @@ export const colors = {
     pillWarningText: '#fbbf24',
     pillInfo: 'rgba(59,130,246,0.15)',
     pillInfoText: '#60a5fa',
+    pillDanger: 'rgba(239,68,68,0.15)',
+    pillDangerText: '#f87171',
+    pillSecondary: 'rgba(139,92,246,0.15)',
+    pillSecondaryText: '#a78bfa',
   },
 };
 

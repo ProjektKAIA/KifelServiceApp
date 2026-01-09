@@ -10,11 +10,14 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
 
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
-  login: (email: string, password: string) => Promise<void>;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  login: (email: string, password: string) => Promise<boolean>;
   loginWithToken: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredAuth: () => Promise<void>;
@@ -55,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isLoading: true,
       isAuthenticated: false,
+      error: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
@@ -62,27 +66,39 @@ export const useAuthStore = create<AuthState>()(
 
       setLoading: (isLoading) => set({ isLoading }),
 
+      setError: (error) => set({ error }),
+
+      clearError: () => set({ error: null }),
+
       login: async (email: string, password: string) => {
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
 
-        // Simulierte API-Verzögerung
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+          // Simulierte API-Verzögerung
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const mockUser = MOCK_USERS[email.toLowerCase()];
+          const mockUser = MOCK_USERS[email.toLowerCase()];
 
-        if (!mockUser || mockUser.password !== password) {
-          set({ isLoading: false });
-          throw new Error('Ungültige Anmeldedaten');
+          if (!mockUser || mockUser.password !== password) {
+            set({ isLoading: false, error: 'Ungültige Anmeldedaten' });
+            return false;
+          }
+
+          const token = `mock-token-${Date.now()}`;
+
+          set({
+            user: mockUser.user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          });
+          return true;
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten';
+          set({ isLoading: false, error: errorMessage });
+          return false;
         }
-
-        const token = `mock-token-${Date.now()}`;
-
-        set({
-          user: mockUser.user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
       },
 
       loginWithToken: async (user: User, token: string) => {

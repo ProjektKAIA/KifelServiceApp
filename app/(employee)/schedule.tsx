@@ -95,7 +95,7 @@ export default function ScheduleScreen() {
                     style={[
                       styles.dayNumber,
                       hasShiftOnDay && styles.dayWithShift,
-                      hasShiftOnDay && { backgroundColor: status === 'active' ? '#3b82f6' : '#3b82f6' },
+                      hasShiftOnDay && { backgroundColor: theme.primary },
                       isCurrentDay && !hasShiftOnDay && { borderColor: theme.primary, borderWidth: 2 },
                     ]}
                   >
@@ -103,7 +103,7 @@ export default function ScheduleScreen() {
                       style={[
                         styles.dayText,
                         { color: theme.text },
-                        hasShiftOnDay && { color: '#fff' },
+                        hasShiftOnDay && { color: theme.textInverse },
                       ]}
                     >
                       {format(day, 'd')}

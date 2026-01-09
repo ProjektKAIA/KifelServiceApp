@@ -12,7 +12,7 @@ import { useTheme } from '@/src/hooks/useTheme';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { user } = useAuthStore();
   const {
     isTracking,
@@ -26,8 +26,10 @@ export default function TimeTrackingScreen() {
     updateElapsedTime,
     setLocationError,
     setLocationLoading,
-    startTime,
+    currentEntry,
   } = useTimeStore();
+
+  const startTime = currentEntry?.clockIn || null;
 
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -146,8 +148,8 @@ export default function TimeTrackingScreen() {
 
         {/* GPS Status */}
         <View style={styles.gpsStatus}>
-          <View style={[styles.gpsDot, { backgroundColor: hasLocation ? '#22c55e' : '#ef4444' }]} />
-          <Text style={[styles.gpsText, { color: hasLocation ? '#4ade80' : '#f87171' }]}>
+          <View style={[styles.gpsDot, { backgroundColor: hasLocation ? theme.success : theme.danger }]} />
+          <Text style={[styles.gpsText, { color: hasLocation ? theme.statusActive : theme.statusInactive }]}>
             {isLocationLoading
               ? 'Standort wird ermittelt...'
               : hasLocation
@@ -180,13 +182,13 @@ export default function TimeTrackingScreen() {
 
         {/* Action Button */}
         {!isTracking ? (
-          <TouchableOpacity style={styles.clockInButton} onPress={handleClockIn} activeOpacity={0.8}>
-            <Text style={styles.clockButtonText}>▶ Arbeitsbeginn</Text>
+          <TouchableOpacity style={[styles.clockInButton, { backgroundColor: theme.success }]} onPress={handleClockIn} activeOpacity={0.8}>
+            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>▶ Arbeitsbeginn</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.clockOutButton} onPress={handleClockOut} activeOpacity={0.8}>
-            <Square size={18} color="#fff" fill="#fff" />
-            <Text style={styles.clockButtonText}>Arbeitsende</Text>
+          <TouchableOpacity style={[styles.clockOutButton, { backgroundColor: theme.danger }]} onPress={handleClockOut} activeOpacity={0.8}>
+            <Square size={18} color={theme.textInverse} fill={theme.textInverse} />
+            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>Arbeitsende</Text>
           </TouchableOpacity>
         )}
 
@@ -201,8 +203,8 @@ export default function TimeTrackingScreen() {
           </Text>
           {hasLocation && (
             <View style={styles.locationStatus}>
-              <CheckCircle size={14} color="#4ade80" />
-              <Text style={styles.locationStatusText}>Im Einsatzgebiet</Text>
+              <CheckCircle size={14} color={theme.statusActive} />
+              <Text style={[styles.locationStatusText, { color: theme.statusActive }]}>Im Einsatzgebiet</Text>
             </View>
           )}
         </View>
@@ -306,7 +308,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: 20,
     borderRadius: borderRadius.card,
-    backgroundColor: '#22c55e',
     marginBottom: spacing.lg,
   },
   clockOutButton: {
@@ -316,11 +317,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: 20,
     borderRadius: borderRadius.card,
-    backgroundColor: '#ef4444',
     marginBottom: spacing.lg,
   },
   clockButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -352,6 +351,5 @@ const styles = StyleSheet.create({
   },
   locationStatusText: {
     fontSize: 12,
-    color: '#4ade80',
   },
 });

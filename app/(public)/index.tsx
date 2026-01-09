@@ -1,12 +1,19 @@
 // app/(public)/index.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Info, Mail, Users, Lock, Monitor } from 'lucide-react-native';
+import { Info, Mail, Users, Lock, Globe } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+
+// Social Media Links
+const SOCIAL_LINKS = {
+  website: 'https://kifel-service.com',
+  instagram: 'https://www.instagram.com/kifel.service/',
+  facebook: 'https://www.facebook.com/KifelService/',
+};
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -15,24 +22,14 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
-        </View>
-
-        {/* Header */}
-        <Text style={[styles.title, { color: theme.text }]}>KIFEL SERVICE</Text>
-        <Text style={[styles.subtitle, { color: theme.textMuted }]}>Ihr Partner für Qualität</Text>
-
-        {/* Welcome Card */}
-        <View style={[styles.welcomeCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-          <View style={[styles.iconBox, { backgroundColor: theme.surface }]}>
-            <Monitor size={32} color={theme.primary} />
-          </View>
-          <Text style={[styles.welcomeTitle, { color: theme.text }]}>Willkommen</Text>
-          <Text style={[styles.welcomeText, { color: theme.textMuted }]}>
-            Professionelle Dienstleistungen mit{'\n'}Qualität und Zuverlässigkeit.
-          </Text>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.slogan, { color: theme.textMuted }]}>Aus reinem Herzen</Text>
         </View>
 
         {/* Menu Buttons */}
@@ -41,7 +38,7 @@ export default function WelcomeScreen() {
           onPress={() => router.push('/(public)/about')}
           activeOpacity={0.7}
         >
-          <Info size={18} color={theme.textSecondary} />
+          <Info size={22} color={theme.textSecondary} />
           <Text style={[styles.menuButtonText, { color: theme.text }]}>Über uns</Text>
         </TouchableOpacity>
 
@@ -50,7 +47,7 @@ export default function WelcomeScreen() {
           onPress={() => router.push('/(public)/contact')}
           activeOpacity={0.7}
         >
-          <Mail size={18} color={theme.textSecondary} />
+          <Mail size={22} color={theme.textSecondary} />
           <Text style={[styles.menuButtonText, { color: theme.text }]}>Kontakt</Text>
         </TouchableOpacity>
 
@@ -59,20 +56,54 @@ export default function WelcomeScreen() {
           onPress={() => router.push('/(public)/career')}
           activeOpacity={0.7}
         >
-          <Users size={18} color={theme.textSecondary} />
+          <Users size={22} color={theme.textSecondary} />
           <Text style={[styles.menuButtonText, { color: theme.text }]}>Karriere</Text>
         </TouchableOpacity>
+
+        {/* Social Media Links */}
+        <View style={styles.socialSection}>
+          <Text style={[styles.socialLabel, { color: theme.textMuted }]}>FOLGEN SIE UNS</Text>
+          <View style={styles.socialButtons}>
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              onPress={() => Linking.openURL(SOCIAL_LINKS.website)}
+              activeOpacity={0.7}
+            >
+              <Globe size={26} color={theme.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              onPress={() => Linking.openURL(SOCIAL_LINKS.instagram)}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/174/174855.png' }}
+                style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              onPress={() => Linking.openURL(SOCIAL_LINKS.facebook)}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' }}
+                style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Login Button */}
         <View style={styles.loginSection}>
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: theme.primary }]}
             onPress={() => router.push('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <Lock size={18} color="#fff" />
-            <Text style={styles.loginButtonText}>Mitarbeiter-Login</Text>
+            <Lock size={22} color={theme.textInverse} />
+            <Text style={[styles.loginButtonText, { color: theme.textInverse }]}>Mitarbeiter-Login</Text>
           </TouchableOpacity>
           <Text style={[styles.loginHint, { color: theme.textMuted }]}>Nur für Mitarbeitende</Text>
         </View>
@@ -87,97 +118,87 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.base,
+    padding: spacing.lg,
     paddingTop: spacing.xl,
   },
-  badge: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: spacing.lg,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 4,
+  logoContainer: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
+    paddingVertical: spacing.lg,
   },
-  welcomeCard: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
-    marginBottom: spacing.base,
+  logo: {
+    width: 300,
+    height: 100,
   },
-  iconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  welcomeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 20,
+  slogan: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    marginTop: spacing.md,
+    letterSpacing: 0.5,
   },
   menuButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    padding: 16,
+    gap: 12,
+    padding: 20,
     borderRadius: borderRadius.card,
     borderWidth: 1,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   menuButtonText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '500',
   },
   loginSection: {
     marginTop: 'auto',
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   divider: {
     height: 1,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    padding: 18,
+    gap: 12,
+    padding: 22,
     borderRadius: borderRadius.card,
-    backgroundColor: '#3b82f6',
   },
   loginButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
   },
   loginHint: {
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+  },
+  socialSection: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+  },
+  socialLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  socialButton: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialIcon: {
+    width: 26,
+    height: 26,
   },
 });

@@ -1,15 +1,20 @@
 // app/(auth)/login.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, X } from 'lucide-react-native';
-// LinearGradient benötigt: npx expo install expo-linear-gradient
-// Fallback: einfache Box mit Primärfarbe
+import { X, Users, Shield, Globe } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+
+// Social Media Links
+const SOCIAL_LINKS = {
+  website: 'https://kifel-service.com',
+  instagram: 'https://www.instagram.com/kifel.service/',
+  facebook: 'https://www.facebook.com/KifelService/',
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -46,15 +51,17 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Icon */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBox}>
-            <User size={32} color="#fff" strokeWidth={1.5} />
-          </View>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Header */}
-        <Text style={[styles.title, { color: theme.text }]}>Anmelden</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Mitarbeiter-Login</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>Zugang zum Mitarbeiterbereich</Text>
 
         {/* Form */}
@@ -87,12 +94,12 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            style={[styles.loginButton, { backgroundColor: theme.primary }, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
             activeOpacity={0.8}
             disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>
+            <Text style={[styles.loginButtonText, { color: theme.textInverse }]}>
               {isLoading ? 'Wird angemeldet...' : 'Einloggen'}
             </Text>
           </TouchableOpacity>
@@ -106,28 +113,66 @@ export default function LoginScreen() {
             <Text style={[styles.devLabel, { color: theme.textMuted }]}>ENTWICKLER-ZUGANG</Text>
             <View style={styles.devButtons}>
               <TouchableOpacity
-                style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                style={[styles.devButton, { backgroundColor: theme.pillSuccess, borderColor: theme.success }]}
                 onPress={async () => {
-                  try {
-                    await login('max@kifel.de', 'max123');
+                  const success = await login('max@kifel.de', 'max123');
+                  if (success) {
                     router.replace('/(employee)');
-                  } catch {}
+                  }
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.devButtonText, { color: theme.text }]}>Mitarbeiter</Text>
+                <Users size={20} color={theme.pillSuccessText} />
+                <Text style={[styles.devButtonText, { color: theme.pillSuccessText }]}>Mitarbeiter</Text>
+                <Text style={[styles.devButtonHint, { color: theme.pillSuccessText }]}>max@kifel.de</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.devButton, { backgroundColor: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.3)' }]}
+                style={[styles.devButton, { backgroundColor: theme.pillSecondary, borderColor: theme.secondary }]}
                 onPress={async () => {
-                  try {
-                    await login('admin@kifel.de', 'admin123');
+                  const success = await login('admin@kifel.de', 'admin123');
+                  if (success) {
                     router.replace('/(admin)');
-                  } catch {}
+                  }
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.devButtonText, { color: '#a855f7' }]}>Admin</Text>
+                <Shield size={20} color={theme.pillSecondaryText} />
+                <Text style={[styles.devButtonText, { color: theme.pillSecondaryText }]}>Admin</Text>
+                <Text style={[styles.devButtonHint, { color: theme.pillSecondaryText }]}>admin@kifel.de</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Social Media Links */}
+          <View style={styles.socialSection}>
+            <Text style={[styles.socialLabel, { color: theme.textMuted }]}>BESUCHEN SIE UNS</Text>
+            <View style={styles.socialButtons}>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                onPress={() => Linking.openURL(SOCIAL_LINKS.website)}
+                activeOpacity={0.7}
+              >
+                <Globe size={20} color={theme.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                onPress={() => Linking.openURL(SOCIAL_LINKS.instagram)}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/174/174855.png' }}
+                  style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                onPress={() => Linking.openURL(SOCIAL_LINKS.facebook)}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' }}
+                  style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -168,22 +213,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  iconContainer: {
+  logoContainer: {
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  iconBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6366f1',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+  logo: {
+    width: 200,
+    height: 65,
   },
   title: {
     fontSize: 24,
@@ -209,7 +245,6 @@ const styles = StyleSheet.create({
   loginButton: {
     height: 52,
     borderRadius: borderRadius.input,
-    backgroundColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.sm,
@@ -220,7 +255,6 @@ const styles = StyleSheet.create({
   loginButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
   helpText: {
     fontSize: 13,
@@ -248,12 +282,43 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
+    padding: 16,
     borderRadius: borderRadius.card,
     borderWidth: 1,
+    gap: 6,
   },
   devButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  devButtonHint: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  socialSection: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  socialLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  socialButton: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialIcon: {
+    width: 20,
+    height: 20,
   },
 });

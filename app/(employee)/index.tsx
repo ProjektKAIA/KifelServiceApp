@@ -78,12 +78,12 @@ export default function DashboardScreen() {
         
         <View style={styles.actionsGrid}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#22c55e' }]}
+            style={[styles.actionButton, { backgroundColor: theme.success }]}
             onPress={() => router.push('/(employee)/time')}
             activeOpacity={0.8}
           >
-            <Clock size={18} color="#fff" />
-            <Text style={styles.actionButtonTextWhite}>Zeit</Text>
+            <Clock size={18} color={theme.textInverse} />
+            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>Zeit</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -235,10 +235,5 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  actionButtonTextWhite: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
   },
 });

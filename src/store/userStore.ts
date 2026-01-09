@@ -8,6 +8,7 @@ interface UserState {
   stats: EmployeeStats | null;
   adminStats: AdminStats | null;
   isLoading: boolean;
+  error: string | null;
 
   setEmployees: (employees: User[]) => void;
   addEmployee: (employee: User) => void;
@@ -16,6 +17,8 @@ interface UserState {
   setStats: (stats: EmployeeStats) => void;
   setAdminStats: (stats: AdminStats) => void;
   setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
   reset: () => void;
 }
 
@@ -24,6 +27,7 @@ const initialState = {
   stats: null,
   adminStats: null,
   isLoading: false,
+  error: null as string | null,
 };
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -51,6 +55,10 @@ export const useUserStore = create<UserState>((set, get) => ({
   setAdminStats: (adminStats) => set({ adminStats }),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setError: (error) => set({ error }),
+
+  clearError: () => set({ error: null }),
 
   reset: () => set(initialState),
 }));

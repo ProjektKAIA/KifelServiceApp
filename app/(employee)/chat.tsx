@@ -33,11 +33,15 @@ const mockMessages: Message[] = [
   { id: '4', userId: '4', userName: 'Chef', userInitials: 'CH', content: 'Kurze Teambesprechung um 15 Uhr. Bitte alle dabei sein!', time: '09:25' },
 ];
 
-const avatarColors: Record<string, string> = {
-  '1': '#22c55e',
-  '2': '#3b82f6',
-  '3': '#f59e0b',
-  '4': '#8b5cf6',
+// Avatar colors will be derived from theme
+const getAvatarColor = (userId: string, theme: any): string => {
+  const colorMap: Record<string, keyof typeof theme> = {
+    '1': 'success',
+    '2': 'primary',
+    '3': 'warning',
+    '4': 'secondary',
+  };
+  return theme[colorMap[userId]] || theme.textMuted;
 };
 
 export default function ChatScreen() {
@@ -71,7 +75,7 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isOwn = item.userId === currentUserId;
-    const avatarColor = avatarColors[item.userId] || '#6b7280';
+    const avatarColor = getAvatarColor(item.userId, theme);
 
     if (isOwn) {
       return (
@@ -79,11 +83,11 @@ export default function ChatScreen() {
           <View style={styles.ownMessageMeta}>
             <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {item.time}</Text>
           </View>
-          <View style={[styles.ownMessageBubble, { backgroundColor: '#22c55e' }]}>
-            <Text style={styles.ownMessageText}>{item.content}</Text>
+          <View style={[styles.ownMessageBubble, { backgroundColor: theme.success }]}>
+            <Text style={[styles.ownMessageText, { color: theme.textInverse }]}>{item.content}</Text>
           </View>
           <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={styles.avatarText}>{item.userInitials}</Text>
+            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{item.userInitials}</Text>
           </View>
         </View>
       );
@@ -92,7 +96,7 @@ export default function ChatScreen() {
     return (
       <View style={styles.otherMessageRow}>
         <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-          <Text style={styles.avatarText}>{item.userInitials}</Text>
+          <Text style={[styles.avatarText, { color: theme.textInverse }]}>{item.userInitials}</Text>
         </View>
         <View style={styles.otherMessageContent}>
           <Text style={[styles.messageSender, { color: theme.textMuted }]}>
@@ -144,7 +148,7 @@ export default function ChatScreen() {
             onPress={handleSend}
             activeOpacity={0.8}
           >
-            <Send size={20} color="#fff" />
+            <Send size={20} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -197,7 +201,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -241,7 +244,6 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   ownMessageText: {
-    color: '#fff',
     fontSize: 14,
     lineHeight: 20,
   },

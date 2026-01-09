@@ -7,3 +7,4 @@ export { Avatar } from './Avatar';
 export { Badge } from './Badge';
 export { Divider } from './Divider';
 export { IconBox } from './IconBox';
+export { LoadingSpinner } from './LoadingSpinner';

@@ -87,8 +87,8 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.profileCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-          <View style={[styles.avatar, { backgroundColor: '#8b5cf6' }]}>
-            <Text style={styles.avatarText}>{getInitials()}</Text>
+          <View style={[styles.avatar, { backgroundColor: theme.secondary }]}>
+            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials()}</Text>
           </View>
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: theme.text }]}>
@@ -129,8 +129,8 @@ export default function SettingsScreen() {
                     <Switch
                       value={item.value}
                       onValueChange={item.onToggle}
-                      trackColor={{ false: theme.surface, true: '#8b5cf6' }}
-                      thumbColor="#fff"
+                      trackColor={{ false: theme.surface, true: theme.secondary }}
+                      thumbColor={theme.textInverse}
                     />
                   ) : (
                     <ChevronRight size={18} color={theme.textMuted} />
@@ -142,8 +142,8 @@ export default function SettingsScreen() {
         ))}
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-          <LogOut size={18} color="#ef4444" />
-          <Text style={styles.logoutText}>Abmelden</Text>
+          <LogOut size={18} color={theme.danger} />
+          <Text style={[styles.logoutText, { color: theme.danger }]}>Abmelden</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: theme.textMuted }]}>Version 1.0.0 (Admin)</Text>
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   headerLarge: { fontSize: 22, fontWeight: '700', letterSpacing: -0.5 },
   profileCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.xl },
   avatar: { width: 50, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  avatarText: { fontSize: 18, fontWeight: '700' },
   profileInfo: { flex: 1, marginLeft: spacing.md },
   profileName: { fontSize: 16, fontWeight: '600' },
   profileRole: { fontSize: 13, marginTop: 2 },
@@ -172,6 +172,6 @@ const styles = StyleSheet.create({
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   menuItemLabel: { fontSize: 15 },
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: 16, marginTop: spacing.xl },
-  logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+  logoutText: { fontSize: 15, fontWeight: '600' },
   versionText: { textAlign: 'center', fontSize: 12, marginTop: spacing.lg },
 });

@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -23,7 +22,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react-native';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/hooks';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 interface Employee {
@@ -39,8 +38,7 @@ interface Employee {
 }
 
 export default function EmployeesScreen() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = colors[colorScheme];
+  const { theme } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -95,7 +93,7 @@ export default function EmployeesScreen() {
             style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => Alert.alert('Hinzufügen', 'Neuen Mitarbeiter anlegen')}
           >
-            <Plus size={20} color="#fff" />
+            <Plus size={20} color={theme.textInverse} />
           </TouchableOpacity>
         </View>
 
@@ -125,7 +123,7 @@ export default function EmployeesScreen() {
               ]}
               onPress={() => setFilter(type)}
             >
-              <Text style={[styles.filterText, { color: filter === type ? '#fff' : theme.textSecondary }]}>
+              <Text style={[styles.filterText, { color: filter === type ? theme.textInverse : theme.textSecondary }]}>
                 {type === 'all' ? 'Alle' : type === 'active' ? 'Aktiv' : 'Inaktiv'}
               </Text>
             </TouchableOpacity>
@@ -149,8 +147,8 @@ export default function EmployeesScreen() {
           >
             <View style={styles.employeeHeader}>
               <View style={styles.employeeInfo}>
-                <View style={[styles.avatar, { backgroundColor: employee.role === 'admin' ? '#8b5cf6' : theme.primary }]}>
-                  <Text style={styles.avatarText}>{getInitials(employee.firstName, employee.lastName)}</Text>
+                <View style={[styles.avatar, { backgroundColor: employee.role === 'admin' ? theme.secondary : theme.primary }]}>
+                  <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials(employee.firstName, employee.lastName)}</Text>
                 </View>
                 <View>
                   <View style={styles.nameRow}>
@@ -158,18 +156,18 @@ export default function EmployeesScreen() {
                       {employee.firstName} {employee.lastName}
                     </Text>
                     {employee.role === 'admin' && (
-                      <View style={[styles.adminBadge, { backgroundColor: 'rgba(139,92,246,0.2)' }]}>
-                        <Text style={styles.adminBadgeText}>Admin</Text>
+                      <View style={[styles.adminBadge, { backgroundColor: theme.pillSecondary }]}>
+                        <Text style={[styles.adminBadgeText, { color: theme.pillSecondaryText }]}>Admin</Text>
                       </View>
                     )}
                   </View>
                   <View style={styles.statusRow}>
                     {employee.status === 'active' ? (
-                      <CheckCircle size={12} color="#4ade80" />
+                      <CheckCircle size={12} color={theme.statusActive} />
                     ) : (
-                      <XCircle size={12} color="#f87171" />
+                      <XCircle size={12} color={theme.statusInactive} />
                     )}
-                    <Text style={[styles.statusText, { color: employee.status === 'active' ? '#4ade80' : '#f87171' }]}>
+                    <Text style={[styles.statusText, { color: employee.status === 'active' ? theme.statusActive : theme.statusInactive }]}>
                       {employee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
                     </Text>
                   </View>
@@ -223,11 +221,11 @@ const styles = StyleSheet.create({
   employeeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: spacing.base },
   employeeInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  avatarText: { fontSize: 16, fontWeight: '600' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   employeeName: { fontSize: 16, fontWeight: '600' },
   adminBadge: { paddingVertical: 2, paddingHorizontal: 6, borderRadius: 8 },
-  adminBadgeText: { fontSize: 10, fontWeight: '600', color: '#a78bfa' },
+  adminBadgeText: { fontSize: 10, fontWeight: '600' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   statusText: { fontSize: 12, fontWeight: '500' },
   employeeDetails: { padding: spacing.base, paddingTop: spacing.sm, borderTopWidth: 1, gap: spacing.xs },

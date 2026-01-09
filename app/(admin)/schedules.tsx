@@ -124,7 +124,7 @@ export default function ScheduleManagementScreen() {
                         <Typography variant="caption" color="muted">{shift.startTime} - {shift.endTime}</Typography>
                       </View>
                       <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
-                        <Trash2 size={18} color="#ef4444" />
+                        <Trash2 size={18} color={theme.danger} />
                       </TouchableOpacity>
                     </View>
                   </Card>

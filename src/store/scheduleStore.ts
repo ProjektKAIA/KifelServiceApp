@@ -8,6 +8,7 @@ interface ScheduleState {
   currentShift: Shift | null;
   selectedDate: string;
   isLoading: boolean;
+  error: string | null;
 
   setShifts: (shifts: Shift[]) => void;
   addShift: (shift: Shift) => void;
@@ -16,6 +17,8 @@ interface ScheduleState {
   setCurrentShift: (shift: Shift | null) => void;
   setSelectedDate: (date: string) => void;
   setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
   getShiftsForDate: (date: string) => Shift[];
   getShiftsForUser: (userId: string) => Shift[];
   reset: () => void;
@@ -26,6 +29,7 @@ const initialState = {
   currentShift: null,
   selectedDate: new Date().toISOString().split('T')[0],
   isLoading: false,
+  error: null as string | null,
 };
 
 export const useScheduleStore = create<ScheduleState>((set, get) => ({
@@ -53,6 +57,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   setSelectedDate: (selectedDate) => set({ selectedDate }),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setError: (error) => set({ error }),
+
+  clearError: () => set({ error: null }),
 
   getShiftsForDate: (date) => {
     return get().shifts.filter((shift) => shift.date === date);

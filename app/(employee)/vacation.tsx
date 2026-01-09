@@ -1,45 +1,177 @@
 // app/(employee)/vacation.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sun, AlertCircle } from 'lucide-react-native';
+import { Sun, AlertCircle, Calendar } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
-
-interface Request {
-  id: string;
-  type: 'vacation' | 'sick';
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: 'approved' | 'pending' | 'confirmed';
-  label: string;
-}
-
-const mockRequests: Request[] = [
-  { id: '1', type: 'vacation', startDate: '23.12.', endDate: '27.12.2024', days: 5, status: 'approved', label: 'Urlaub' },
-  { id: '2', type: 'sick', startDate: '05.11.2024', endDate: '', days: 1, status: 'confirmed', label: 'Krankmeldung' },
-  { id: '3', type: 'vacation', startDate: '15.01.', endDate: '17.01.2025', days: 3, status: 'pending', label: 'Urlaub' },
-];
+import { useAuthStore } from '@/src/store/authStore';
+import { vacationRequestsCollection, statsCollection } from '@/src/lib/firestore';
+import { VacationRequest } from '@/src/types';
+import { format, differenceInDays, addDays, parseISO } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { Modal } from '@/src/components/molecules';
+import { Typography } from '@/src/components/atoms';
 
 export default function VacationScreen() {
   const { theme } = useTheme();
+  const { user } = useAuthStore();
 
-  const getStatusStyle = (status: Request['status']) => {
+  const [requests, setRequests] = useState<VacationRequest[]>([]);
+  const [remainingDays, setRemainingDays] = useState(30);
+  const [usedDays, setUsedDays] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // New request modal
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [requestType, setRequestType] = useState<'vacation' | 'sick'>('vacation');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const [userRequests, userStats] = await Promise.all([
+        vacationRequestsCollection.getForUser(user.id),
+        statsCollection.getUserStats(user.id),
+      ]);
+
+      setRequests(userRequests);
+      setRemainingDays(userStats.remainingVacationDays);
+      setUsedDays(userStats.usedVacationDays);
+    } catch (error) {
+      console.error('Error loading vacation data:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadData();
+  }, [loadData]);
+
+  const getStatusStyle = (status: VacationRequest['status']) => {
     switch (status) {
       case 'approved':
         return { bg: theme.pillSuccess, text: theme.pillSuccessText, label: 'Genehmigt' };
-      case 'confirmed':
-        return { bg: theme.pillInfo, text: theme.pillInfoText, label: 'Bestätigt' };
+      case 'rejected':
+        return { bg: theme.pillDanger, text: theme.pillDangerText, label: 'Abgelehnt' };
       case 'pending':
+      default:
         return { bg: theme.pillWarning, text: theme.pillWarningText, label: 'Ausstehend' };
     }
   };
 
+  const getTypeLabel = (type: VacationRequest['type']) => {
+    switch (type) {
+      case 'vacation': return 'Urlaub';
+      case 'sick': return 'Krankmeldung';
+      case 'other': return 'Sonstiges';
+      default: return type;
+    }
+  };
+
+  const formatDateRange = (start: string, end: string) => {
+    try {
+      const startD = parseISO(start);
+      const endD = parseISO(end);
+      if (start === end) {
+        return format(startD, 'd. MMMM yyyy', { locale: de });
+      }
+      return `${format(startD, 'd. MMM', { locale: de })} – ${format(endD, 'd. MMM yyyy', { locale: de })}`;
+    } catch {
+      return `${start} – ${end}`;
+    }
+  };
+
+  const resetForm = () => {
+    setStartDate('');
+    setEndDate('');
+    setReason('');
+  };
+
+  const openNewRequest = (type: 'vacation' | 'sick') => {
+    setRequestType(type);
+    resetForm();
+    setShowNewRequestModal(true);
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!user?.id || !startDate || !endDate) {
+      Alert.alert('Fehler', 'Bitte Start- und Enddatum angeben.');
+      return;
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      Alert.alert('Fehler', 'Bitte Datum im Format JJJJ-MM-TT eingeben (z.B. 2025-01-15).');
+      return;
+    }
+
+    try {
+      const start = parseISO(startDate);
+      const end = parseISO(endDate);
+
+      if (end < start) {
+        Alert.alert('Fehler', 'Das Enddatum muss nach dem Startdatum liegen.');
+        return;
+      }
+
+      const days = differenceInDays(end, start) + 1;
+
+      setIsSubmitting(true);
+
+      await vacationRequestsCollection.create({
+        userId: user.id,
+        type: requestType,
+        startDate,
+        endDate,
+        days,
+        reason: reason.trim() || undefined,
+      });
+
+      setShowNewRequestModal(false);
+      resetForm();
+      Alert.alert('Erfolg', 'Antrag wurde eingereicht.');
+      loadData();
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      Alert.alert('Fehler', 'Antrag konnte nicht eingereicht werden.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
+        }
+      >
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>ABWESENHEIT</Text>
@@ -56,12 +188,12 @@ export default function VacationScreen() {
         }]}>
           <View style={styles.balanceRow}>
             <View style={styles.balanceItem}>
-              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Resturlaub 2024</Text>
-              <Text style={[styles.balanceValue, { color: theme.primary }]}>18 Tage</Text>
+              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Resturlaub {new Date().getFullYear()}</Text>
+              <Text style={[styles.balanceValue, { color: theme.primary }]}>{remainingDays} Tage</Text>
             </View>
             <View style={styles.balanceItem}>
               <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Genommen</Text>
-              <Text style={[styles.balanceValue, { color: theme.text }]}>12</Text>
+              <Text style={[styles.balanceValue, { color: theme.text }]}>{usedDays}</Text>
             </View>
           </View>
         </View>
@@ -71,6 +203,7 @@ export default function VacationScreen() {
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.primary }]}
             activeOpacity={0.8}
+            onPress={() => openNewRequest('vacation')}
           >
             <Sun size={18} color={theme.textInverse} />
             <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>Urlaub</Text>
@@ -78,6 +211,7 @@ export default function VacationScreen() {
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder, borderWidth: 1 }]}
             activeOpacity={0.7}
+            onPress={() => openNewRequest('sick')}
           >
             <AlertCircle size={18} color={theme.danger} />
             <Text style={[styles.actionButtonText, { color: theme.danger }]}>Krank</Text>
@@ -87,30 +221,89 @@ export default function VacationScreen() {
         {/* Requests */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MEINE ANTRÄGE</Text>
 
-        {mockRequests.map((request) => {
-          const statusStyle = getStatusStyle(request.status);
+        {requests.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Anträge vorhanden</Text>
+          </View>
+        ) : (
+          requests.map((request) => {
+            const statusStyle = getStatusStyle(request.status);
 
-          return (
-            <View
-              key={request.id}
-              style={[styles.requestCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-            >
-              <View style={styles.requestInfo}>
-                <Text style={[styles.requestDate, { color: theme.text }]}>
-                  {request.endDate ? `${request.startDate} – ${request.endDate}` : request.startDate}
-                </Text>
-                <Text style={[styles.requestType, { color: theme.textMuted }]}>
-                  {request.label} · {request.days} {request.days === 1 ? 'Tag' : 'Tage'}
-                </Text>
+            return (
+              <View
+                key={request.id}
+                style={[styles.requestCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              >
+                <View style={styles.requestInfo}>
+                  <Text style={[styles.requestDate, { color: theme.text }]}>
+                    {formatDateRange(request.startDate, request.endDate)}
+                  </Text>
+                  <Text style={[styles.requestType, { color: theme.textMuted }]}>
+                    {getTypeLabel(request.type)} · {request.days} {request.days === 1 ? 'Tag' : 'Tage'}
+                  </Text>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                  <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
+                  <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
+                </View>
               </View>
-              <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-                <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
-                <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </ScrollView>
+
+      {/* New Request Modal */}
+      <Modal
+        visible={showNewRequestModal}
+        onClose={() => setShowNewRequestModal(false)}
+        title={requestType === 'vacation' ? 'Urlaub beantragen' : 'Krankmeldung'}
+      >
+        <Typography variant="overline" color="muted" style={styles.modalLabel}>ZEITRAUM</Typography>
+
+        <View style={styles.dateRow}>
+          <View style={styles.dateInput}>
+            <Typography variant="caption" color="muted">Von (JJJJ-MM-TT)</Typography>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              value={startDate}
+              onChangeText={setStartDate}
+              placeholder="2025-01-15"
+              placeholderTextColor={theme.textMuted}
+            />
+          </View>
+          <View style={styles.dateInput}>
+            <Typography variant="caption" color="muted">Bis (JJJJ-MM-TT)</Typography>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              value={endDate}
+              onChangeText={setEndDate}
+              placeholder="2025-01-20"
+              placeholderTextColor={theme.textMuted}
+            />
+          </View>
+        </View>
+
+        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>GRUND (OPTIONAL)</Typography>
+        <TextInput
+          style={[styles.input, styles.textArea, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+          value={reason}
+          onChangeText={setReason}
+          placeholder="z.B. Familienurlaub"
+          placeholderTextColor={theme.textMuted}
+          multiline
+          numberOfLines={3}
+        />
+
+        <TouchableOpacity
+          style={[styles.submitButton, { backgroundColor: theme.primary, opacity: isSubmitting ? 0.5 : 1 }]}
+          onPress={handleSubmitRequest}
+          disabled={isSubmitting}
+        >
+          <Typography variant="label" style={{ color: theme.textInverse }}>
+            {isSubmitting ? 'Wird eingereicht...' : 'Antrag einreichen'}
+          </Typography>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -118,6 +311,11 @@ export default function VacationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     padding: spacing.base,
@@ -188,6 +386,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.md,
   },
+  emptyCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+  },
   requestCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -224,5 +431,32 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  modalLabel: {
+    marginBottom: spacing.sm,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  dateInput: {
+    flex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: spacing.md,
+    marginTop: spacing.xs,
+    fontSize: 16,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    padding: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: spacing.xl,
   },
 });

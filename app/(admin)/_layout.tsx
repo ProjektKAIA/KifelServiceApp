@@ -1,7 +1,7 @@
 // app/(admin)/_layout.tsx
 
 import { Tabs } from 'expo-router';
-import { BarChart3, Users, Calendar, MessageCircle, Settings } from 'lucide-react-native';
+import { BarChart3, Users, Calendar, MessageCircle, Settings, Clock } from 'lucide-react-native';
 import { useTheme, useFeatures } from '@/src/hooks';
 
 export default function AdminLayout() {
@@ -61,16 +61,17 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="reports"
+        options={{
+          title: 'Stunden',
+          tabBarIcon: ({ color, size }) => <Clock size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="employees"
-        options={{
-          href: null,
         }}
       />
       <Tabs.Screen

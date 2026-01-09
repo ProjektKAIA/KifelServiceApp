@@ -1,6 +1,6 @@
 // app/(employee)/chat.tsx
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,84 +10,137 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { chatCollection, usersCollection } from '@/src/lib/firestore';
+import { ChatMessage, ChatRoom, User } from '@/src/types';
 
-interface Message {
-  id: string;
-  userId: string;
-  userName: string;
-  userInitials: string;
-  content: string;
-  time: string;
-}
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
 
-const mockMessages: Message[] = [
-  { id: '1', userId: '2', userName: 'Thomas M.', userInitials: 'TM', content: 'Guten Morgen zusammen! Wer ist heute in Forst?', time: '09:15' },
-  { id: '2', userId: '1', userName: 'Max Mustermann', userInitials: 'MM', content: 'Ich bin da! Gerade angekommen 👍', time: '09:18' },
-  { id: '3', userId: '3', userName: 'Sandra K.', userInitials: 'SK', content: 'Perfekt! Ich komme um 10 Uhr nach.', time: '09:20' },
-  { id: '4', userId: '4', userName: 'Chef', userInitials: 'CH', content: 'Kurze Teambesprechung um 15 Uhr. Bitte alle dabei sein!', time: '09:25' },
-];
-
-// Avatar colors will be derived from theme
 const getAvatarColor = (userId: string, theme: any): string => {
-  const colorMap: Record<string, keyof typeof theme> = {
-    '1': 'success',
-    '2': 'primary',
-    '3': 'warning',
-    '4': 'secondary',
-  };
-  return theme[colorMap[userId]] || theme.textMuted;
+  const colors = [theme.primary, theme.success, theme.warning, theme.secondary, theme.danger];
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 };
 
 export default function ChatScreen() {
   const { theme } = useTheme();
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
-  const currentUserId = user?.id || '1';
 
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
+  const [memberCount, setMemberCount] = useState(0);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const currentUserId = user?.id || '';
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      userId: currentUserId,
-      userName: `${user?.firstName || 'Max'} ${user?.lastName || 'Mustermann'}`,
-      userInitials: 'MM',
-      content: inputText.trim(),
-      time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+  // Initialize chat room and subscribe to messages
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
+    const initChat = async () => {
+      try {
+        // Get or create team chat room
+        const room = await chatCollection.getTeamRoom();
+        if (!room) {
+          setIsLoading(false);
+          return;
+        }
+        setChatRoom(room);
+
+        // Get member count
+        const users = await usersCollection.getAll();
+        setMemberCount(users.filter(u => u.status !== 'inactive' && u.status !== 'deleted').length);
+
+        // Subscribe to realtime messages
+        unsubscribe = chatCollection.subscribeToMessages(room.id, (newMessages) => {
+          setMessages(newMessages);
+          setIsLoading(false);
+        });
+      } catch (error) {
+        console.error('Error initializing chat:', error);
+        setIsLoading(false);
+      }
     };
 
-    setMessages([...messages, newMessage]);
+    initChat();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const handleSend = useCallback(async () => {
+    if (!inputText.trim() || !user || !chatRoom || isSending) return;
+
+    setIsSending(true);
+    const messageContent = inputText.trim();
     setInputText('');
 
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    try {
+      await chatCollection.sendMessage(
+        chatRoom.id,
+        user.id,
+        `${user.firstName} ${user.lastName}`,
+        messageContent
+      );
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setInputText(messageContent);
+    } finally {
+      setIsSending(false);
+    }
+  }, [inputText, user, chatRoom, isSending]);
+
+  const formatTime = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwn = item.userId === currentUserId;
     const avatarColor = getAvatarColor(item.userId, theme);
+    const initials = getInitials(item.userName);
+
+    if (item.isDeleted) {
+      return null;
+    }
 
     if (isOwn) {
       return (
         <View style={styles.ownMessageRow}>
           <View style={styles.ownMessageMeta}>
-            <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {item.time}</Text>
+            <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {formatTime(item.timestamp)}</Text>
           </View>
           <View style={[styles.ownMessageBubble, { backgroundColor: theme.success }]}>
             <Text style={[styles.ownMessageText, { color: theme.textInverse }]}>{item.content}</Text>
           </View>
           <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{item.userInitials}</Text>
+            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{initials}</Text>
           </View>
         </View>
       );
@@ -96,11 +149,11 @@ export default function ChatScreen() {
     return (
       <View style={styles.otherMessageRow}>
         <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-          <Text style={[styles.avatarText, { color: theme.textInverse }]}>{item.userInitials}</Text>
+          <Text style={[styles.avatarText, { color: theme.textInverse }]}>{initials}</Text>
         </View>
         <View style={styles.otherMessageContent}>
           <Text style={[styles.messageSender, { color: theme.textMuted }]}>
-            {item.userName} · {item.time}
+            {item.userName} · {formatTime(item.timestamp)}
           </Text>
           <View style={[styles.otherMessageBubble, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.otherMessageText, { color: theme.text }]}>{item.content}</Text>
@@ -110,6 +163,16 @@ export default function ChatScreen() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       {/* Header */}
@@ -117,7 +180,7 @@ export default function ChatScreen() {
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>CHAT</Text>
         </View>
-        <Text style={[styles.memberCount, { color: theme.textMuted }]}>12 Mitglieder</Text>
+        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} Mitglieder</Text>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Team-Chat</Text>
       </View>
 
@@ -130,6 +193,13 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+              Noch keine Nachrichten. Starte die Unterhaltung!
+            </Text>
+          </View>
+        }
       />
 
       {/* Input */}
@@ -142,11 +212,13 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={setInputText}
             multiline
+            editable={!isSending}
           />
           <TouchableOpacity
-            style={[styles.sendButton, { backgroundColor: theme.primary }]}
+            style={[styles.sendButton, { backgroundColor: theme.primary, opacity: isSending ? 0.5 : 1 }]}
             onPress={handleSend}
             activeOpacity={0.8}
+            disabled={isSending || !inputText.trim()}
           >
             <Send size={20} color={theme.textInverse} />
           </TouchableOpacity>
@@ -159,6 +231,11 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     padding: spacing.base,
@@ -187,6 +264,17 @@ const styles = StyleSheet.create({
   messagesList: {
     padding: spacing.base,
     paddingBottom: spacing.xl,
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing['3xl'],
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   otherMessageRow: {
     flexDirection: 'row',

@@ -1,30 +1,26 @@
 // app/(employee)/schedule.tsx
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react-native';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, getDay } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
-
-// Mock data for shifts
-const mockShifts = [
-  { id: '1', date: new Date(), startTime: '08:00', endTime: '16:00', location: 'Standort Forst', status: 'active' },
-  { id: '2', date: new Date(Date.now() + 86400000), startTime: '10:00', endTime: '18:00', location: 'Standort Cottbus', status: 'planned' },
-  { id: '3', date: new Date(Date.now() + 86400000 * 4), startTime: '08:00', endTime: '16:00', location: 'Standort Forst', status: 'planned' },
-  { id: '4', date: new Date(Date.now() + 86400000 * 5), startTime: '08:00', endTime: '16:00', location: 'Standort Forst', status: 'planned' },
-  { id: '5', date: new Date(Date.now() + 86400000 * 6), startTime: '08:00', endTime: '16:00', location: 'Standort Cottbus', status: 'planned' },
-  { id: '6', date: new Date(Date.now() + 86400000 * 11), startTime: '08:00', endTime: '16:00', location: 'Standort Forst', status: 'planned' },
-  { id: '7', date: new Date(Date.now() + 86400000 * 12), startTime: '08:00', endTime: '16:00', location: 'Standort Forst', status: 'planned' },
-];
+import { useAuthStore } from '@/src/store/authStore';
+import { shiftsCollection } from '@/src/lib/firestore';
+import { Shift } from '@/src/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 export default function ScheduleScreen() {
   const { theme } = useTheme();
+  const { user } = useAuthStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -34,17 +30,77 @@ export default function ScheduleScreen() {
   const firstDayOfWeek = getDay(monthStart);
   const paddingDays = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
-  const hasShift = (date: Date) => mockShifts.some((s) => isSameDay(s.date, date));
-  const getShiftStatus = (date: Date) => mockShifts.find((s) => isSameDay(s.date, date))?.status;
+  const loadShifts = useCallback(async () => {
+    if (!user?.id) return;
 
-  const upcomingShifts = mockShifts
-    .filter((s) => s.date >= new Date(new Date().setHours(0, 0, 0, 0)))
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .slice(0, 3);
+    try {
+      // Load shifts for current month and next month
+      const startDate = format(monthStart, 'yyyy-MM-dd');
+      const endDate = format(addMonths(monthEnd, 1), 'yyyy-MM-dd');
+
+      const userShifts = await shiftsCollection.getForUser(user.id, startDate, endDate);
+      setShifts(userShifts);
+    } catch (error) {
+      console.error('Error loading shifts:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user?.id, monthStart, monthEnd]);
+
+  useEffect(() => {
+    loadShifts();
+  }, [loadShifts]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadShifts();
+  }, [loadShifts]);
+
+  const hasShift = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return shifts.some((s) => s.date === dateStr);
+  };
+
+  const getShiftForDate = (date: Date): Shift | undefined => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return shifts.find((s) => s.date === dateStr);
+  };
+
+  const isShiftActive = (shift: Shift) => {
+    const today = new Date();
+    const shiftDate = new Date(shift.date);
+    return isSameDay(shiftDate, today) && shift.status !== 'completed' && shift.status !== 'cancelled';
+  };
+
+  const upcomingShifts = shifts
+    .filter((s) => {
+      const shiftDate = new Date(s.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return shiftDate >= today && s.status !== 'cancelled';
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
+        }
+      >
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>DIENSTPLAN</Text>
@@ -86,7 +142,6 @@ export default function ScheduleScreen() {
             {/* Month days */}
             {monthDays.map((day) => {
               const hasShiftOnDay = hasShift(day);
-              const status = getShiftStatus(day);
               const isCurrentDay = isToday(day);
 
               return (
@@ -118,46 +173,55 @@ export default function ScheduleScreen() {
         {/* Upcoming Shifts */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>KOMMENDE SCHICHTEN</Text>
 
-        {upcomingShifts.map((shift) => {
-          const isActive = shift.status === 'active';
-          const shiftIsToday = isToday(shift.date);
+        {upcomingShifts.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine kommenden Schichten</Text>
+          </View>
+        ) : (
+          upcomingShifts.map((shift) => {
+            const shiftDate = new Date(shift.date);
+            const shiftIsToday = isToday(shiftDate);
+            const active = isShiftActive(shift);
 
-          return (
-            <View
-              key={shift.id}
-              style={[styles.shiftCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-            >
-              <View style={styles.shiftInfo}>
-                <Text style={[styles.shiftDate, { color: theme.text }]}>
-                  {shiftIsToday ? 'Heute' : format(shift.date, 'EEE, d. MMM', { locale: de })}
-                </Text>
-                <Text style={[styles.shiftTime, { color: theme.textMuted }]}>
-                  {shift.startTime} – {shift.endTime} Uhr
-                </Text>
-                <View style={styles.shiftLocationRow}>
-                  <MapPin size={12} color={theme.primary} />
-                  <Text style={[styles.shiftLocation, { color: theme.primary }]}>{shift.location}</Text>
-                </View>
-              </View>
+            return (
               <View
-                style={[
-                  styles.shiftStatusPill,
-                  { backgroundColor: shiftIsToday ? theme.pillSuccess : theme.pillInfo },
-                ]}
+                key={shift.id}
+                style={[styles.shiftCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
               >
+                <View style={styles.shiftInfo}>
+                  <Text style={[styles.shiftDate, { color: theme.text }]}>
+                    {shiftIsToday ? 'Heute' : format(shiftDate, 'EEE, d. MMM', { locale: de })}
+                  </Text>
+                  <Text style={[styles.shiftTime, { color: theme.textMuted }]}>
+                    {shift.startTime} – {shift.endTime} Uhr
+                  </Text>
+                  {shift.location && (
+                    <View style={styles.shiftLocationRow}>
+                      <MapPin size={12} color={theme.primary} />
+                      <Text style={[styles.shiftLocation, { color: theme.primary }]}>{shift.location}</Text>
+                    </View>
+                  )}
+                </View>
                 <View
                   style={[
-                    styles.shiftStatusDot,
-                    { backgroundColor: shiftIsToday ? theme.pillSuccessText : theme.pillInfoText },
+                    styles.shiftStatusPill,
+                    { backgroundColor: active ? theme.pillSuccess : theme.pillInfo },
                   ]}
-                />
-                <Text style={{ color: shiftIsToday ? theme.pillSuccessText : theme.pillInfoText, fontSize: 11, fontWeight: '600' }}>
-                  {shiftIsToday ? 'Aktiv' : 'Geplant'}
-                </Text>
+                >
+                  <View
+                    style={[
+                      styles.shiftStatusDot,
+                      { backgroundColor: active ? theme.pillSuccessText : theme.pillInfoText },
+                    ]}
+                  />
+                  <Text style={{ color: active ? theme.pillSuccessText : theme.pillInfoText, fontSize: 11, fontWeight: '600' }}>
+                    {active ? 'Aktiv' : 'Geplant'}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,6 +230,11 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     padding: spacing.base,
@@ -244,6 +313,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
+  },
+  emptyCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
   },
   shiftCard: {
     flexDirection: 'row',

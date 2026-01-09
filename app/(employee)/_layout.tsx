@@ -1,7 +1,7 @@
 // app/(employee)/_layout.tsx
 
 import { Tabs } from 'expo-router';
-import { Home, Calendar, Clock, MessageCircle, User } from 'lucide-react-native';
+import { Home, Calendar, Clock, MessageCircle, User, BarChart2 } from 'lucide-react-native';
 import { useTheme, useFeatures } from '@/src/hooks';
 
 export default function EmployeeLayout() {
@@ -58,6 +58,13 @@ export default function EmployeeLayout() {
           title: 'Chat',
           tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
           href: chatEnabled ? undefined : null,
+        }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: 'Stunden',
+          tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
         }}
       />
       <Tabs.Screen

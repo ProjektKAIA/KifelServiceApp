@@ -333,6 +333,67 @@ export const timeEntriesCollection = {
     const docRef = doc(getDb(), COLLECTIONS.TIME_ENTRIES, entryId);
     await updateDoc(docRef, { breakMinutes });
   },
+
+  // Get entries for user within date range
+  getForUserInRange: async (userId: string, startDate: string, endDate: string): Promise<TimeEntry[]> => {
+    if (!isFirebaseConfigured()) return [];
+
+    const q = query(
+      collection(getDb(), COLLECTIONS.TIME_ENTRIES),
+      where('userId', '==', userId),
+      orderBy('clockIn', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          clockIn: toISOString(data.clockIn),
+          clockOut: data.clockOut ? toISOString(data.clockOut) : null,
+          breakMinutes: data.breakMinutes || 0,
+          clockInLocation: data.clockInLocation,
+          clockOutLocation: data.clockOutLocation,
+          notes: data.notes,
+        } as TimeEntry;
+      })
+      .filter(entry => {
+        const entryDate = entry.clockIn.split('T')[0];
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+  },
+
+  // Get all entries (admin) within date range
+  getAllInRange: async (startDate: string, endDate: string): Promise<TimeEntry[]> => {
+    if (!isFirebaseConfigured()) return [];
+
+    const q = query(
+      collection(getDb(), COLLECTIONS.TIME_ENTRIES),
+      orderBy('clockIn', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          clockIn: toISOString(data.clockIn),
+          clockOut: data.clockOut ? toISOString(data.clockOut) : null,
+          breakMinutes: data.breakMinutes || 0,
+          clockInLocation: data.clockInLocation,
+          clockOutLocation: data.clockOutLocation,
+          notes: data.notes,
+        } as TimeEntry;
+      })
+      .filter(entry => {
+        const entryDate = entry.clockIn.split('T')[0];
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+  },
 };
 
 // ============================================================================

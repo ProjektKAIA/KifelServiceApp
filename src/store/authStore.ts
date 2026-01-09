@@ -14,6 +14,7 @@ interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   useMockAuth: boolean;
+  _hasHydrated: boolean;
 
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
@@ -21,10 +22,10 @@ interface AuthState {
   setError: (error: string | null) => void;
   clearError: () => void;
   login: (email: string, password: string) => Promise<boolean>;
-  loginWithToken: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
-  loadStoredAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   reset: () => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 // Mock-User für Offline-Entwicklung
@@ -64,6 +65,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       error: null,
       useMockAuth: !isFirebaseConfigured(),
+      _hasHydrated: false,
+
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
@@ -91,10 +95,9 @@ export const useAuthStore = create<AuthState>()(
               return false;
             }
 
-            const token = `mock-token-${Date.now()}`;
             set({
               user: mockUser.user,
-              token,
+              token: `mock-token-${Date.now()}`,
               isAuthenticated: true,
               isLoading: false,
               error: null,
@@ -129,6 +132,8 @@ export const useAuthStore = create<AuthState>()(
 
           const token = await firebaseUser.getIdToken();
 
+          console.log('🔥 Login successful, role:', userProfile.role);
+
           set({
             user: userProfile,
             token,
@@ -141,7 +146,6 @@ export const useAuthStore = create<AuthState>()(
         } catch (err: any) {
           let errorMessage = 'Ein Fehler ist aufgetreten';
 
-          // Firebase error codes
           if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
             errorMessage = 'Ungültige Anmeldedaten';
           } else if (err.code === 'auth/user-not-found') {
@@ -159,15 +163,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loginWithToken: async (user: User, token: string) => {
-        set({
-          user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      },
-
       logout: async () => {
         try {
           if (!get().useMockAuth) {
@@ -181,38 +176,23 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
+          isLoading: false,
         });
       },
 
-      loadStoredAuth: async () => {
+      // Refresh user data from Firestore
+      refreshUser: async () => {
+        const { user, useMockAuth } = get();
+        if (!user || useMockAuth) return;
+
         try {
-          if (get().useMockAuth) {
-            set({ isLoading: false });
-            return;
+          const freshUserData = await usersCollection.get(user.id);
+          if (freshUserData) {
+            console.log('🔥 User refreshed, role:', freshUserData.role);
+            set({ user: freshUserData });
           }
-
-          // Check for existing Firebase session
-          const currentUser = firebaseAuth.getCurrentUser();
-
-          if (currentUser) {
-            const userProfile = await usersCollection.get(currentUser.uid);
-
-            if (userProfile) {
-              const token = await currentUser.getIdToken();
-              set({
-                user: userProfile,
-                token,
-                isAuthenticated: true,
-                isLoading: false,
-              });
-              return;
-            }
-          }
-
-          set({ isLoading: false });
         } catch (error) {
-          console.error('Error loading stored auth:', error);
-          set({ isLoading: false });
+          console.error('Error refreshing user:', error);
         }
       },
 
@@ -229,40 +209,74 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'kifel-auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      // WICHTIG: Nur Token speichern, NICHT die User-Daten
+      // User-Daten werden immer frisch aus Firestore geladen
       partialize: (state) => ({
-        user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        // User-ID für Refresh speichern, aber nicht die kompletten Daten
+        _userId: state.user?.id,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.isLoading = false;
+          state.setHasHydrated(true);
         }
       },
     }
   )
 );
 
-// Listen to Firebase auth state changes
-if (isFirebaseConfigured()) {
+// Initialize auth state after hydration
+let authInitialized = false;
+
+const initializeAuth = async () => {
+  if (authInitialized) return;
+  authInitialized = true;
+
+  const state = useAuthStore.getState();
+
+  if (state.useMockAuth) {
+    useAuthStore.setState({ isLoading: false });
+    return;
+  }
+
+  // Wait for Firebase Auth to initialize
   firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
-    console.log('🔥 Auth state changed:', firebaseUser ? 'signed in' : 'signed out');
+    console.log('🔥 Auth state changed:', firebaseUser ? `signed in (${firebaseUser.uid})` : 'signed out');
 
     if (!firebaseUser) {
       useAuthStore.getState().reset();
-    } else {
-      // Refresh user data on auth state change
+      return;
+    }
+
+    // Always fetch fresh user data from Firestore
+    try {
       const userProfile = await usersCollection.get(firebaseUser.uid);
 
       if (userProfile) {
         const token = await firebaseUser.getIdToken();
+        console.log('🔥 Setting user from Firestore, role:', userProfile.role);
+
         useAuthStore.setState({
           user: userProfile,
           token,
           isAuthenticated: true,
           isLoading: false,
         });
+      } else {
+        console.log('🔥 No profile found for user');
+        useAuthStore.setState({ isLoading: false });
       }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      useAuthStore.setState({ isLoading: false });
     }
   });
+};
+
+// Start initialization when Firebase is configured
+if (isFirebaseConfigured()) {
+  initializeAuth();
+} else {
+  useAuthStore.setState({ isLoading: false });
 }

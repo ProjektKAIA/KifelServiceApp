@@ -1,6 +1,7 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import {
+  initializeAuth,
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -8,13 +9,15 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   User as FirebaseUser,
-  Auth
+  Auth,
+  getReactNativePersistence
 } from 'firebase/auth';
 import {
   getFirestore,
   Firestore
 } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -44,10 +47,14 @@ let storage: FirebaseStorage | undefined;
 if (isFirebaseConfigured()) {
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
+    // Initialize Auth with AsyncStorage persistence for React Native
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
   } else {
     app = getApps()[0];
+    auth = getAuth(app);
   }
-  auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
   console.log('🔥 Firebase initialized');

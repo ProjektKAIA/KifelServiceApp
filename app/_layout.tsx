@@ -1,7 +1,7 @@
 // app/_layout.tsx
 
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
@@ -11,39 +11,51 @@ import { useTheme } from '@/src/hooks/useTheme';
 
 export default function RootLayout() {
   const { isDark } = useTheme();
-  const { user, isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
+  const { user, isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-
-  // Auth beim Start laden
-  useEffect(() => {
-    loadStoredAuth();
-  }, []);
+  const navigationState = useRootNavigationState();
 
   // Navigation basierend auf Auth-Status
   useEffect(() => {
+    // Warte bis Navigation bereit ist
+    if (!navigationState?.key) return;
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inEmployeeGroup = segments[0] === '(employee)';
-    const inAdminGroup = segments[0] === '(admin)';
+    const currentSegment = segments[0];
+    const inAuthGroup = currentSegment === '(auth)';
+    const inPublicGroup = currentSegment === '(public)';
+    const inEmployeeGroup = currentSegment === '(employee)';
+    const inAdminGroup = currentSegment === '(admin)';
+
+    console.log('🧭 Navigation check:', {
+      isAuthenticated,
+      role: user?.role,
+      currentSegment,
+      isLoading
+    });
 
     if (isAuthenticated && user) {
       // Eingeloggt - zur richtigen Gruppe navigieren
-      if (inAuthGroup || segments[0] === '(public)') {
-        if (user.role === 'admin') {
-          router.replace('/(admin)');
-        } else {
-          router.replace('/(employee)');
-        }
+      const shouldBeInAdmin = user.role === 'admin';
+      const shouldBeInEmployee = user.role === 'employee';
+
+      // Wenn in falscher Gruppe oder noch in public/auth
+      if (shouldBeInAdmin && !inAdminGroup) {
+        console.log('🧭 Navigating to admin');
+        router.replace('/(admin)');
+      } else if (shouldBeInEmployee && !inEmployeeGroup) {
+        console.log('🧭 Navigating to employee');
+        router.replace('/(employee)');
       }
     } else {
       // Nicht eingeloggt - zum öffentlichen Bereich
       if (inEmployeeGroup || inAdminGroup) {
+        console.log('🧭 Navigating to public (not authenticated)');
         router.replace('/(public)');
       }
     }
-  }, [isAuthenticated, user, segments, isLoading]);
+  }, [isAuthenticated, user, segments, isLoading, navigationState?.key]);
 
   return (
     <SafeAreaProvider>

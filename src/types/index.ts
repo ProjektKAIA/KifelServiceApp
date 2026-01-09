@@ -2,6 +2,8 @@
 
 export type UserRole = 'employee' | 'admin';
 
+export type UserStatus = 'active' | 'inactive' | 'deleted';
+
 export interface User {
   id: string;
   email: string;
@@ -9,6 +11,7 @@ export interface User {
   lastName: string;
   phone?: string;
   role: UserRole;
+  status?: UserStatus;
   avatar?: string;
   location?: string;
   vacationDaysTotal?: number;

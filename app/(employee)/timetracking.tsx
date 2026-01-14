@@ -1,6 +1,6 @@
 // app/(employee)/timetracking.tsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Play, Square, Coffee, MapPin, Clock, AlertCircle } from 'lucide-react-native';
@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 import { Typography, Button, LoadingSpinner } from '@/src/components/atoms';
-import { Card, StatusPill } from '@/src/components/molecules';
+import { Card, StatusPill, LocationPermissionModal } from '@/src/components/molecules';
 import { ScreenHeader, StatsGrid } from '@/src/components/organisms';
 
 import { useTheme, useLocation } from '@/src/hooks';
@@ -44,6 +44,9 @@ export default function TimeTrackingScreen() {
 
   const gpsEnabled = isFeatureEnabled('gpsTracking');
 
+  // Permission modal state
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+
   const currentTime = format(new Date(), 'HH:mm');
   const currentDate = format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de });
 
@@ -62,21 +65,51 @@ export default function TimeTrackingScreen() {
   }, [isWorking, gpsEnabled, startTracking, stopTracking]);
 
   const handleClockIn = async () => {
-    // Request GPS permission if enabled
-    if (gpsEnabled) {
-      const hasPermission = await requestPermission();
-      if (!hasPermission) {
-        Alert.alert(
-          'Standort-Berechtigung',
-          'Für die Zeiterfassung wird der Standort benötigt. Bitte aktivieren Sie die Standort-Berechtigung in den Einstellungen.',
-          [
-            { text: 'Trotzdem fortfahren', onPress: () => performClockIn(null) },
-            { text: 'Abbrechen', style: 'cancel' },
-          ]
-        );
-        return;
-      }
+    // Check if GPS is enabled and permission is needed
+    if (gpsEnabled && permissionStatus !== 'granted') {
+      // Show our custom permission modal first
+      setShowPermissionModal(true);
+      return;
+    }
 
+    // Permission already granted or GPS disabled - proceed
+    await proceedWithClockIn();
+  };
+
+  const handlePermissionAllow = async () => {
+    setShowPermissionModal(false);
+    const hasPermission = await requestPermission();
+
+    if (hasPermission) {
+      await proceedWithClockIn();
+    } else {
+      // System permission denied - offer to continue without location
+      Alert.alert(
+        'Standort-Berechtigung verweigert',
+        'Sie können trotzdem einstempeln, aber ohne Standorterfassung.',
+        [
+          { text: 'Ohne Standort fortfahren', onPress: () => performClockIn(null) },
+          { text: 'Abbrechen', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
+  const handlePermissionDeny = () => {
+    setShowPermissionModal(false);
+    // User declined in our modal - offer to continue without location
+    Alert.alert(
+      'Ohne Standort fortfahren?',
+      'Sie können trotzdem einstempeln, aber ohne Standorterfassung.',
+      [
+        { text: 'Ohne Standort fortfahren', onPress: () => performClockIn(null) },
+        { text: 'Abbrechen', style: 'cancel' },
+      ]
+    );
+  };
+
+  const proceedWithClockIn = async () => {
+    if (gpsEnabled && permissionStatus === 'granted') {
       const loc = await getCurrentLocation();
       performClockIn(loc);
     } else {
@@ -204,6 +237,14 @@ export default function TimeTrackingScreen() {
         </Typography>
         <StatsGrid stats={stats} />
       </ScrollView>
+
+      {/* GPS Permission Modal */}
+      <LocationPermissionModal
+        visible={showPermissionModal}
+        onAllow={handlePermissionAllow}
+        onDeny={handlePermissionDeny}
+        onClose={() => setShowPermissionModal(false)}
+      />
     </SafeAreaView>
   );
 }

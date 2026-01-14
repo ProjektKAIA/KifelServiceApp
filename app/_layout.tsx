@@ -4,10 +4,13 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import 'react-native-reanimated';
 
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { toastConfig } from '@/src/components/atoms/ToastConfig';
+import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const { isDark } = useTheme();
@@ -58,14 +61,17 @@ export default function RootLayout() {
   }, [isAuthenticated, user, segments, isLoading, navigationState?.key]);
 
   return (
-    <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(public)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(employee)" />
-        <Stack.Screen name="(admin)" />
-      </Stack>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </SafeAreaProvider>
+    <ErrorBoundary showDetails={__DEV__}>
+      <SafeAreaProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(public)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(employee)" />
+          <Stack.Screen name="(admin)" />
+        </Stack>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Toast config={toastConfig} position="top" topOffset={50} />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

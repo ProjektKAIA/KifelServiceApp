@@ -37,6 +37,7 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { useAuthStore } from '@/src/store/authStore';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
+import { toast } from '@/src/utils/toast';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
 
@@ -199,7 +200,7 @@ export default function EmployeeReportsScreen() {
 
       setDayEntries(dayStats);
     } catch (error) {
-      console.error('Error loading report data:', error);
+      toast.loadError('Arbeitsstunden');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

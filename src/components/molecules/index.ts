@@ -8,3 +8,4 @@ export { Modal } from './Modal';
 export { FilterTabs } from './FilterTabs';
 export { BackHeader } from './BackHeader';
 export { ThemeToggle } from './ThemeToggle';
+export { LocationPermissionModal } from './LocationPermissionModal';

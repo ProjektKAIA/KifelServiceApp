@@ -10,6 +10,7 @@ import {
   Switch,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -157,18 +158,27 @@ export default function SettingsScreen() {
           <Text style={[styles.headerLarge, { color: theme.text }]}>Einstellungen</Text>
         </View>
 
-        <View style={[styles.profileCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-          <View style={[styles.avatar, { backgroundColor: theme.secondary }]}>
-            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials()}</Text>
-          </View>
+        <TouchableOpacity
+          style={[styles.profileCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+          onPress={() => router.push('/(admin)/settings/profile')}
+          activeOpacity={0.7}
+        >
+          {user?.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: theme.secondary }]}>
+              <Text style={[styles.avatarText, { color: theme.textInverse }]}>{getInitials()}</Text>
+            </View>
+          )}
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: theme.text }]}>
               {user?.firstName} {user?.lastName}
             </Text>
             <Text style={[styles.profileRole, { color: theme.textMuted }]}>Administrator</Text>
+            <Text style={[styles.profileHint, { color: theme.primary }]}>Profil & Firma bearbeiten</Text>
           </View>
           <ChevronRight size={20} color={theme.textMuted} />
-        </View>
+        </TouchableOpacity>
 
         {/* Theme Selection */}
         <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>ERSCHEINUNGSBILD</Text>
@@ -239,10 +249,12 @@ const styles = StyleSheet.create({
   headerLarge: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
   profileCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.xl },
   avatar: { width: 50, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: 50, height: 50, borderRadius: 14 },
   avatarText: { fontSize: 18, fontWeight: '700' },
   profileInfo: { flex: 1, marginLeft: spacing.md },
   profileName: { fontSize: 16, fontWeight: '600' },
   profileRole: { fontSize: 13, marginTop: 2 },
+  profileHint: { fontSize: 12, marginTop: 4 },
   sectionTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: spacing.sm, marginTop: spacing.md },
   themeCard: { borderRadius: borderRadius.card, borderWidth: 1, padding: spacing.base, marginBottom: spacing.md },
   themeLabel: { fontSize: 15, fontWeight: '500', marginBottom: spacing.md },

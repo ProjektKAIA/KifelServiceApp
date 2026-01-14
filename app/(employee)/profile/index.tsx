@@ -1,10 +1,10 @@
-// app/(employee)/profile.tsx
+// app/(employee)/profile/index.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone } from 'lucide-react-native';
+import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -49,29 +49,44 @@ export default function ProfileScreen() {
         </View>
 
         {/* Avatar & Name */}
-        <View style={styles.profileHeader}>
-          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-            <Text style={[styles.avatarText, { color: theme.textInverse }]}>{userInitials}</Text>
+        <TouchableOpacity
+          style={styles.profileHeader}
+          onPress={() => router.push('/(employee)/profile/edit')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.avatarContainer]}>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.avatarText, { color: theme.textInverse }]}>{userInitials}</Text>
+              </View>
+            )}
+            <View style={[styles.editBadge, { backgroundColor: theme.secondary }]}>
+              <Camera size={12} color={theme.textInverse} />
+            </View>
           </View>
           <Text style={[styles.userName, { color: theme.text }]}>{userName}</Text>
           <Text style={[styles.userRole, { color: theme.textMuted }]}>Mitarbeiter</Text>
-        </View>
+        </TouchableOpacity>
 
         {/* Info Card */}
         <View style={[styles.infoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           <View style={styles.infoRow}>
             <Mail size={18} color={theme.textMuted} />
-            <Text style={[styles.infoText, { color: theme.text }]}>{user?.email || 'max.mustermann@kifel.de'}</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>{user?.email || '-'}</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <View style={styles.infoRow}>
             <Phone size={18} color={theme.textMuted} />
-            <Text style={[styles.infoText, { color: theme.text }]}>+49 170 1234567</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>{user?.phone || 'Nicht hinterlegt'}</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <View style={styles.infoRow}>
             <MapPin size={18} color={theme.textMuted} />
-            <Text style={[styles.infoText, { color: theme.text }]}>Standort Forst</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>
+              {user?.city ? `${user.zipCode || ''} ${user.city}`.trim() : 'Nicht hinterlegt'}
+            </Text>
           </View>
         </View>
 
@@ -115,12 +130,12 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-          onPress={() => Alert.alert('Persönliche Daten', 'Diese Funktion wird in einer zukünftigen Version verfügbar sein.')}
+          onPress={() => router.push('/(employee)/profile/edit')}
           activeOpacity={0.7}
         >
           <View style={styles.menuButtonLeft}>
             <User size={20} color={theme.textSecondary} />
-            <Text style={[styles.menuButtonText, { color: theme.text }]}>Persönliche Daten</Text>
+            <Text style={[styles.menuButtonText, { color: theme.text }]}>Persönliche Daten bearbeiten</Text>
           </View>
           <ChevronRight size={18} color={theme.textMuted} />
         </TouchableOpacity>
@@ -214,13 +229,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: spacing.md,
+  },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarText: {
     fontSize: 28,

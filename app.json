@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.amelkantarevic.KifelServiceApp"
+      "bundleIdentifier": "com.amelkantarevic.KifelServiceApp",
+      "appleTeamId": "B66382YV72"
     },
     "android": {
       "adaptiveIcon": {

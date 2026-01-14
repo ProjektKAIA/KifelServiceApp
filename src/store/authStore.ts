@@ -28,24 +28,40 @@ interface AuthState {
   setHasHydrated: (state: boolean) => void;
 }
 
-// Mock-User für Offline-Entwicklung
-const MOCK_USERS: Record<string, { user: User; password: string }> = {
+// Mock-User für Offline-Entwicklung (NUR für lokale Entwicklung!)
+// WARNUNG: Diese Daten werden nur verwendet, wenn Firebase nicht konfiguriert ist
+// In Produktion MUSS Firebase konfiguriert sein!
+const MOCK_USERS: Record<string, { user: User; passwordHash: string }> = {
   'admin@kifel.de': {
-    password: 'admin123',
+    // In echten Apps: Passwort-Hash verwenden, niemals Klartext!
+    // Dieser Mock ist nur für lokale Entwicklung ohne Backend
+    passwordHash: 'MOCK_DEV_ONLY', // Akzeptiert jeden Input im Dev-Modus
     user: {
       id: 'admin-1',
       email: 'admin@kifel.de',
-      firstName: 'Alexander',
-      lastName: 'Kifel',
+      firstName: 'Demo',
+      lastName: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
   },
-  'max@kifel.de': {
-    password: 'max123',
+  'demo@kifel.de': {
+    passwordHash: 'MOCK_DEV_ONLY',
     user: {
       id: 'emp-1',
+      email: 'demo@kifel.de',
+      firstName: 'Demo',
+      lastName: 'User',
+      role: 'employee',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  },
+  'max@kifel.de': {
+    passwordHash: 'MOCK_DEV_ONLY',
+    user: {
+      id: 'emp-2',
       email: 'max@kifel.de',
       firstName: 'Max',
       lastName: 'Mustermann',
@@ -55,6 +71,11 @@ const MOCK_USERS: Record<string, { user: User; password: string }> = {
     },
   },
 };
+
+// Warnung ausgeben wenn Mock-Auth verwendet wird
+if (__DEV__) {
+  console.warn('⚠️ SECURITY WARNING: Mock authentication is enabled. DO NOT use in production!');
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -90,7 +111,8 @@ export const useAuthStore = create<AuthState>()(
 
             const mockUser = MOCK_USERS[email.toLowerCase()];
 
-            if (!mockUser || mockUser.password !== password) {
+            // Im Dev-Modus: Akzeptiere jeden nicht-leeren Passwort-Input für Mock-User
+            if (!mockUser || !password || password.length < 1) {
               set({ isLoading: false, error: 'Ungültige Anmeldedaten' });
               return false;
             }

@@ -14,8 +14,33 @@ export interface User {
   status?: UserStatus;
   avatar?: string;
   location?: string;
+  // Erweiterte Profildaten
+  street?: string;
+  zipCode?: string;
+  city?: string;
+  birthDate?: string;
+  employeeId?: string; // Personalnummer
+  department?: string;
+  position?: string;
+  startDate?: string; // Eintrittsdatum
+  // Urlaubstage
   vacationDaysTotal?: number;
   vacationDaysUsed?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  logo?: string;
+  street?: string;
+  zipCode?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  taxId?: string; // Steuernummer
   createdAt: string;
   updatedAt: string;
 }

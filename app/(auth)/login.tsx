@@ -8,6 +8,8 @@ import { X, Users, Shield, Globe } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { firebaseAuth } from '@/src/lib/firebase';
+import { usersCollection } from '@/src/lib/firestore';
 
 // Social Media Links
 const SOCIAL_LINKS = {
@@ -35,6 +37,53 @@ export default function LoginScreen() {
       router.replace('/(employee)');
     } else {
       Alert.alert('Fehler', 'Ungültige Anmeldedaten.');
+    }
+  };
+
+  // DEV ONLY: Auto-create user if not exists and login
+  const devQuickLogin = async (
+    devEmail: string,
+    devPassword: string,
+    firstName: string,
+    lastName: string,
+    role: 'employee' | 'admin'
+  ) => {
+    try {
+      // First try normal login
+      let success = await login(devEmail, devPassword);
+
+      if (!success) {
+        // User doesn't exist - create in Firebase Auth
+        console.log('🔧 DEV: Creating user', devEmail);
+        try {
+          const userCredential = await firebaseAuth.signUp(devEmail, devPassword);
+          const uid = userCredential.user.uid;
+
+          // Create user profile in Firestore
+          await usersCollection.create(uid, {
+            email: devEmail,
+            firstName,
+            lastName,
+            role,
+          });
+
+          console.log('🔧 DEV: User created, logging in...');
+          // Now login
+          success = await login(devEmail, devPassword);
+        } catch (signupError: any) {
+          // User might exist but with wrong password
+          console.log('🔧 DEV: Signup failed:', signupError.code);
+          Alert.alert('Dev Login Fehler', signupError.message || 'User konnte nicht angelegt werden');
+          return;
+        }
+      }
+
+      if (success) {
+        router.replace(role === 'admin' ? '/(admin)' : '/(employee)');
+      }
+    } catch (error: any) {
+      console.error('Dev login error:', error);
+      Alert.alert('Fehler', error.message || 'Login fehlgeschlagen');
     }
   };
 
@@ -114,12 +163,7 @@ export default function LoginScreen() {
             <View style={styles.devButtons}>
               <TouchableOpacity
                 style={[styles.devButton, { backgroundColor: theme.pillSuccess, borderColor: theme.success }]}
-                onPress={async () => {
-                  const success = await login('max@kifel.de', 'max123');
-                  if (success) {
-                    router.replace('/(employee)');
-                  }
-                }}
+                onPress={() => devQuickLogin('max@kifel.de', 'max123', 'Max', 'Mustermann', 'employee')}
                 activeOpacity={0.7}
               >
                 <Users size={20} color={theme.pillSuccessText} />
@@ -128,12 +172,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.devButton, { backgroundColor: theme.pillSecondary, borderColor: theme.secondary }]}
-                onPress={async () => {
-                  const success = await login('admin@kifel.de', 'admin123');
-                  if (success) {
-                    router.replace('/(admin)');
-                  }
-                }}
+                onPress={() => devQuickLogin('admin@kifel.de', 'admin123', 'Demo', 'Admin', 'admin')}
                 activeOpacity={0.7}
               >
                 <Shield size={20} color={theme.pillSecondaryText} />

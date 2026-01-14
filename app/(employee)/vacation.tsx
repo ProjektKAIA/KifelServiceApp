@@ -13,6 +13,7 @@ import { format, differenceInDays, addDays, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Modal } from '@/src/components/molecules';
 import { Typography } from '@/src/components/atoms';
+import { toast } from '@/src/utils/toast';
 
 export default function VacationScreen() {
   const { theme } = useTheme();
@@ -45,7 +46,7 @@ export default function VacationScreen() {
       setRemainingDays(userStats.remainingVacationDays);
       setUsedDays(userStats.usedVacationDays);
     } catch (error) {
-      console.error('Error loading vacation data:', error);
+      toast.loadError('Urlaubsdaten');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -144,11 +145,10 @@ export default function VacationScreen() {
 
       setShowNewRequestModal(false);
       resetForm();
-      Alert.alert('Erfolg', 'Antrag wurde eingereicht.');
+      toast.success('Antrag wurde eingereicht');
       loadData();
     } catch (error) {
-      console.error('Error submitting request:', error);
-      Alert.alert('Fehler', 'Antrag konnte nicht eingereicht werden.');
+      toast.error(error, 'Antrag fehlgeschlagen');
     } finally {
       setIsSubmitting(false);
     }

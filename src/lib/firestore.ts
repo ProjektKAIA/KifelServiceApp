@@ -19,7 +19,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { User, Shift, VacationRequest, ChatMessage, ChatRoom } from '../types';
+import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company } from '../types';
 import { logError } from '../utils/errorHandler';
 
 // Helper to get db instance safely
@@ -37,6 +37,7 @@ const COLLECTIONS = {
   CHAT_ROOMS: 'chatRooms',
   CHAT_MESSAGES: 'chatMessages',
   LOCATIONS: 'locations',
+  COMPANY: 'company',
 } as const;
 
 // Helper: Convert Firestore timestamp to ISO string
@@ -903,6 +904,80 @@ export const statsCollection = {
   },
 };
 
+// ============================================================================
+// COMPANY
+// ============================================================================
+
+export const companyCollection = {
+  // Get company (singleton - only one company per app instance)
+  get: async (): Promise<Company | null> => {
+    return safeFirestoreOpSilent(
+      async () => {
+        const q = query(collection(getDb(), COLLECTIONS.COMPANY), limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) return null;
+
+        const docData = snapshot.docs[0];
+        const data = docData.data();
+        return {
+          id: docData.id,
+          ...data,
+          createdAt: toISOString(data.createdAt),
+          updatedAt: toISOString(data.updatedAt),
+        } as Company;
+      },
+      null,
+      'company.get'
+    );
+  },
+
+  // Create or update company
+  save: async (companyData: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    return safeFirestoreOp(
+      async () => {
+        // Check if company already exists
+        const existing = await companyCollection.get();
+
+        if (existing) {
+          // Update existing
+          const docRef = doc(getDb(), COLLECTIONS.COMPANY, existing.id);
+          await updateDoc(docRef, {
+            ...companyData,
+            updatedAt: serverTimestamp(),
+          });
+          return existing.id;
+        } else {
+          // Create new
+          const docRef = await addDoc(collection(getDb(), COLLECTIONS.COMPANY), {
+            ...companyData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          return docRef.id;
+        }
+      },
+      '',
+      'company.save'
+    );
+  },
+
+  // Update company
+  update: async (companyId: string, updates: Partial<Company>): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.COMPANY, companyId);
+        await updateDoc(docRef, {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        });
+      },
+      undefined,
+      'company.update'
+    );
+  },
+};
+
 // Export all collections
 export const firestoreDb = {
   users: usersCollection,
@@ -911,6 +986,7 @@ export const firestoreDb = {
   vacationRequests: vacationRequestsCollection,
   chat: chatCollection,
   stats: statsCollection,
+  company: companyCollection,
 };
 
 export default firestoreDb;

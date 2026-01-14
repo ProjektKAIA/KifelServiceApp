@@ -1,9 +1,9 @@
 // app/(employee)/timetracking.tsx
 
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, StyleSheet, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { ScrollView, View, StyleSheet, Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Play, Square, Coffee, MapPin, Clock, AlertCircle } from 'lucide-react-native';
+import { Play, Square, Coffee, MapPin, Clock, AlertCircle, Pause, Timer } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -29,6 +29,9 @@ export default function TimeTrackingScreen() {
     endBreak,
     todayHours,
     currentLocation,
+    currentEntry,
+    updateElapsedTime,
+    elapsedSeconds,
   } = useTimeStore();
 
   const {
@@ -47,8 +50,62 @@ export default function TimeTrackingScreen() {
   // Permission modal state
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
+  // Timer for elapsed time display
+  const [displayTime, setDisplayTime] = useState('00:00:00');
+  const [breakTime, setBreakTime] = useState('00:00');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const currentTime = format(new Date(), 'HH:mm');
   const currentDate = format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de });
+
+  // Format seconds to HH:MM:SS
+  const formatElapsedTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Format minutes to MM:SS
+  const formatBreakTime = (totalMinutes: number, currentBreakStart: number | null): string => {
+    let totalSeconds = totalMinutes * 60;
+    if (currentBreakStart) {
+      totalSeconds += Math.floor((Date.now() - currentBreakStart) / 1000);
+    }
+    const minutes = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Update timer every second when working
+  useEffect(() => {
+    if (isWorking) {
+      timerRef.current = setInterval(() => {
+        updateElapsedTime();
+
+        // Update break time display
+        if (currentEntry) {
+          setBreakTime(formatBreakTime(currentEntry.breakMinutes, currentEntry.breakStart));
+        }
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isWorking, currentEntry]);
+
+  // Update display time when elapsed seconds change
+  useEffect(() => {
+    setDisplayTime(formatElapsedTime(elapsedSeconds));
+  }, [elapsedSeconds]);
 
   const stats = [
     { value: todayHours.toFixed(1), label: 'Stunden heute', icon: Clock },
@@ -119,32 +176,43 @@ export default function TimeTrackingScreen() {
 
   const performClockIn = (loc: typeof location) => {
     clockIn(user?.id, loc || undefined);
-    Alert.alert('Eingestempelt', `Sie sind um ${currentTime} eingestempelt.`);
+    Alert.alert('Arbeitsbeginn', `Arbeit gestartet um ${currentTime} Uhr.`);
   };
 
   const handleClockOut = async () => {
-    Alert.alert('Ausstempeln', 'Möchten Sie sich wirklich ausstempeln?', [
+    Alert.alert('Arbeit beenden', 'Möchten Sie die Arbeit wirklich beenden?', [
       { text: 'Abbrechen', style: 'cancel' },
       {
-        text: 'Ausstempeln',
+        text: 'Beenden',
+        style: 'destructive',
         onPress: async () => {
           let loc = null;
           if (gpsEnabled && permissionStatus === 'granted') {
             loc = await getCurrentLocation();
           }
           clockOut(loc || undefined);
-          Alert.alert('Ausgestempelt', 'Sie sind jetzt ausgestempelt.');
+          Alert.alert('Arbeitszeit erfasst', `Arbeit beendet um ${format(new Date(), 'HH:mm')} Uhr.`);
         },
       },
     ]);
   };
 
-  const handleBreakToggle = () => {
-    if (isOnBreak) {
-      endBreak();
-    } else {
-      startBreak();
+  const handleStartBreak = () => {
+    startBreak();
+    Alert.alert('Pause', `Pause gestartet um ${format(new Date(), 'HH:mm')} Uhr.`);
+  };
+
+  const handleEndBreak = () => {
+    endBreak();
+    Alert.alert('Pause beendet', `Pause beendet um ${format(new Date(), 'HH:mm')} Uhr.`);
+  };
+
+  // Get start time for display
+  const getStartTimeDisplay = (): string => {
+    if (currentEntry?.clockIn) {
+      return format(new Date(currentEntry.clockIn), 'HH:mm');
     }
+    return '--:--';
   };
 
   return (
@@ -160,9 +228,50 @@ export default function TimeTrackingScreen() {
           </View>
           <StatusPill
             status={isWorking ? (isOnBreak ? 'warning' : 'active') : 'inactive'}
-            label={isWorking ? (isOnBreak ? 'Pause' : 'Aktiv') : 'Nicht eingestempelt'}
+            label={isWorking ? (isOnBreak ? 'In Pause' : 'Arbeitet') : 'Nicht aktiv'}
           />
         </Card>
+
+        {/* Working Status Display - Show when working */}
+        {isWorking && (
+          <Card style={styles.workingCard}>
+            <View style={styles.workingHeader}>
+              <View style={[styles.statusDot, { backgroundColor: isOnBreak ? theme.warning : theme.success }]} />
+              <Typography variant="label" style={{ color: theme.text }}>
+                {isOnBreak ? 'Pause läuft' : 'Arbeit läuft'}
+              </Typography>
+            </View>
+
+            <View style={styles.timeDisplayRow}>
+              {/* Arbeitszeit */}
+              <View style={styles.timeDisplayItem}>
+                <View style={styles.timeDisplayIcon}>
+                  <Timer size={20} color={theme.success} />
+                </View>
+                <Text style={[styles.timerText, { color: theme.text }]}>{displayTime}</Text>
+                <Typography variant="caption" color="muted">Arbeitszeit</Typography>
+              </View>
+
+              {/* Startzeit */}
+              <View style={styles.timeDisplayItem}>
+                <View style={styles.timeDisplayIcon}>
+                  <Play size={20} color={theme.primary} />
+                </View>
+                <Text style={[styles.timerText, { color: theme.text }]}>{getStartTimeDisplay()}</Text>
+                <Typography variant="caption" color="muted">Gestartet</Typography>
+              </View>
+
+              {/* Pausenzeit */}
+              <View style={styles.timeDisplayItem}>
+                <View style={styles.timeDisplayIcon}>
+                  <Coffee size={20} color={theme.warning} />
+                </View>
+                <Text style={[styles.timerText, { color: isOnBreak ? theme.warning : theme.text }]}>{breakTime}</Text>
+                <Typography variant="caption" color="muted">Pause</Typography>
+              </View>
+            </View>
+          </Card>
+        )}
 
         {/* Location Error */}
         {locationError && (
@@ -200,36 +309,72 @@ export default function TimeTrackingScreen() {
           </Card>
         )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionRow}>
-          {!isWorking ? (
+        {/* Action Buttons - State-based flow */}
+        <Typography variant="overline" color="muted" style={styles.sectionTitle}>
+          AKTIONEN
+        </Typography>
+
+        {/* State: Not Working - Show Arbeitsbeginn */}
+        {!isWorking && (
+          <View style={styles.actionContainer}>
             <Button
-              title={isLocationLoading ? 'Standort wird ermittelt...' : 'Einstempeln'}
+              title={isLocationLoading ? 'Standort wird ermittelt...' : 'Arbeitsbeginn'}
               icon={Play}
               onPress={handleClockIn}
               fullWidth
               disabled={isLocationLoading}
-              style={{ backgroundColor: theme.success }}
+              style={{ ...styles.primaryActionButton, backgroundColor: theme.success }}
             />
-          ) : (
-            <>
-              <Button
-                title={isOnBreak ? 'Pause beenden' : 'Pause starten'}
-                icon={Coffee}
-                variant="secondary"
-                onPress={handleBreakToggle}
-                style={styles.actionButton}
-              />
-              <Button
-                title="Ausstempeln"
-                icon={Square}
-                variant="danger"
-                onPress={handleClockOut}
-                style={styles.actionButton}
-              />
-            </>
-          )}
-        </View>
+            <Typography variant="caption" color="muted" style={styles.actionHint}>
+              Tippen Sie, um Ihre Arbeitszeit zu starten
+            </Typography>
+          </View>
+        )}
+
+        {/* State: Working but not on break - Show Beenden & Pause */}
+        {isWorking === true && isOnBreak !== true && (
+          <View style={styles.actionContainer}>
+            <Button
+              title="Arbeitsende"
+              icon={Square}
+              variant="danger"
+              onPress={handleClockOut}
+              fullWidth
+              style={styles.primaryActionButton}
+            />
+            <Button
+              title="Pause"
+              icon={Coffee}
+              onPress={handleStartBreak}
+              fullWidth
+              style={{ ...styles.secondaryActionButton, backgroundColor: theme.warning }}
+            />
+          </View>
+        )}
+
+        {/* State: On Break - Show Pause beenden & Beenden */}
+        {isWorking && isOnBreak && (
+          <View style={styles.actionContainer}>
+            <Button
+              title="Pause beenden"
+              icon={Play}
+              onPress={handleEndBreak}
+              fullWidth
+              style={{ ...styles.primaryActionButton, backgroundColor: theme.success }}
+            />
+            <Button
+              title="Arbeit beenden"
+              icon={Square}
+              variant="danger"
+              onPress={handleClockOut}
+              fullWidth
+              style={styles.secondaryActionButton}
+            />
+            <Typography variant="caption" color="muted" style={styles.actionHint}>
+              Pause beenden und weiterarbeiten
+            </Typography>
+          </View>
+        )}
 
         {/* Stats */}
         <Typography variant="overline" color="muted" style={styles.sectionTitle}>
@@ -268,6 +413,37 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '700',
   },
+  workingCard: {
+    marginBottom: spacing.base,
+    padding: spacing.base,
+  },
+  workingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  timeDisplayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  timeDisplayItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeDisplayIcon: {
+    marginBottom: 4,
+  },
+  timerText: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   locationCard: {
     marginBottom: spacing.base,
   },
@@ -279,13 +455,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  actionContainer: {
+    marginBottom: spacing.xl,
+  },
   actionRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+  },
+  buttonWrapper: {
+    flex: 1,
   },
   actionButton: {
     flex: 1,
+  },
+  primaryActionButton: {
+    height: 56,
+  },
+  secondaryActionButton: {
+    marginTop: spacing.sm,
+  },
+  actionHint: {
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   sectionTitle: {
     marginBottom: spacing.md,

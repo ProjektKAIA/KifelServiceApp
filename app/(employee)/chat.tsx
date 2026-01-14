@@ -11,14 +11,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send } from 'lucide-react-native';
+import { Send, X, AtSign } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { chatCollection, usersCollection } from '@/src/lib/firestore';
 import { ChatMessage, ChatRoom, User } from '@/src/types';
+import { moderateMessage, parseMessageWithMentions, MessagePart } from '@/src/utils/chatModeration';
 
 const getInitials = (name: string): string => {
   return name
@@ -49,6 +53,8 @@ export default function ChatScreen() {
   const [isSending, setIsSending] = useState(false);
   const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
   const [memberCount, setMemberCount] = useState(0);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [showMentionPicker, setShowMentionPicker] = useState(false);
 
   const currentUserId = user?.id || '';
 
@@ -66,9 +72,11 @@ export default function ChatScreen() {
         }
         setChatRoom(room);
 
-        // Get member count
+        // Get member count and store team members for @mentions
         const users = await usersCollection.getAll();
-        setMemberCount(users.filter(u => u.status !== 'inactive' && u.status !== 'deleted').length);
+        const activeUsers = users.filter(u => u.status !== 'inactive' && u.status !== 'deleted');
+        setMemberCount(activeUsers.length);
+        setTeamMembers(activeUsers);
 
         // Subscribe to realtime messages
         unsubscribe = chatCollection.subscribeToMessages(room.id, (newMessages) => {
@@ -95,6 +103,18 @@ export default function ChatScreen() {
 
     setIsSending(true);
     const messageContent = inputText.trim();
+
+    // Moderiere Nachricht (Schimpfwort-Filter)
+    const moderation = moderateMessage(messageContent);
+
+    if (!moderation.isClean) {
+      Alert.alert(
+        'Hinweis',
+        'Deine Nachricht enthält unangemessene Wörter. Diese wurden automatisch gefiltert.',
+        [{ text: 'OK' }]
+      );
+    }
+
     setInputText('');
 
     try {
@@ -102,7 +122,7 @@ export default function ChatScreen() {
         chatRoom.id,
         user.id,
         `${user.firstName} ${user.lastName}`,
-        messageContent
+        moderation.filteredContent // Gefilterten Inhalt senden
       );
 
       setTimeout(() => {
@@ -116,9 +136,45 @@ export default function ChatScreen() {
     }
   }, [inputText, user, chatRoom, isSending]);
 
+  // @mention einfügen
+  const handleMention = (selectedUser: User) => {
+    const mentionText = `@${selectedUser.firstName}${selectedUser.lastName} `;
+    setInputText(prev => prev + mentionText);
+    setShowMentionPicker(false);
+  };
+
   const formatTime = (timestamp: number): string => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Rendert Nachrichteninhalt mit hervorgehobenen @mentions
+  const renderMessageContent = (content: string, isOwn: boolean) => {
+    const parts = parseMessageWithMentions(content);
+
+    return (
+      <Text style={isOwn ? [styles.ownMessageText, { color: theme.textInverse }] : [styles.otherMessageText, { color: theme.text }]}>
+        {parts.map((part, index) => {
+          if (part.type === 'mention') {
+            return (
+              <Text
+                key={index}
+                style={[
+                  styles.mentionText,
+                  {
+                    color: isOwn ? '#ffffff' : theme.primary,
+                    fontWeight: '700',
+                  }
+                ]}
+              >
+                {part.content}
+              </Text>
+            );
+          }
+          return <Text key={index}>{part.content}</Text>;
+        })}
+      </Text>
+    );
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
@@ -137,7 +193,7 @@ export default function ChatScreen() {
             <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {formatTime(item.timestamp)}</Text>
           </View>
           <View style={[styles.ownMessageBubble, { backgroundColor: theme.success }]}>
-            <Text style={[styles.ownMessageText, { color: theme.textInverse }]}>{item.content}</Text>
+            {renderMessageContent(item.content, true)}
           </View>
           <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
             <Text style={[styles.avatarText, { color: theme.textInverse }]}>{initials}</Text>
@@ -156,7 +212,7 @@ export default function ChatScreen() {
             {item.userName} · {formatTime(item.timestamp)}
           </Text>
           <View style={[styles.otherMessageBubble, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.otherMessageText, { color: theme.text }]}>{item.content}</Text>
+            {renderMessageContent(item.content, false)}
           </View>
         </View>
       </View>
@@ -205,6 +261,15 @@ export default function ChatScreen() {
       {/* Input */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+          {/* @mention Button */}
+          <TouchableOpacity
+            style={[styles.mentionButton, { backgroundColor: theme.surface }]}
+            onPress={() => setShowMentionPicker(true)}
+            activeOpacity={0.7}
+          >
+            <AtSign size={20} color={theme.primary} />
+          </TouchableOpacity>
+
           <TextInput
             style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
             placeholder="Nachricht..."
@@ -224,6 +289,51 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* @mention Picker Modal */}
+      <Modal
+        visible={showMentionPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowMentionPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.mentionPickerContainer, { backgroundColor: theme.background }]}>
+            <View style={styles.mentionPickerHeader}>
+              <Text style={[styles.mentionPickerTitle, { color: theme.text }]}>Person erwähnen</Text>
+              <TouchableOpacity onPress={() => setShowMentionPicker(false)}>
+                <X size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.mentionList}>
+              {teamMembers
+                .filter(member => member.id !== currentUserId)
+                .map(member => (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[styles.mentionItem, { borderBottomColor: theme.border }]}
+                    onPress={() => handleMention(member)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.mentionAvatar, { backgroundColor: getAvatarColor(member.id, theme) }]}>
+                      <Text style={[styles.avatarText, { color: theme.textInverse }]}>
+                        {getInitials(`${member.firstName} ${member.lastName}`)}
+                      </Text>
+                    </View>
+                    <View style={styles.mentionInfo}>
+                      <Text style={[styles.mentionName, { color: theme.text }]}>
+                        {member.firstName} {member.lastName}
+                      </Text>
+                      <Text style={[styles.mentionHandle, { color: theme.primary }]}>
+                        @{member.firstName}{member.lastName}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -359,5 +469,65 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mentionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mentionText: {
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  mentionPickerContainer: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: spacing.xl,
+  },
+  mentionPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  mentionPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  mentionList: {
+    paddingHorizontal: spacing.base,
+  },
+  mentionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  mentionAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mentionInfo: {
+    marginLeft: spacing.md,
+  },
+  mentionName: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  mentionHandle: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });

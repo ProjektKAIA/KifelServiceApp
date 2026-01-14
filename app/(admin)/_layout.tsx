@@ -16,16 +16,20 @@ export default function AdminLayout() {
           backgroundColor: theme.navBackground,
           borderTopColor: theme.navBorder,
           borderTopWidth: 1,
-          paddingTop: 8,
-          paddingBottom: 24,
-          height: 80,
+          paddingTop: 12,
+          paddingBottom: 30,
+          paddingHorizontal: 8,
+          height: 92,
         },
         tabBarActiveTintColor: theme.secondary,
         tabBarInactiveTintColor: theme.navInactive,
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-          marginTop: 4,
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 6,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
         },
       }}
     >

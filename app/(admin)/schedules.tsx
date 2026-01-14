@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin } from 'lucide-react-native';
-import { format, addWeeks, subWeeks, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X } from 'lucide-react-native';
+import { format, addWeeks, subWeeks, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
+import * as DocumentPicker from 'expo-document-picker';
 
 import { Typography, Avatar } from '@/src/components/atoms';
 import { Card, Modal } from '@/src/components/molecules';
@@ -15,6 +16,7 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { spacing } from '@/src/constants/spacing';
 import { shiftsCollection, usersCollection } from '@/src/lib/firestore';
 import { Shift, User } from '@/src/types';
+import { importScheduleFromUri, ImportedSchedule, ImportedShift } from '@/src/utils/importUtils';
 
 interface DisplayShift extends Shift {
   employeeName: string;
@@ -25,9 +27,17 @@ export default function ScheduleManagementScreen() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [shifts, setShifts] = useState<DisplayShift[]>([]);
   const [employees, setEmployees] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Import state
+  const [importData, setImportData] = useState<ImportedSchedule | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [selectedImportUserId, setSelectedImportUserId] = useState<string | null>(null);
 
   // New shift form state
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
@@ -42,8 +52,11 @@ export default function ScheduleManagementScreen() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const startDate = format(weekStart, 'yyyy-MM-dd');
-      const endDate = format(weekEnd, 'yyyy-MM-dd');
+      // Calculate dates inside callback to avoid dependency issues
+      const ws = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const we = addDays(ws, 6);
+      const startDate = format(ws, 'yyyy-MM-dd');
+      const endDate = format(we, 'yyyy-MM-dd');
 
       const [shiftsData, employeesData] = await Promise.all([
         shiftsCollection.getAll(startDate, endDate),
@@ -67,7 +80,7 @@ export default function ScheduleManagementScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [weekStart, weekEnd]);
+  }, [currentWeek]);
 
   useEffect(() => {
     loadData();
@@ -141,6 +154,104 @@ export default function ScheduleManagementScreen() {
     setShowAddModal(true);
   };
 
+  // === IMPORT FUNCTIONS ===
+
+  const handlePickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]) {
+        return;
+      }
+
+      const file = result.assets[0];
+      setIsImporting(true);
+      setImportError(null);
+      setImportData(null);
+      setImportWarnings([]);
+      setSelectedImportUserId(null);
+
+      const importResult = await importScheduleFromUri(file.uri);
+
+      if (importResult.success && importResult.data) {
+        setImportData(importResult.data);
+        setImportWarnings(importResult.warnings);
+        setShowImportModal(true);
+
+        // Auto-select matching employee
+        const matchingEmployee = employees.find(
+          e => e.firstName.toLowerCase() === importResult.data!.employee.firstName.toLowerCase() &&
+               e.lastName.toLowerCase() === importResult.data!.employee.lastName.toLowerCase()
+        );
+        if (matchingEmployee) {
+          setSelectedImportUserId(matchingEmployee.id);
+        }
+      } else {
+        setImportError(importResult.error || 'Unbekannter Fehler');
+        Alert.alert('Import-Fehler', importResult.error || 'Die Datei konnte nicht gelesen werden.');
+      }
+    } catch (error) {
+      console.error('File pick error:', error);
+      Alert.alert('Fehler', 'Datei konnte nicht geöffnet werden.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importData || !selectedImportUserId) {
+      Alert.alert('Fehler', 'Bitte wählen Sie einen Mitarbeiter aus.');
+      return;
+    }
+
+    const employee = employees.find(e => e.id === selectedImportUserId);
+    if (!employee) return;
+
+    setIsImporting(true);
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const shift of importData.shifts) {
+        try {
+          const newShift: Omit<Shift, 'id'> = {
+            userId: selectedImportUserId,
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            date: shift.date,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            location: shift.client ? `${shift.client}${shift.address ? ' - ' + shift.address : ''}` : shift.address || 'Importiert',
+            status: 'scheduled',
+          };
+          await shiftsCollection.create(newShift);
+          successCount++;
+        } catch (e) {
+          errorCount++;
+          console.error('Error importing shift:', e);
+        }
+      }
+
+      setShowImportModal(false);
+      setImportData(null);
+      loadData();
+
+      if (errorCount === 0) {
+        Alert.alert('Import erfolgreich', `${successCount} Schichten wurden importiert.`);
+      } else {
+        Alert.alert('Import abgeschlossen', `${successCount} importiert, ${errorCount} fehlgeschlagen.`);
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      Alert.alert('Fehler', 'Import konnte nicht abgeschlossen werden.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -154,7 +265,22 @@ export default function ScheduleManagementScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader overline="VERWALTUNG" title="Dienstplan bearbeiten" />
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <ScreenHeader overline="VERWALTUNG" title="Dienstplan bearbeiten" />
+          </View>
+          <TouchableOpacity
+            style={[styles.importButton, { backgroundColor: theme.primary }]}
+            onPress={handlePickFile}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <ActivityIndicator size="small" color={theme.textInverse} />
+            ) : (
+              <Upload size={20} color={theme.textInverse} />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Week Navigation */}
         <View style={styles.weekNav}>
@@ -303,6 +429,119 @@ export default function ScheduleManagementScreen() {
           <Typography variant="label" style={{ color: theme.textInverse }}>Schicht hinzufügen</Typography>
         </TouchableOpacity>
       </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        visible={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData(null); }}
+        title="Dienstplan importieren"
+        subtitle={importData ? `${importData.employee.firstName} ${importData.employee.lastName}` : ''}
+      >
+        {importData && (
+          <>
+            {/* Summary */}
+            <View style={[styles.importSummary, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
+              <View style={styles.importSummaryRow}>
+                <FileSpreadsheet size={20} color={theme.primary} />
+                <View style={styles.importSummaryText}>
+                  <Typography variant="label">{importData.shifts.length} Schichten</Typography>
+                  <Typography variant="caption" color="muted">
+                    {importData.totalHours} Std. | {importData.workDays} Tage
+                  </Typography>
+                </View>
+              </View>
+              <Typography variant="caption" color="muted" style={styles.importPeriod}>
+                {importData.periodStart && importData.periodEnd
+                  ? `${format(parseISO(importData.periodStart), 'd. MMM', { locale: de })} - ${format(parseISO(importData.periodEnd), 'd. MMM yyyy', { locale: de })}`
+                  : 'Zeitraum unbekannt'}
+              </Typography>
+            </View>
+
+            {/* Warnings */}
+            {importWarnings.length > 0 && (
+              <View style={[styles.importWarning, { backgroundColor: theme.pillWarning }]}>
+                <AlertCircle size={16} color={theme.warning} />
+                <Typography variant="caption" style={{ flex: 1, marginLeft: 8 }}>
+                  {importWarnings.join(', ')}
+                </Typography>
+              </View>
+            )}
+
+            {/* Employee Selection */}
+            <Typography variant="overline" color="muted" style={styles.modalLabel}>
+              MITARBEITER ZUORDNEN
+            </Typography>
+            <ScrollView style={styles.employeeList} nestedScrollEnabled>
+              {employees.map((emp) => (
+                <TouchableOpacity
+                  key={emp.id}
+                  style={[
+                    styles.employeeOption,
+                    {
+                      backgroundColor: selectedImportUserId === emp.id ? theme.primary + '20' : theme.surface,
+                      borderColor: selectedImportUserId === emp.id ? theme.primary : theme.border,
+                    },
+                  ]}
+                  onPress={() => setSelectedImportUserId(emp.id)}
+                >
+                  <Avatar name={`${emp.firstName} ${emp.lastName}`} size="sm" />
+                  <View style={styles.employeeOptionText}>
+                    <Typography variant="body">{emp.firstName} {emp.lastName}</Typography>
+                    {importData.employee.firstName.toLowerCase() === emp.firstName.toLowerCase() &&
+                     importData.employee.lastName.toLowerCase() === emp.lastName.toLowerCase() && (
+                      <View style={[styles.matchBadge, { backgroundColor: theme.pillSuccess }]}>
+                        <CheckCircle size={10} color={theme.pillSuccessText} />
+                        <Typography variant="caption" style={{ color: theme.pillSuccessText, marginLeft: 4 }}>
+                          Match
+                        </Typography>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Preview */}
+            <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.md }}>
+              VORSCHAU (ERSTE 3)
+            </Typography>
+            {importData.shifts.slice(0, 3).map((shift, idx) => (
+              <View key={idx} style={[styles.previewShift, { borderColor: theme.border }]}>
+                <Typography variant="caption" color="muted">
+                  {format(parseISO(shift.date), 'EEE d. MMM', { locale: de })}
+                </Typography>
+                <Typography variant="body">
+                  {shift.startTime} - {shift.endTime} ({shift.hours}h)
+                </Typography>
+                <Typography variant="caption" color="muted" numberOfLines={1}>
+                  {shift.client}
+                </Typography>
+              </View>
+            ))}
+
+            {/* Import Button */}
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                {
+                  backgroundColor: theme.primary,
+                  opacity: selectedImportUserId && !isImporting ? 1 : 0.5,
+                },
+              ]}
+              onPress={handleConfirmImport}
+              disabled={!selectedImportUserId || isImporting}
+            >
+              {isImporting ? (
+                <ActivityIndicator size="small" color={theme.textInverse} />
+              ) : (
+                <Typography variant="label" style={{ color: theme.textInverse }}>
+                  {importData.shifts.length} Schichten importieren
+                </Typography>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -314,7 +553,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: { padding: spacing.base, paddingBottom: spacing['3xl'] },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing['3xl'] },
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xl },
   navButton: { padding: spacing.sm, borderRadius: 10 },
   dayContainer: { marginBottom: spacing.lg },
@@ -342,5 +581,61 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: spacing.xl,
+  },
+  // Import styles
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  importButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  importSummary: {
+    padding: spacing.base,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+  },
+  importSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  importSummaryText: {
+    marginLeft: spacing.md,
+  },
+  importPeriod: {
+    marginTop: spacing.sm,
+  },
+  importWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  employeeList: {
+    maxHeight: 180,
+    marginBottom: spacing.sm,
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  previewShift: {
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: spacing.xs,
   },
 });

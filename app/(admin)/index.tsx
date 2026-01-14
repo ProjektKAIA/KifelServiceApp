@@ -12,6 +12,7 @@ import { VacationRequest, User, AdminStats } from '@/src/types';
 import { useAuthStore } from '@/src/store/authStore';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { toast } from '@/src/utils/toast';
 
 interface OpenRequest extends VacationRequest {
   employeeName: string;
@@ -55,7 +56,7 @@ export default function AdminDashboardScreen() {
 
       setOpenRequests(requestsWithNames);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      toast.loadError('Dashboard-Daten');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -76,11 +77,10 @@ export default function AdminDashboardScreen() {
 
     try {
       await vacationRequestsCollection.updateStatus(requestId, 'approved', user.id);
-      Alert.alert('Erfolg', 'Antrag wurde genehmigt.');
+      toast.success('Antrag wurde genehmigt');
       loadData();
     } catch (error) {
-      console.error('Error approving request:', error);
-      Alert.alert('Fehler', 'Antrag konnte nicht genehmigt werden.');
+      toast.error(error, 'Genehmigung fehlgeschlagen');
     }
   };
 
@@ -98,11 +98,10 @@ export default function AdminDashboardScreen() {
           onPress: async () => {
             try {
               await vacationRequestsCollection.updateStatus(requestId, 'rejected', user.id);
-              Alert.alert('Erfolg', 'Antrag wurde abgelehnt.');
+              toast.success('Antrag wurde abgelehnt');
               loadData();
             } catch (error) {
-              console.error('Error rejecting request:', error);
-              Alert.alert('Fehler', 'Antrag konnte nicht abgelehnt werden.');
+              toast.error(error, 'Ablehnung fehlgeschlagen');
             }
           },
         },
@@ -267,8 +266,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['3xl'],
   },
   badge: {
     alignSelf: 'flex-end',

@@ -19,7 +19,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite } from '../types';
+import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification } from '../types';
 import { logError } from '../utils/errorHandler';
 
 // Helper to get db instance safely
@@ -39,6 +39,7 @@ const COLLECTIONS = {
   LOCATIONS: 'locations',
   COMPANY: 'company',
   INVITES: 'invites',
+  ADMIN_NOTIFICATIONS: 'adminNotifications',
 } as const;
 
 // Helper: Convert Firestore timestamp to ISO string
@@ -1220,6 +1221,165 @@ export const invitesCollection = {
   },
 };
 
+// ============================================================================
+// ADMIN NOTIFICATIONS (Benachrichtigungen für Admin)
+// ============================================================================
+
+export const adminNotificationsCollection = {
+  // Create a new notification (z.B. bei Profil-Änderung)
+  create: async (notification: {
+    type: AdminNotification['type'];
+    userId: string;
+    userName: string;
+    title: string;
+    message: string;
+    changes?: Record<string, { old: string; new: string }>;
+  }): Promise<AdminNotification> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS), {
+          ...notification,
+          readBy: [],
+          createdAt: serverTimestamp(),
+        });
+
+        return {
+          id: docRef.id,
+          ...notification,
+          readBy: [],
+          createdAt: new Date().toISOString(),
+        };
+      },
+      null as any,
+      'adminNotifications.create'
+    );
+  },
+
+  // Get all unread notifications (for admin)
+  getUnread: async (adminId: string): Promise<AdminNotification[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS),
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              type: data.type,
+              userId: data.userId,
+              userName: data.userName,
+              title: data.title,
+              message: data.message,
+              changes: data.changes,
+              createdAt: toISOString(data.createdAt),
+              readBy: data.readBy || [],
+              isRead: (data.readBy || []).includes(adminId),
+            } as AdminNotification;
+          })
+          .filter(n => !n.isRead);
+      },
+      [],
+      'adminNotifications.getUnread'
+    );
+  },
+
+  // Get all notifications (for admin dashboard)
+  getAll: async (adminId: string, maxResults = 20): Promise<AdminNotification[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS),
+          orderBy('createdAt', 'desc'),
+          limit(maxResults)
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: data.type,
+            userId: data.userId,
+            userName: data.userName,
+            title: data.title,
+            message: data.message,
+            changes: data.changes,
+            createdAt: toISOString(data.createdAt),
+            readBy: data.readBy || [],
+            isRead: (data.readBy || []).includes(adminId),
+          } as AdminNotification;
+        });
+      },
+      [],
+      'adminNotifications.getAll'
+    );
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string, adminId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS, notificationId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const readBy = data.readBy || [];
+          if (!readBy.includes(adminId)) {
+            await updateDoc(docRef, {
+              readBy: [...readBy, adminId],
+            });
+          }
+        }
+      },
+      undefined,
+      'adminNotifications.markAsRead'
+    );
+  },
+
+  // Mark all as read
+  markAllAsRead: async (adminId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const unread = await adminNotificationsCollection.getUnread(adminId);
+        await Promise.all(
+          unread.map(n => adminNotificationsCollection.markAsRead(n.id, adminId))
+        );
+      },
+      undefined,
+      'adminNotifications.markAllAsRead'
+    );
+  },
+
+  // Delete old notifications (cleanup)
+  deleteOld: async (daysOld = 30): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - daysOld);
+
+        const q = query(
+          collection(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS),
+          where('createdAt', '<', Timestamp.fromDate(cutoff))
+        );
+        const snapshot = await getDocs(q);
+
+        await Promise.all(
+          snapshot.docs.map(doc => deleteDoc(doc.ref))
+        );
+      },
+      undefined,
+      'adminNotifications.deleteOld'
+    );
+  },
+};
+
 // Export all collections
 export const firestoreDb = {
   users: usersCollection,
@@ -1230,6 +1390,7 @@ export const firestoreDb = {
   stats: statsCollection,
   company: companyCollection,
   invites: invitesCollection,
+  adminNotifications: adminNotificationsCollection,
 };
 
 export default firestoreDb;

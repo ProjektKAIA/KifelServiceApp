@@ -19,11 +19,43 @@ export default function DashboardScreen() {
   const greeting = getGreeting();
   const userName = user?.firstName || 'Max Mustermann';
 
-  function getGreeting() {
+  function getGreeting(): string {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Guten Morgen';
-    if (hour < 18) return 'Guten Tag';
-    return 'Guten Abend';
+    const random = Math.random();
+
+    // Frühmorgens (5-9)
+    if (hour >= 5 && hour < 9) {
+      const greetings = ['Moin!', 'Guten Morgen!', 'Moin Moin!', 'Morgen!'];
+      return greetings[Math.floor(random * greetings.length)];
+    }
+
+    // Vormittag (9-11)
+    if (hour >= 9 && hour < 11) {
+      const greetings = ['Guten Morgen!', 'Moin!', 'Morgen!', 'Schönen Vormittag!'];
+      return greetings[Math.floor(random * greetings.length)];
+    }
+
+    // Mittag (11-14)
+    if (hour >= 11 && hour < 14) {
+      const greetings = ['Mahlzeit!', 'Guten Mittag!', 'Moin!', 'Mahlzeit!', 'Guten Appetit!'];
+      return greetings[Math.floor(random * greetings.length)];
+    }
+
+    // Nachmittag (14-17)
+    if (hour >= 14 && hour < 17) {
+      const greetings = ['Moin!', 'Guten Tag!', 'Hallo!', 'Na, wie läuft\'s?'];
+      return greetings[Math.floor(random * greetings.length)];
+    }
+
+    // Abend (17-21)
+    if (hour >= 17 && hour < 21) {
+      const greetings = ['Guten Abend!', 'N\'Abend!', 'Nabend!', 'Schönen Feierabend!'];
+      return greetings[Math.floor(random * greetings.length)];
+    }
+
+    // Spät (21-5)
+    const greetings = ['Gute Nacht!', 'N\'Abend!', 'Noch wach?', 'Hallo Nachteule!'];
+    return greetings[Math.floor(random * greetings.length)];
   }
 
   return (
@@ -35,8 +67,8 @@ export default function DashboardScreen() {
         </View>
 
         {/* Header */}
-        <Text style={[styles.greeting, { color: theme.textMuted }]}>{greeting}</Text>
-        <Text style={[styles.userName, { color: theme.text }]}>{userName}</Text>
+        <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+        <Text style={[styles.userName, { color: theme.textMuted }]}>{userName}</Text>
 
         {/* Shift Card */}
         <View style={[styles.shiftCard, { 
@@ -139,12 +171,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   greeting: {
-    fontSize: 13,
-    marginBottom: 4,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   userName: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '500',
     marginBottom: spacing.lg,
   },
   shiftCard: {

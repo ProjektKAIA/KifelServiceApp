@@ -29,7 +29,7 @@ import {
 import { useTheme } from '@/src/hooks/useTheme';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
-import { usersCollection } from '@/src/lib/firestore';
+import { usersCollection, adminNotificationsCollection } from '@/src/lib/firestore';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -116,6 +116,34 @@ export default function EditProfileScreen() {
 
     setIsSaving(true);
     try {
+      // Track changes for admin notification
+      const changes: Record<string, { old: string; new: string }> = {};
+
+      if (firstName.trim() !== (user.firstName || '')) {
+        changes['Vorname'] = { old: user.firstName || '-', new: firstName.trim() };
+      }
+      if (lastName.trim() !== (user.lastName || '')) {
+        changes['Nachname'] = { old: user.lastName || '-', new: lastName.trim() };
+      }
+      if (phone.trim() !== (user.phone || '')) {
+        changes['Telefon'] = { old: user.phone || '-', new: phone.trim() || '-' };
+      }
+      if (street.trim() !== (user.street || '')) {
+        changes['Straße'] = { old: user.street || '-', new: street.trim() || '-' };
+      }
+      if (zipCode.trim() !== (user.zipCode || '')) {
+        changes['PLZ'] = { old: user.zipCode || '-', new: zipCode.trim() || '-' };
+      }
+      if (city.trim() !== (user.city || '')) {
+        changes['Stadt'] = { old: user.city || '-', new: city.trim() || '-' };
+      }
+      if (birthDate.trim() !== (user.birthDate || '')) {
+        changes['Geburtsdatum'] = { old: user.birthDate || '-', new: birthDate.trim() || '-' };
+      }
+      if (avatar !== (user.avatar || '')) {
+        changes['Profilfoto'] = { old: user.avatar ? 'vorhanden' : '-', new: avatar ? 'geändert' : 'entfernt' };
+      }
+
       await usersCollection.update(user.id, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -126,6 +154,19 @@ export default function EditProfileScreen() {
         birthDate: birthDate.trim(),
         avatar: avatar,
       });
+
+      // Send admin notification if there are changes
+      if (Object.keys(changes).length > 0) {
+        const changedFields = Object.keys(changes).join(', ');
+        await adminNotificationsCollection.create({
+          type: 'profile_change',
+          userId: user.id,
+          userName: `${firstName.trim()} ${lastName.trim()}`,
+          title: 'Profil geändert',
+          message: `${firstName.trim()} ${lastName.trim()} hat folgende Daten geändert: ${changedFields}`,
+          changes,
+        });
+      }
 
       // Update local state
       setUser({

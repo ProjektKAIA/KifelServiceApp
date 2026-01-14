@@ -1,19 +1,13 @@
 // app/(public)/index.tsx
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Info, Mail, Users, Lock, Globe } from 'lucide-react-native';
+import { Info, Mail, Users, Lock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
-
-// Social Media Links
-const SOCIAL_LINKS = {
-  website: 'https://kifel-service.com',
-  instagram: 'https://www.instagram.com/kifel.service/',
-  facebook: 'https://www.facebook.com/KifelService/',
-};
+import { SocialMediaButtons } from '@/src/components/molecules';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -62,36 +56,7 @@ export default function WelcomeScreen() {
 
         {/* Social Media Links */}
         <View style={styles.socialSection}>
-          <Text style={[styles.socialLabel, { color: theme.textMuted }]}>FOLGEN SIE UNS</Text>
-          <View style={styles.socialButtons}>
-            <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-              onPress={() => Linking.openURL(SOCIAL_LINKS.website)}
-              activeOpacity={0.7}
-            >
-              <Globe size={26} color={theme.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-              onPress={() => Linking.openURL(SOCIAL_LINKS.instagram)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/174/174855.png' }}
-                style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-              onPress={() => Linking.openURL(SOCIAL_LINKS.facebook)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' }}
-                style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
-              />
-            </TouchableOpacity>
-          </View>
+          <SocialMediaButtons size="medium" glassEffect={true} />
         </View>
 
         {/* Login Button */}
@@ -142,9 +107,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     padding: 20,
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.6)',
+    borderLeftColor: 'rgba(255,255,255,0.4)',
+    borderRightColor: 'rgba(0,0,0,0.1)',
+    borderBottomColor: 'rgba(0,0,0,0.15)',
     marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   menuButtonText: {
     fontSize: 17,
@@ -164,7 +138,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     padding: 22,
-    borderRadius: borderRadius.card,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.4)',
+    borderLeftColor: 'rgba(255,255,255,0.3)',
+    borderRightColor: 'rgba(0,0,0,0.2)',
+    borderBottomColor: 'rgba(0,0,0,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
   },
   loginButtonText: {
     fontSize: 18,
@@ -177,28 +161,5 @@ const styles = StyleSheet.create({
   },
   socialSection: {
     marginTop: spacing.xl,
-    alignItems: 'center',
-  },
-  socialLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: spacing.md,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  socialButton: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialIcon: {
-    width: 26,
-    height: 26,
   },
 });

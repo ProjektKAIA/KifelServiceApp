@@ -4,19 +4,15 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X, Users, Shield, Globe } from 'lucide-react-native';
+import { X, Users, Shield, Eye, EyeOff, Check, Phone } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { firebaseAuth } from '@/src/lib/firebase';
 import { usersCollection } from '@/src/lib/firestore';
-
-// Social Media Links
-const SOCIAL_LINKS = {
-  website: 'https://kifel-service.com',
-  instagram: 'https://www.instagram.com/kifel.service/',
-  facebook: 'https://www.facebook.com/KifelService/',
-};
+import { SocialMediaButtons } from '@/src/components/molecules';
+import { validateLoginInput } from '@/src/utils/validation';
+import { checkLoginAllowed, recordFailedLogin, recordSuccessfulLogin } from '@/src/utils/rateLimiter';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,18 +21,38 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(true);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Fehler', 'Bitte füllen Sie alle Felder aus.');
+    // Input Validation
+    const validation = validateLoginInput(email, password);
+    if (!validation.isValid) {
+      Alert.alert('Fehler', validation.error || 'Ungültige Eingabe');
       return;
     }
 
-    const success = await login(email, password);
+    // Rate Limiting Check
+    const rateLimit = await checkLoginAllowed(validation.email);
+    if (!rateLimit.allowed) {
+      Alert.alert('Gesperrt', rateLimit.message || 'Zu viele Versuche');
+      return;
+    }
+
+    // Login Versuch
+    const success = await login(validation.email, validation.password);
+
     if (success) {
+      await recordSuccessfulLogin(validation.email);
       router.replace('/(employee)');
     } else {
-      Alert.alert('Fehler', 'Ungültige Anmeldedaten.');
+      const result = await recordFailedLogin(validation.email);
+
+      if (result.message) {
+        Alert.alert('Fehler', `Ungültige Anmeldedaten.\n${result.message}`);
+      } else {
+        Alert.alert('Fehler', 'Ungültige Anmeldedaten.');
+      }
     }
   };
 
@@ -129,18 +145,50 @@ export default function LoginScreen() {
             keyboardType="email-address"
           />
 
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: theme.inputBackground, 
-              borderColor: theme.inputBorder,
-              color: theme.text 
-            }]}
-            placeholder="Passwort"
-            placeholderTextColor={theme.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={[styles.passwordContainer, {
+            backgroundColor: theme.inputBackground,
+            borderColor: theme.inputBorder
+          }]}>
+            <TextInput
+              style={[styles.passwordInput, { color: theme.text }]}
+              placeholder="Passwort"
+              placeholderTextColor={theme.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.passwordToggle}
+              onPress={() => setShowPassword(!showPassword)}
+              activeOpacity={0.7}
+            >
+              {showPassword ? (
+                <EyeOff size={20} color={theme.textMuted} />
+              ) : (
+                <Eye size={20} color={theme.textMuted} />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Stay Logged In */}
+          <TouchableOpacity
+            style={styles.stayLoggedInRow}
+            onPress={() => setStayLoggedIn(!stayLoggedIn)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.checkbox,
+              {
+                borderColor: stayLoggedIn ? theme.primary : theme.inputBorder,
+                backgroundColor: stayLoggedIn ? theme.primary : 'transparent'
+              }
+            ]}>
+              {stayLoggedIn && <Check size={14} color={theme.textInverse} />}
+            </View>
+            <Text style={[styles.stayLoggedInText, { color: theme.text }]}>
+              Angemeldet bleiben
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.loginButton, { backgroundColor: theme.primary }, isLoading && styles.loginButtonDisabled]}
@@ -153,9 +201,19 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={[styles.helpText, { color: theme.textMuted }]}>
-            Passwort vergessen?{'\n'}Bitte an die Personalabteilung wenden.
-          </Text>
+          <View style={styles.helpSection}>
+            <Text style={[styles.helpText, { color: theme.textMuted }]}>
+              Passwort vergessen? Bitte an den Support wenden.
+            </Text>
+            <TouchableOpacity
+              style={[styles.supportButton, { backgroundColor: theme.primary }]}
+              onPress={() => Linking.openURL('tel:+4921312945497')}
+              activeOpacity={0.7}
+            >
+              <Phone size={16} color={theme.textInverse} />
+              <Text style={[styles.supportButtonText, { color: theme.textInverse }]}>Support anrufen</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Dev Access */}
           <View style={[styles.devSection, { borderTopColor: theme.borderLight }]}>
@@ -184,36 +242,7 @@ export default function LoginScreen() {
 
           {/* Social Media Links */}
           <View style={styles.socialSection}>
-            <Text style={[styles.socialLabel, { color: theme.textMuted }]}>BESUCHEN SIE UNS</Text>
-            <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-                onPress={() => Linking.openURL(SOCIAL_LINKS.website)}
-                activeOpacity={0.7}
-              >
-                <Globe size={20} color={theme.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-                onPress={() => Linking.openURL(SOCIAL_LINKS.instagram)}
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/174/174855.png' }}
-                  style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-                onPress={() => Linking.openURL(SOCIAL_LINKS.facebook)}
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' }}
-                  style={[styles.socialIcon, { tintColor: theme.textSecondary }]}
-                />
-              </TouchableOpacity>
-            </View>
+            <SocialMediaButtons size="small" labelText="BESUCHEN SIE UNS" />
           </View>
         </View>
       </View>
@@ -281,6 +310,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     fontSize: 15,
   },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    borderRadius: borderRadius.input,
+    borderWidth: 1,
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: spacing.base,
+    fontSize: 15,
+  },
+  passwordToggle: {
+    paddingHorizontal: spacing.base,
+    height: '100%',
+    justifyContent: 'center',
+  },
+  stayLoggedInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stayLoggedInText: {
+    marginLeft: spacing.sm,
+    fontSize: 14,
+  },
   loginButton: {
     height: 52,
     borderRadius: borderRadius.input,
@@ -295,11 +359,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  helpSection: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
   helpText: {
     fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
-    marginTop: spacing.lg,
+  },
+  supportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
+  },
+  supportButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   devSection: {
     marginTop: spacing.xl,
@@ -336,28 +415,5 @@ const styles = StyleSheet.create({
   },
   socialSection: {
     marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  socialLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  socialButton: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialIcon: {
-    width: 20,
-    height: 20,
   },
 });

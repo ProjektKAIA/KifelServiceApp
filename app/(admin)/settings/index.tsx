@@ -138,7 +138,7 @@ export default function SettingsScreen() {
       title: 'SYSTEM',
       items: [
         { icon: Clock, label: 'Arbeitszeit-Regeln', onPress: () => router.push('/(admin)/settings/workinghours') },
-        { icon: Database, label: 'Daten exportieren', onPress: () => Alert.alert('Export', 'Daten werden exportiert...') },
+        { icon: Database, label: 'Daten exportieren', onPress: () => router.push('/(admin)/settings/export') },
         { icon: Shield, label: 'Datenschutz & Sicherheit', onPress: () => router.push('/(admin)/settings/privacy') },
       ],
     },

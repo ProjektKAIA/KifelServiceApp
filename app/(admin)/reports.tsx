@@ -24,6 +24,11 @@ import {
   FileText,
   FileSpreadsheet,
   X,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Coffee,
 } from 'lucide-react-native';
 import {
   format,
@@ -62,6 +67,7 @@ interface EmployeeStats {
   netHours: number;
   netMinutes: number;
   entriesCount: number;
+  entries: TimeEntry[]; // Store individual entries for detail view
 }
 
 const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
@@ -91,6 +97,8 @@ export default function AdminReportsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailEmployee, setDetailEmployee] = useState<{ user: User; stats: EmployeeStats } | null>(null);
 
   // Calculate date range based on period type
   const getDateRange = useCallback((date: Date, type: PeriodType): { start: Date; end: Date } => {
@@ -204,6 +212,7 @@ export default function AdminReportsScreen() {
           netHours: 0,
           netMinutes: 0,
           entriesCount: 0,
+          entries: [],
         });
       });
 
@@ -219,6 +228,7 @@ export default function AdminReportsScreen() {
         stats.breakMinutes += breakMinutes;
         stats.netMinutes += netMinutes;
         stats.entriesCount += 1;
+        stats.entries.push(entry);
       });
 
       // Convert to hours and sort
@@ -295,6 +305,38 @@ export default function AdminReportsScreen() {
 
   const formatHoursMinutes = (hours: number, minutes: number): string => {
     return `${hours}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Open employee detail modal
+  const handleOpenDetail = (stats: EmployeeStats) => {
+    const user = employees.find(e => e.id === stats.userId);
+    if (user) {
+      setDetailEmployee({ user, stats });
+      setShowDetailModal(true);
+    }
+  };
+
+  // Format time entry for display
+  const formatTimeEntry = (entry: TimeEntry) => {
+    const clockIn = new Date(entry.clockIn);
+    const clockOut = entry.clockOut ? new Date(entry.clockOut) : null;
+    const { grossMinutes, breakMinutes } = calculateHours(entry);
+    const netMinutes = grossMinutes - breakMinutes;
+    const netHours = Math.floor(netMinutes / 60);
+    const netMins = netMinutes % 60;
+
+    return {
+      date: format(clockIn, 'EEE, d. MMM', { locale: de }),
+      dateShort: format(clockIn, 'dd.MM.', { locale: de }),
+      clockIn: format(clockIn, 'HH:mm'),
+      clockOut: clockOut ? format(clockOut, 'HH:mm') : '--:--',
+      grossHours: Math.floor(grossMinutes / 60),
+      grossMins: grossMinutes % 60,
+      breakMins: breakMinutes,
+      netHours,
+      netMins,
+      location: entry.clockInLocation?.address || entry.clockOutLocation?.address || null,
+    };
   };
 
   if (isLoading) {
@@ -464,9 +506,11 @@ export default function AdminReportsScreen() {
           </View>
         ) : (
           employeeStats.map((stats) => (
-            <View
+            <TouchableOpacity
               key={stats.userId}
               style={[styles.statsCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+              onPress={() => handleOpenDetail(stats)}
+              activeOpacity={0.7}
             >
               <View style={styles.statsHeader}>
                 <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
@@ -486,6 +530,7 @@ export default function AdminReportsScreen() {
                   </Text>
                   <Text style={[styles.statsHoursLabel, { color: theme.textMuted }]}>Stunden</Text>
                 </View>
+                <ChevronRight size={20} color={theme.textMuted} style={{ marginLeft: 8 }} />
               </View>
               <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
                 <View style={styles.statsDetailItem}>
@@ -507,7 +552,7 @@ export default function AdminReportsScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
@@ -549,6 +594,160 @@ export default function AdminReportsScreen() {
             ))}
           </Pressable>
         </Pressable>
+      </Modal>
+
+      {/* Employee Detail Modal */}
+      <Modal
+        visible={showDetailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDetailModal(false)}
+      >
+        <View style={[styles.detailModalContainer, { backgroundColor: theme.background }]}>
+          {/* Header */}
+          <View style={[styles.detailHeader, { borderBottomColor: theme.border }]}>
+            <TouchableOpacity onPress={() => setShowDetailModal(false)} style={styles.detailCloseButton}>
+              <X size={24} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>Mitarbeiter-Details</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {detailEmployee && (
+            <ScrollView contentContainerStyle={styles.detailContent}>
+              {/* Employee Info Card */}
+              <View style={[styles.detailInfoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                <View style={styles.detailInfoHeader}>
+                  <View style={[styles.detailAvatar, { backgroundColor: theme.primary }]}>
+                    <Text style={[styles.detailAvatarText, { color: theme.textInverse }]}>
+                      {detailEmployee.user.firstName[0]}{detailEmployee.user.lastName[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.detailInfoMain}>
+                    <Text style={[styles.detailName, { color: theme.text }]}>
+                      {detailEmployee.user.firstName} {detailEmployee.user.lastName}
+                    </Text>
+                    <View style={[styles.detailRoleBadge, { backgroundColor: detailEmployee.user.role === 'admin' ? theme.pillInfo : theme.pillSecondary }]}>
+                      <Text style={[styles.detailRoleText, { color: detailEmployee.user.role === 'admin' ? theme.primary : theme.pillSecondaryText }]}>
+                        {detailEmployee.user.role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Contact Info */}
+                <View style={[styles.detailContactSection, { borderTopColor: theme.border }]}>
+                  {detailEmployee.user.email && (
+                    <View style={styles.detailContactRow}>
+                      <Mail size={16} color={theme.textMuted} />
+                      <Text style={[styles.detailContactText, { color: theme.text }]}>{detailEmployee.user.email}</Text>
+                    </View>
+                  )}
+                  {detailEmployee.user.phone && (
+                    <View style={styles.detailContactRow}>
+                      <Phone size={16} color={theme.textMuted} />
+                      <Text style={[styles.detailContactText, { color: theme.text }]}>{detailEmployee.user.phone}</Text>
+                    </View>
+                  )}
+                  {detailEmployee.user.location && (
+                    <View style={styles.detailContactRow}>
+                      <MapPin size={16} color={theme.textMuted} />
+                      <Text style={[styles.detailContactText, { color: theme.text }]}>{detailEmployee.user.location}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Stats Summary */}
+              <Text style={[styles.detailSectionTitle, { color: theme.textMuted }]}>
+                ZEITRAUM: {getPeriodLabel().toUpperCase()}
+              </Text>
+              <View style={[styles.detailStatsCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
+                <View style={styles.detailStatsRow}>
+                  <View style={styles.detailStatItem}>
+                    <Clock size={18} color={theme.primary} />
+                    <Text style={[styles.detailStatValue, { color: theme.primary }]}>
+                      {formatHoursMinutes(detailEmployee.stats.netHours, detailEmployee.stats.netMinutes)}h
+                    </Text>
+                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>Netto</Text>
+                  </View>
+                  <View style={styles.detailStatItem}>
+                    <Calendar size={18} color={theme.textSecondary} />
+                    <Text style={[styles.detailStatValue, { color: theme.text }]}>
+                      {detailEmployee.stats.entriesCount}
+                    </Text>
+                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>Einträge</Text>
+                  </View>
+                  <View style={styles.detailStatItem}>
+                    <Coffee size={18} color={theme.textSecondary} />
+                    <Text style={[styles.detailStatValue, { color: theme.text }]}>
+                      {Math.floor(detailEmployee.stats.breakMinutes / 60)}:{(detailEmployee.stats.breakMinutes % 60).toString().padStart(2, '0')}h
+                    </Text>
+                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>Pause</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Time Entries List */}
+              <Text style={[styles.detailSectionTitle, { color: theme.textMuted }]}>ZEITEINTRÄGE</Text>
+
+              {detailEmployee.stats.entries.length === 0 ? (
+                <View style={[styles.detailEmptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                  <Text style={[styles.detailEmptyText, { color: theme.textMuted }]}>
+                    Keine Einträge in diesem Zeitraum
+                  </Text>
+                </View>
+              ) : (
+                detailEmployee.stats.entries
+                  .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
+                  .map((entry, index) => {
+                    const formatted = formatTimeEntry(entry);
+                    return (
+                      <View
+                        key={entry.id || index}
+                        style={[styles.detailEntryCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                      >
+                        <View style={styles.detailEntryHeader}>
+                          <Text style={[styles.detailEntryDate, { color: theme.text }]}>{formatted.date}</Text>
+                          <Text style={[styles.detailEntryHours, { color: theme.primary }]}>
+                            {formatHoursMinutes(formatted.netHours, formatted.netMins)}h
+                          </Text>
+                        </View>
+                        <View style={styles.detailEntryTimes}>
+                          <View style={styles.detailEntryTimeItem}>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Kommen</Text>
+                            <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>{formatted.clockIn}</Text>
+                          </View>
+                          <View style={styles.detailEntryTimeItem}>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Gehen</Text>
+                            <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>{formatted.clockOut}</Text>
+                          </View>
+                          <View style={styles.detailEntryTimeItem}>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Pause</Text>
+                            <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>{formatted.breakMins} min</Text>
+                          </View>
+                          <View style={styles.detailEntryTimeItem}>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Brutto</Text>
+                            <Text style={[styles.detailEntryTimeValue, { color: theme.textSecondary }]}>
+                              {formatHoursMinutes(formatted.grossHours, formatted.grossMins)}h
+                            </Text>
+                          </View>
+                        </View>
+                        {formatted.location && (
+                          <View style={[styles.detailEntryLocation, { borderTopColor: theme.border }]}>
+                            <MapPin size={12} color={theme.textMuted} />
+                            <Text style={[styles.detailEntryLocationText, { color: theme.textMuted }]} numberOfLines={1}>
+                              {formatted.location}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+              )}
+            </ScrollView>
+          )}
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -811,5 +1010,174 @@ const styles = StyleSheet.create({
   exportOptionDesc: {
     fontSize: 13,
     marginTop: 2,
+  },
+  // Detail Modal Styles
+  detailModalContainer: {
+    flex: 1,
+    paddingTop: 50,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  detailCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  detailContent: {
+    padding: spacing.base,
+    paddingBottom: spacing['3xl'],
+  },
+  detailInfoCard: {
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+  },
+  detailInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+  },
+  detailAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailAvatarText: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  detailInfoMain: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  detailName: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  detailRoleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  detailRoleText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  detailContactSection: {
+    padding: spacing.base,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+  },
+  detailContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailContactText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  detailSectionTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  detailStatsCard: {
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+  },
+  detailStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  detailStatItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  detailStatLabel: {
+    fontSize: 11,
+  },
+  detailEmptyCard: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  detailEmptyText: {
+    fontSize: 14,
+  },
+  detailEntryCard: {
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  detailEntryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.base,
+    paddingBottom: spacing.sm,
+  },
+  detailEntryDate: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  detailEntryHours: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  detailEntryTimes: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
+  },
+  detailEntryTimeItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  detailEntryTimeLabel: {
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  detailEntryTimeValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  detailEntryLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderTopWidth: 1,
+  },
+  detailEntryLocationText: {
+    fontSize: 12,
+    flex: 1,
   },
 });

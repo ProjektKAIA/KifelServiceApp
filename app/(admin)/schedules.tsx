@@ -3,8 +3,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X } from 'lucide-react-native';
-import { format, addWeeks, subWeeks, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin, Upload, Download, FileSpreadsheet, FileText, CheckCircle, AlertCircle, X } from 'lucide-react-native';
+import {
+  format,
+  addWeeks,
+  subWeeks,
+  startOfWeek,
+  addDays,
+  isSameDay,
+  parseISO,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  addYears,
+  subYears,
+  startOfYear,
+  endOfYear,
+  addDays as addDay,
+  subDays,
+  eachDayOfInterval,
+  getDaysInMonth,
+} from 'date-fns';
 import { de } from 'date-fns/locale';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -17,14 +37,32 @@ import { spacing } from '@/src/constants/spacing';
 import { shiftsCollection, usersCollection } from '@/src/lib/firestore';
 import { Shift, User } from '@/src/types';
 import { importScheduleFromUri, ImportedSchedule, ImportedShift } from '@/src/utils/importUtils';
+import { exportSchedule, ExportFormat, ExportShiftData } from '@/src/utils/exportUtils';
 
 interface DisplayShift extends Shift {
   employeeName: string;
 }
 
+type ViewMode = 'day' | 'week' | 'month' | 'year';
+
+const viewModeLabels: Record<ViewMode, string> = {
+  day: 'Tag',
+  week: 'Woche',
+  month: 'Monat',
+  year: 'Jahr',
+};
+
+const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
+  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
+  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
+  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
+];
+
 export default function ScheduleManagementScreen() {
   const { theme } = useTheme();
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  // Store date as ISO string to prevent reference comparison issues
+  const [currentDateStr, setCurrentDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -39,27 +77,67 @@ export default function ScheduleManagementScreen() {
   const [isImporting, setIsImporting] = useState(false);
   const [selectedImportUserId, setSelectedImportUserId] = useState<string | null>(null);
 
+  // Export state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
   // New shift form state
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('16:00');
   const [location, setLocation] = useState('');
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = addDays(weekStart, 6);
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Parse current date from string
+  const currentDate = React.useMemo(() => parseISO(currentDateStr), [currentDateStr]);
+
+  // Helper to update date
+  const setCurrentDate = useCallback((date: Date) => {
+    setCurrentDateStr(format(date, 'yyyy-MM-dd'));
+  }, []);
+
+  // Calculate date range based on view mode
+  const dateRange = React.useMemo(() => {
+    switch (viewMode) {
+      case 'day':
+        return {
+          startStr: currentDateStr,
+          endStr: currentDateStr,
+          days: [currentDate],
+        };
+      case 'week': {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        return {
+          startStr: format(weekStart, 'yyyy-MM-dd'),
+          endStr: format(addDays(weekStart, 6), 'yyyy-MM-dd'),
+          days: Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+        };
+      }
+      case 'month': {
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfMonth(currentDate);
+        return {
+          startStr: format(monthStart, 'yyyy-MM-dd'),
+          endStr: format(monthEnd, 'yyyy-MM-dd'),
+          days: eachDayOfInterval({ start: monthStart, end: monthEnd }),
+        };
+      }
+      case 'year': {
+        const yearStart = startOfYear(currentDate);
+        const yearEnd = endOfYear(currentDate);
+        return {
+          startStr: format(yearStart, 'yyyy-MM-dd'),
+          endStr: format(yearEnd, 'yyyy-MM-dd'),
+          days: [], // For year view, we'll group by month
+        };
+      }
+    }
+  }, [viewMode, currentDateStr, currentDate]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Calculate dates inside callback to avoid dependency issues
-      const ws = startOfWeek(currentWeek, { weekStartsOn: 1 });
-      const we = addDays(ws, 6);
-      const startDate = format(ws, 'yyyy-MM-dd');
-      const endDate = format(we, 'yyyy-MM-dd');
-
       const [shiftsData, employeesData] = await Promise.all([
-        shiftsCollection.getAll(startDate, endDate),
+        shiftsCollection.getAll(dateRange.startStr, dateRange.endStr),
         usersCollection.getAll(),
       ]);
 
@@ -80,11 +158,74 @@ export default function ScheduleManagementScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentWeek]);
+  }, [dateRange.startStr, dateRange.endStr]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Navigation functions
+  const navigatePrevious = () => {
+    switch (viewMode) {
+      case 'day':
+        setCurrentDate(subDays(currentDate, 1));
+        break;
+      case 'week':
+        setCurrentDate(subWeeks(currentDate, 1));
+        break;
+      case 'month':
+        setCurrentDate(subMonths(currentDate, 1));
+        break;
+      case 'year':
+        setCurrentDate(subYears(currentDate, 1));
+        break;
+    }
+  };
+
+  const navigateNext = () => {
+    switch (viewMode) {
+      case 'day':
+        setCurrentDate(addDays(currentDate, 1));
+        break;
+      case 'week':
+        setCurrentDate(addWeeks(currentDate, 1));
+        break;
+      case 'month':
+        setCurrentDate(addMonths(currentDate, 1));
+        break;
+      case 'year':
+        setCurrentDate(addYears(currentDate, 1));
+        break;
+    }
+  };
+
+  const getNavigationLabel = (): string => {
+    switch (viewMode) {
+      case 'day':
+        return format(currentDate, 'EEEE, d. MMMM yyyy', { locale: de });
+      case 'week': {
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        return `${format(weekStart, 'd. MMM', { locale: de })} - ${format(addDays(weekStart, 6), 'd. MMM yyyy', { locale: de })}`;
+      }
+      case 'month':
+        return format(currentDate, 'MMMM yyyy', { locale: de });
+      case 'year':
+        return format(currentDate, 'yyyy');
+    }
+  };
+
+  // Get shifts grouped by month for year view
+  const getShiftsByMonth = () => {
+    const months: { [key: string]: DisplayShift[] } = {};
+    shifts.forEach(shift => {
+      const monthKey = shift.date.substring(0, 7); // YYYY-MM
+      if (!months[monthKey]) {
+        months[monthKey] = [];
+      }
+      months[monthKey].push(shift);
+    });
+    return months;
+  };
 
   const getShiftsForDay = (day: Date): DisplayShift[] => {
     const dayStr = format(day, 'yyyy-MM-dd');
@@ -252,6 +393,43 @@ export default function ScheduleManagementScreen() {
     }
   };
 
+  // === EXPORT FUNCTIONS ===
+
+  const handleExport = async (format: ExportFormat) => {
+    setIsExporting(true);
+    setShowExportModal(false);
+
+    try {
+      const exportData: ExportShiftData[] = shifts.map(shift => {
+        const [startH, startM] = shift.startTime.split(':').map(Number);
+        const [endH, endM] = shift.endTime.split(':').map(Number);
+        const hours = (endH + endM / 60) - (startH + startM / 60);
+
+        return {
+          date: shift.date,
+          employeeName: shift.employeeName,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          location: shift.location || '',
+          hours,
+        };
+      });
+
+      await exportSchedule(format, {
+        title: 'Dienstplan',
+        periodLabel: getNavigationLabel(),
+        shifts: exportData,
+        generatedAt: new Date(),
+        companyName: 'Kifel Service',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Fehler', 'Export konnte nicht erstellt werden.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -267,94 +445,215 @@ export default function ScheduleManagementScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <ScreenHeader overline="VERWALTUNG" title="Dienstplan bearbeiten" />
+            <ScreenHeader overline="VERWALTUNG" title="Dienstplan" />
           </View>
-          <TouchableOpacity
-            style={[styles.importButton, { backgroundColor: theme.primary }]}
-            onPress={handlePickFile}
-            disabled={isImporting}
-          >
-            {isImporting ? (
-              <ActivityIndicator size="small" color={theme.textInverse} />
-            ) : (
-              <Upload size={20} color={theme.textInverse} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={[styles.headerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={handlePickFile}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <>
+                  <Upload size={16} color={theme.primary} />
+                  <Typography variant="caption" style={{ color: theme.primary, marginLeft: 6, fontWeight: '600' }}>
+                    Import
+                  </Typography>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerButton, { backgroundColor: theme.primary }]}
+              onPress={() => setShowExportModal(true)}
+              disabled={isExporting || shifts.length === 0}
+            >
+              {isExporting ? (
+                <ActivityIndicator size="small" color={theme.textInverse} />
+              ) : (
+                <>
+                  <Download size={16} color={theme.textInverse} />
+                  <Typography variant="caption" style={{ color: theme.textInverse, marginLeft: 6, fontWeight: '600' }}>
+                    Export
+                  </Typography>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Week Navigation */}
+        {/* View Mode Filter */}
+        <View style={styles.filterRow}>
+          {(['day', 'week', 'month', 'year'] as ViewMode[]).map((mode) => (
+            <TouchableOpacity
+              key={mode}
+              style={[
+                styles.filterPill,
+                {
+                  backgroundColor: viewMode === mode ? theme.primary : theme.surface,
+                  borderColor: viewMode === mode ? theme.primary : theme.border,
+                },
+              ]}
+              onPress={() => setViewMode(mode)}
+            >
+              <Typography
+                variant="caption"
+                style={{
+                  color: viewMode === mode ? theme.textInverse : theme.textSecondary,
+                  fontWeight: viewMode === mode ? '600' : '400',
+                }}
+              >
+                {viewModeLabels[mode]}
+              </Typography>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Date Navigation */}
         <View style={styles.weekNav}>
           <TouchableOpacity
             style={[styles.navButton, { backgroundColor: theme.surface }]}
-            onPress={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            onPress={navigatePrevious}
           >
             <ChevronLeft size={20} color={theme.textSecondary} />
           </TouchableOpacity>
-          <Typography variant="label">
-            {format(weekStart, 'd. MMM', { locale: de })} - {format(addDays(weekStart, 6), 'd. MMM yyyy', { locale: de })}
-          </Typography>
+          <TouchableOpacity onPress={() => setCurrentDate(new Date())}>
+            <Typography variant="label" style={{ textAlign: 'center' }}>
+              {getNavigationLabel()}
+            </Typography>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.navButton, { backgroundColor: theme.surface }]}
-            onPress={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            onPress={navigateNext}
           >
             <ChevronRight size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Days */}
-        {weekDays.map((day, index) => {
-          const dayShifts = getShiftsForDay(day);
-          const isToday = isSameDay(day, new Date());
+        {/* Content based on view mode */}
+        {viewMode === 'year' ? (
+          // Year View - Group by month
+          <>
+            {Array.from({ length: 12 }, (_, i) => {
+              const monthDate = new Date(currentDate.getFullYear(), i, 1);
+              const monthKey = format(monthDate, 'yyyy-MM');
+              const monthShifts = getShiftsByMonth()[monthKey] || [];
+              const totalHours = monthShifts.reduce((sum, s) => {
+                const [startH, startM] = s.startTime.split(':').map(Number);
+                const [endH, endM] = s.endTime.split(':').map(Number);
+                return sum + (endH + endM / 60) - (startH + startM / 60);
+              }, 0);
 
-          return (
-            <View key={index} style={styles.dayContainer}>
-              <View style={styles.dayHeader}>
-                <View>
-                  <Typography variant="label" style={isToday ? { color: theme.primary } : undefined}>
-                    {format(day, 'EEEE', { locale: de })}
-                  </Typography>
-                  <Typography variant="caption" color="muted">{format(day, 'd. MMM', { locale: de })}</Typography>
-                </View>
+              return (
                 <TouchableOpacity
-                  style={[styles.addDayButton, { backgroundColor: theme.surface }]}
-                  onPress={() => openAddModal(day)}
+                  key={monthKey}
+                  style={[styles.monthCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                  onPress={() => {
+                    setCurrentDate(monthDate);
+                    setViewMode('month');
+                  }}
                 >
-                  <Plus size={16} color={theme.primary} />
+                  <View style={styles.monthHeader}>
+                    <Typography variant="label">{format(monthDate, 'MMMM', { locale: de })}</Typography>
+                    <ChevronRight size={16} color={theme.textMuted} />
+                  </View>
+                  <View style={styles.monthStats}>
+                    <Typography variant="h3" style={{ color: theme.primary }}>{monthShifts.length}</Typography>
+                    <Typography variant="caption" color="muted">Schichten</Typography>
+                  </View>
+                  {totalHours > 0 && (
+                    <Typography variant="caption" color="muted">
+                      {Math.round(totalHours)} Stunden
+                    </Typography>
+                  )}
                 </TouchableOpacity>
-              </View>
+              );
+            })}
+          </>
+        ) : (
+          // Day, Week, Month View - Show individual days
+          <>
+            {dateRange.days.map((day, index) => {
+              const dayShifts = getShiftsForDay(day);
+              const isToday = isSameDay(day, new Date());
 
-              {dayShifts.length > 0 ? (
-                dayShifts.map((shift) => (
-                  <Card key={shift.id} style={styles.shiftCard}>
-                    <View style={styles.shiftContent}>
-                      <Avatar name={shift.employeeName} size="sm" />
-                      <View style={styles.shiftInfo}>
-                        <Typography variant="label">{shift.employeeName}</Typography>
-                        <View style={styles.shiftDetails}>
-                          <Clock size={12} color={theme.textMuted} />
-                          <Typography variant="caption" color="muted">{shift.startTime} - {shift.endTime}</Typography>
-                        </View>
-                        {shift.location && (
-                          <View style={styles.shiftDetails}>
-                            <MapPin size={12} color={theme.textMuted} />
-                            <Typography variant="caption" color="muted">{shift.location}</Typography>
-                          </View>
-                        )}
-                      </View>
-                      <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
-                        <Trash2 size={18} color={theme.danger} />
-                      </TouchableOpacity>
+              return (
+                <View key={index} style={styles.dayContainer}>
+                  <View style={styles.dayHeader}>
+                    <View>
+                      <Typography variant="label" style={isToday ? { color: theme.primary } : undefined}>
+                        {viewMode === 'day'
+                          ? format(day, 'EEEE', { locale: de })
+                          : format(day, viewMode === 'month' ? 'EEE d.' : 'EEEE', { locale: de })}
+                      </Typography>
+                      {viewMode !== 'day' && (
+                        <Typography variant="caption" color="muted">
+                          {format(day, viewMode === 'month' ? 'MMM' : 'd. MMM', { locale: de })}
+                        </Typography>
+                      )}
                     </View>
-                  </Card>
-                ))
-              ) : (
-                <Card style={styles.emptyCard}>
-                  <Typography variant="caption" color="muted">Keine Schichten geplant</Typography>
-                </Card>
-              )}
-            </View>
-          );
-        })}
+                    <TouchableOpacity
+                      style={[styles.addDayButton, { backgroundColor: theme.surface }]}
+                      onPress={() => openAddModal(day)}
+                    >
+                      <Plus size={16} color={theme.primary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {dayShifts.length > 0 ? (
+                    dayShifts.map((shift) => (
+                      <Card key={shift.id} style={styles.shiftCard}>
+                        <View style={styles.shiftContent}>
+                          <Avatar name={shift.employeeName} size="sm" />
+                          <View style={styles.shiftInfo}>
+                            <Typography variant="label">{shift.employeeName}</Typography>
+                            <View style={styles.shiftDetails}>
+                              <Clock size={12} color={theme.textMuted} />
+                              <Typography variant="caption" color="muted">{shift.startTime} - {shift.endTime}</Typography>
+                            </View>
+                            {shift.location && (
+                              <View style={styles.shiftDetails}>
+                                <MapPin size={12} color={theme.textMuted} />
+                                <Typography variant="caption" color="muted" numberOfLines={1}>{shift.location}</Typography>
+                              </View>
+                            )}
+                          </View>
+                          <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
+                            <Trash2 size={18} color={theme.danger} />
+                          </TouchableOpacity>
+                        </View>
+                      </Card>
+                    ))
+                  ) : (
+                    viewMode !== 'month' && (
+                      <Card style={styles.emptyCard}>
+                        <Typography variant="caption" color="muted">Keine Schichten geplant</Typography>
+                      </Card>
+                    )
+                  )}
+                </View>
+              );
+            })}
+
+            {/* Month summary */}
+            {viewMode === 'month' && shifts.length > 0 && (
+              <View style={[styles.monthSummary, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                <Typography variant="overline" color="muted">ZUSAMMENFASSUNG</Typography>
+                <View style={styles.summaryRow}>
+                  <Typography variant="body">{shifts.length} Schichten</Typography>
+                  <Typography variant="body" color="muted">
+                    {Math.round(shifts.reduce((sum, s) => {
+                      const [startH, startM] = s.startTime.split(':').map(Number);
+                      const [endH, endM] = s.endTime.split(':').map(Number);
+                      return sum + (endH + endM / 60) - (startH + startM / 60);
+                    }, 0))} Stunden
+                  </Typography>
+                </View>
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
 
       {/* Add Modal */}
@@ -542,6 +841,40 @@ export default function ScheduleManagementScreen() {
           </>
         )}
       </Modal>
+
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        title="Export-Format wählen"
+        subtitle={getNavigationLabel()}
+      >
+        {EXPORT_OPTIONS.map((option) => (
+          <TouchableOpacity
+            key={option.key}
+            style={[styles.exportOption, { borderColor: theme.border }]}
+            onPress={() => handleExport(option.key)}
+          >
+            <View style={[styles.exportIconContainer, { backgroundColor: theme.pillInfo }]}>
+              <option.icon size={24} color={theme.primary} />
+            </View>
+            <View style={styles.exportOptionInfo}>
+              <Typography variant="label">{option.label}</Typography>
+              <Typography variant="caption" color="muted">{option.description}</Typography>
+            </View>
+            <ChevronRight size={20} color={theme.textMuted} />
+          </TouchableOpacity>
+        ))}
+
+        {shifts.length === 0 && (
+          <View style={[styles.emptyExport, { backgroundColor: theme.pillWarning }]}>
+            <AlertCircle size={16} color={theme.warning} />
+            <Typography variant="caption" style={{ flex: 1, marginLeft: 8 }}>
+              Keine Schichten im gewählten Zeitraum vorhanden
+            </Typography>
+          </View>
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -554,9 +887,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing['3xl'] },
-  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xl },
+  // Filter
+  filterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  filterPill: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
   navButton: { padding: spacing.sm, borderRadius: 10 },
-  dayContainer: { marginBottom: spacing.lg },
+  dayContainer: { marginBottom: spacing.md },
   dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   addDayButton: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   shiftCard: { marginBottom: spacing.sm },
@@ -564,6 +911,37 @@ const styles = StyleSheet.create({
   shiftInfo: { flex: 1, marginLeft: spacing.md },
   shiftDetails: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   emptyCard: { alignItems: 'center', paddingVertical: spacing.md },
+  // Month/Year views
+  monthCard: {
+    padding: spacing.base,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+  },
+  monthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  monthStats: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  monthSummary: {
+    padding: spacing.base,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: spacing.md,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  // Modal
   modalLabel: { marginBottom: spacing.sm },
   employeeOption: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderRadius: 12, borderWidth: 1, marginBottom: spacing.sm },
   employeeOptionText: { marginLeft: spacing.md },
@@ -582,20 +960,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xl,
   },
-  // Import styles
+  // Header styles
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
-  importButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginTop: spacing.md,
   },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  // Export styles
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  exportIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportOptionInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  emptyExport: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: 8,
+    marginTop: spacing.sm,
+  },
+  // Import styles
   importSummary: {
     padding: spacing.base,
     borderRadius: 12,

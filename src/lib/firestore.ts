@@ -19,7 +19,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company } from '../types';
+import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite } from '../types';
 import { logError } from '../utils/errorHandler';
 
 // Helper to get db instance safely
@@ -38,6 +38,7 @@ const COLLECTIONS = {
   CHAT_MESSAGES: 'chatMessages',
   LOCATIONS: 'locations',
   COMPANY: 'company',
+  INVITES: 'invites',
 } as const;
 
 // Helper: Convert Firestore timestamp to ISO string
@@ -121,6 +122,7 @@ export const usersCollection = {
         const docRef = doc(getDb(), COLLECTIONS.USERS, userId);
         await setDoc(docRef, {
           ...userData,
+          status: userData.status || 'active', // Default status to 'active'
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -978,6 +980,246 @@ export const companyCollection = {
   },
 };
 
+// ============================================================================
+// INVITES (Einladungs-System)
+// ============================================================================
+
+// Generate a random token
+const generateInviteToken = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let token = '';
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+};
+
+export const invitesCollection = {
+  // Create a new invite
+  create: async (inviteData: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    location?: string;
+    role: 'employee' | 'admin';
+    createdBy: string;
+  }): Promise<Invite> => {
+    return safeFirestoreOp(
+      async () => {
+        const token = generateInviteToken();
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 Tage gültig
+
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.INVITES), {
+          ...inviteData,
+          token,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+          expiresAt: Timestamp.fromDate(expiresAt),
+        });
+
+        return {
+          id: docRef.id,
+          ...inviteData,
+          token,
+          status: 'pending' as const,
+          createdAt: now.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+        };
+      },
+      null as any,
+      'invites.create'
+    );
+  },
+
+  // Get invite by token
+  getByToken: async (token: string): Promise<Invite | null> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.INVITES),
+          where('token', '==', token),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) return null;
+
+        const docData = snapshot.docs[0];
+        const data = docData.data();
+
+        const invite: Invite = {
+          id: docData.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          location: data.location,
+          role: data.role,
+          token: data.token,
+          createdBy: data.createdBy,
+          createdAt: toISOString(data.createdAt),
+          expiresAt: toISOString(data.expiresAt),
+          acceptedAt: data.acceptedAt ? toISOString(data.acceptedAt) : undefined,
+          status: data.status,
+        };
+
+        // Check if expired
+        if (new Date(invite.expiresAt) < new Date() && invite.status === 'pending') {
+          // Update status to expired
+          await updateDoc(doc(getDb(), COLLECTIONS.INVITES, docData.id), {
+            status: 'expired',
+          });
+          invite.status = 'expired';
+        }
+
+        return invite;
+      },
+      null,
+      'invites.getByToken'
+    );
+  },
+
+  // Get all pending invites (admin)
+  getPending: async (): Promise<Invite[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.INVITES),
+          where('status', '==', 'pending')
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            email: data.email,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            location: data.location,
+            role: data.role,
+            token: data.token,
+            createdBy: data.createdBy,
+            createdAt: toISOString(data.createdAt),
+            expiresAt: toISOString(data.expiresAt),
+            status: data.status,
+          } as Invite;
+        });
+      },
+      [],
+      'invites.getPending'
+    );
+  },
+
+  // Accept invite and create user
+  accept: async (token: string, userId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        // Find the invite
+        const q = query(
+          collection(getDb(), COLLECTIONS.INVITES),
+          where('token', '==', token),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          throw new Error('Einladung nicht gefunden');
+        }
+
+        const inviteDoc = snapshot.docs[0];
+        const inviteData = inviteDoc.data();
+
+        // Check if already accepted
+        if (inviteData.status === 'accepted') {
+          throw new Error('Einladung wurde bereits verwendet');
+        }
+
+        // Check if expired
+        const expiresAt = inviteData.expiresAt?.toDate() || new Date();
+        if (expiresAt < new Date()) {
+          throw new Error('Einladung ist abgelaufen');
+        }
+
+        // Update invite status
+        await updateDoc(doc(getDb(), COLLECTIONS.INVITES, inviteDoc.id), {
+          status: 'accepted',
+          acceptedAt: serverTimestamp(),
+        });
+
+        // Create user profile
+        await usersCollection.create(userId, {
+          email: inviteData.email,
+          firstName: inviteData.firstName,
+          lastName: inviteData.lastName,
+          phone: inviteData.phone || undefined,
+          location: inviteData.location || undefined,
+          role: inviteData.role,
+          status: 'active',
+        });
+      },
+      undefined,
+      'invites.accept'
+    );
+  },
+
+  // Delete/revoke invite
+  delete: async (inviteId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.INVITES, inviteId);
+        await deleteDoc(docRef);
+      },
+      undefined,
+      'invites.delete'
+    );
+  },
+
+  // Resend invite (generate new token)
+  resend: async (inviteId: string): Promise<Invite> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.INVITES, inviteId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          throw new Error('Einladung nicht gefunden');
+        }
+
+        const data = docSnap.data();
+        const newToken = generateInviteToken();
+        const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        await updateDoc(docRef, {
+          token: newToken,
+          status: 'pending',
+          expiresAt: Timestamp.fromDate(newExpiresAt),
+        });
+
+        return {
+          id: docSnap.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          location: data.location,
+          role: data.role,
+          token: newToken,
+          createdBy: data.createdBy,
+          createdAt: toISOString(data.createdAt),
+          expiresAt: newExpiresAt.toISOString(),
+          status: 'pending' as const,
+        };
+      },
+      null as any,
+      'invites.resend'
+    );
+  },
+};
+
 // Export all collections
 export const firestoreDb = {
   users: usersCollection,
@@ -987,6 +1229,7 @@ export const firestoreDb = {
   chat: chatCollection,
   stats: statsCollection,
   company: companyCollection,
+  invites: invitesCollection,
 };
 
 export default firestoreDb;

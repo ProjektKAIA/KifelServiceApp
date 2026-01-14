@@ -2,7 +2,7 @@
 
 export type UserRole = 'employee' | 'admin';
 
-export type UserStatus = 'active' | 'inactive' | 'deleted';
+export type UserStatus = 'active' | 'inactive' | 'deleted' | 'invited';
 
 export interface User {
   id: string;
@@ -125,4 +125,21 @@ export interface AdminStats {
   onVacation: number;
   sick: number;
   pendingRequests: number;
+}
+
+// Einladungs-System
+export interface Invite {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  location?: string;
+  role: UserRole;
+  token: string;
+  createdBy: string; // Admin ID
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  status: 'pending' | 'accepted' | 'expired';
 }

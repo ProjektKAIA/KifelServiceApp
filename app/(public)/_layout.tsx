@@ -18,6 +18,7 @@ export default function PublicLayout() {
       <Stack.Screen name="about" />
       <Stack.Screen name="contact" />
       <Stack.Screen name="career" />
+      <Stack.Screen name="invite" />
     </Stack>
   );
 }

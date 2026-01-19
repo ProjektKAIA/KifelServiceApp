@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Location from 'expo-location';
 import { useTimeStore, LocationData } from '@/src/store/timeStore';
 import { isFeatureEnabled, features } from '@/src/config/features';
+import {
+  startBackgroundLocationTask,
+  stopBackgroundLocationTask,
+  isBackgroundLocationRunning,
+  requestBackgroundPermission,
+  hasBackgroundPermission,
+  setLocationUpdateCallback,
+} from '@/src/services/backgroundLocationService';
 
 export type LocationPermissionStatus = 'undetermined' | 'granted' | 'denied' | 'restricted';
 
@@ -17,6 +25,11 @@ interface UseLocationReturn {
   startTracking: () => void;
   stopTracking: () => void;
   isTracking: boolean;
+  // Background-Location-Funktionen
+  startBackgroundTracking: () => Promise<boolean>;
+  stopBackgroundTracking: () => Promise<void>;
+  isBackgroundTracking: boolean;
+  hasBackgroundPermission: () => Promise<boolean>;
 }
 
 export const useLocation = (): UseLocationReturn => {
@@ -25,6 +38,7 @@ export const useLocation = (): UseLocationReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [isBackgroundTracking, setIsBackgroundTracking] = useState(false);
 
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { updateLocation, setLocationError, setLocationLoading } = useTimeStore();
@@ -32,10 +46,37 @@ export const useLocation = (): UseLocationReturn => {
   // Check if GPS tracking is enabled via feature flags
   const gpsEnabled = isFeatureEnabled('gpsTracking');
 
-  // Check initial permission status
+  // Check initial permission status and background tracking status
   useEffect(() => {
     checkPermissionStatus();
-  }, []);
+    checkBackgroundTrackingStatus();
+
+    // Callback fuer Background-Location-Updates setzen
+    setLocationUpdateCallback((locationData) => {
+      const data: LocationData = {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        accuracy: locationData.accuracy,
+        timestamp: locationData.timestamp,
+      };
+      setLocation(data);
+      updateLocation(data);
+    });
+
+    return () => {
+      // Callback aufraumen
+      setLocationUpdateCallback(null);
+    };
+  }, [updateLocation]);
+
+  const checkBackgroundTrackingStatus = async () => {
+    try {
+      const running = await isBackgroundLocationRunning();
+      setIsBackgroundTracking(running);
+    } catch (err) {
+      console.error('Error checking background tracking status:', err);
+    }
+  };
 
   const checkPermissionStatus = async () => {
     try {
@@ -165,6 +206,62 @@ export const useLocation = (): UseLocationReturn => {
     setIsTracking(false);
   }, []);
 
+  // ============================================================================
+  // Background-Location-Funktionen (DSGVO-konform)
+  // ============================================================================
+
+  /**
+   * Startet das Background-Location-Tracking
+   * DSGVO: Nur bei Arbeitsbeginn (clockIn) aufrufen
+   */
+  const startBackgroundTrackingFn = useCallback(async (): Promise<boolean> => {
+    if (!gpsEnabled) {
+      setError('GPS-Tracking ist deaktiviert');
+      return false;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const success = await startBackgroundLocationTask();
+      setIsBackgroundTracking(success);
+
+      if (!success) {
+        setError('Background-Tracking konnte nicht gestartet werden');
+      }
+
+      return success;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Fehler beim Starten des Background-Trackings';
+      setError(errorMessage);
+      setLocationError(errorMessage);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gpsEnabled, setLocationError]);
+
+  /**
+   * Stoppt das Background-Location-Tracking
+   * DSGVO: Bei Arbeitsende (clockOut) aufrufen
+   */
+  const stopBackgroundTrackingFn = useCallback(async (): Promise<void> => {
+    try {
+      await stopBackgroundLocationTask();
+      setIsBackgroundTracking(false);
+    } catch (err) {
+      console.error('Error stopping background tracking:', err);
+    }
+  }, []);
+
+  /**
+   * Prueft ob Background-Permission vorhanden ist
+   */
+  const checkHasBackgroundPermission = useCallback(async (): Promise<boolean> => {
+    return hasBackgroundPermission();
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -184,5 +281,10 @@ export const useLocation = (): UseLocationReturn => {
     startTracking,
     stopTracking,
     isTracking,
+    // Background-Location
+    startBackgroundTracking: startBackgroundTrackingFn,
+    stopBackgroundTracking: stopBackgroundTrackingFn,
+    isBackgroundTracking,
+    hasBackgroundPermission: checkHasBackgroundPermission,
   };
 };

@@ -16,6 +16,8 @@ import { useTimeStore } from '@/src/store/timeStore';
 import { useAuthStore } from '@/src/store/authStore';
 import { spacing } from '@/src/constants/spacing';
 import { isFeatureEnabled } from '@/src/config/features';
+import { useOfflineSync } from '@/src/hooks/useOfflineSync';
+import { timeEntriesCollection } from '@/src/lib/firestore';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
@@ -43,9 +45,15 @@ export default function TimeTrackingScreen() {
     getCurrentLocation,
     startTracking,
     stopTracking,
+    // Background-Location (DSGVO-konform)
+    startBackgroundTracking,
+    stopBackgroundTracking,
   } = useLocation();
 
+  const { isOnline, addToQueue } = useOfflineSync();
+
   const gpsEnabled = isFeatureEnabled('gpsTracking');
+  const offlineModeEnabled = isFeatureEnabled('offlineMode');
 
   // Permission modal state
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -174,8 +182,52 @@ export default function TimeTrackingScreen() {
     }
   };
 
-  const performClockIn = (loc: typeof location) => {
+  const performClockIn = async (loc: typeof location) => {
+    // Lokalen Eintrag erstellen
     clockIn(user?.id, loc || undefined);
+
+    // Background-GPS-Tracking starten (DSGVO: nur waehrend Arbeitszeit)
+    if (gpsEnabled) {
+      const bgStarted = await startBackgroundTracking();
+      if (bgStarted) {
+        console.log('[TimeTracking] Background-GPS gestartet');
+      }
+    }
+
+    // Firestore-Sync (online oder Queue)
+    if (offlineModeEnabled) {
+      const localEntryId = useTimeStore.getState().getCurrentEntryLocalId();
+      const locationData = loc ? {
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        address: loc.address,
+      } : undefined;
+
+      if (isOnline) {
+        // Online: Direkt zu Firestore
+        try {
+          const firestoreId = await timeEntriesCollection.clockIn(user?.id || 'default-user', locationData);
+          // Firestore-ID speichern fuer spaetere Updates
+          if (localEntryId && firestoreId) {
+            useTimeStore.getState().setFirestoreEntryId(localEntryId, firestoreId);
+          }
+        } catch (error) {
+          console.error('[TimeTracking] Firestore clockIn fehlgeschlagen, nutze Queue:', error);
+          // Bei Fehler zur Queue hinzufuegen
+          await addToQueue('clockIn', {
+            userId: user?.id || 'default-user',
+            location: locationData,
+          }, undefined, localEntryId || undefined);
+        }
+      } else {
+        // Offline: Zur Queue hinzufuegen
+        await addToQueue('clockIn', {
+          userId: user?.id || 'default-user',
+          location: locationData,
+        }, undefined, localEntryId || undefined);
+      }
+    }
+
     Alert.alert('Arbeitsbeginn', `Arbeit gestartet um ${currentTime} Uhr.`);
   };
 
@@ -186,11 +238,48 @@ export default function TimeTrackingScreen() {
         text: 'Beenden',
         style: 'destructive',
         onPress: async () => {
+          // Firestore-ID vor clockOut holen (wird danach geloescht)
+          const firestoreEntryId = currentEntry?.firestoreEntryId;
+          const localEntryId = currentEntry?.id;
+
+          // Finale Location holen
           let loc = null;
           if (gpsEnabled && permissionStatus === 'granted') {
             loc = await getCurrentLocation();
           }
+
+          // Background-GPS-Tracking stoppen (DSGVO: sofort bei Arbeitsende)
+          await stopBackgroundTracking();
+          console.log('[TimeTracking] Background-GPS gestoppt');
+
+          // Lokalen Eintrag beenden
           clockOut(loc || undefined);
+
+          // Firestore-Sync (online oder Queue)
+          if (offlineModeEnabled) {
+            const locationData = loc ? {
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              address: loc.address,
+            } : undefined;
+
+            if (isOnline && firestoreEntryId) {
+              // Online und Firestore-ID vorhanden: Direkt updaten
+              try {
+                await timeEntriesCollection.clockOut(firestoreEntryId, locationData);
+              } catch (error) {
+                console.error('[TimeTracking] Firestore clockOut fehlgeschlagen, nutze Queue:', error);
+                await addToQueue('clockOut', { location: locationData }, firestoreEntryId);
+              }
+            } else if (firestoreEntryId) {
+              // Offline aber Firestore-ID vorhanden: Queue mit ID
+              await addToQueue('clockOut', { location: locationData }, firestoreEntryId);
+            } else if (localEntryId) {
+              // Keine Firestore-ID: Queue mit lokaler ID (wird spaeter gemappt)
+              await addToQueue('clockOut', { location: locationData }, undefined, localEntryId);
+            }
+          }
+
           Alert.alert('Arbeitszeit erfasst', `Arbeit beendet um ${format(new Date(), 'HH:mm')} Uhr.`);
         },
       },

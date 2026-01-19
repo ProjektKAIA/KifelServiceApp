@@ -53,7 +53,7 @@ export const features: FeatureFlags = {
   // Allgemein
   darkMode: true,
   pushNotifications: true,
-  offlineMode: false,
+  offlineMode: true,
 };
 
 export const isFeatureEnabled = (feature: keyof FeatureFlags): boolean => {

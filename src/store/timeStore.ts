@@ -26,6 +26,10 @@ export interface TimeEntry {
   notes?: string;
   status: 'active' | 'completed' | 'pending_review';
   shiftId?: string;
+  /** Firestore-ID nach erfolgreicher Synchronisation */
+  firestoreEntryId?: string;
+  /** Markiert ob noch synchronisiert werden muss */
+  pendingSync?: boolean;
 }
 
 interface TimeState {
@@ -61,6 +65,11 @@ interface TimeState {
   getTotalHoursForMonth: (year: number, month: number) => number;
   resetCurrentEntry: () => void;
   calculateTodayHours: () => void;
+  // Offline-Sync Hilfsmethoden
+  setFirestoreEntryId: (localId: string, firestoreId: string) => void;
+  markEntryAsSynced: (localId: string) => void;
+  getPendingSyncEntries: () => TimeEntry[];
+  getCurrentEntryLocalId: () => string | null;
 }
 
 const generateId = (): string => {
@@ -107,6 +116,7 @@ export const useTimeStore = create<TimeState>()(
           breakStart: null,
           status: 'active',
           shiftId,
+          pendingSync: true, // Markiert fuer Offline-Sync
         };
 
         set({
@@ -301,6 +311,88 @@ export const useTimeStore = create<TimeState>()(
           isOnBreak: false,
           elapsedSeconds: 0,
         });
+      },
+
+      // ============================================================================
+      // Offline-Sync Hilfsmethoden
+      // ============================================================================
+
+      /**
+       * Setzt die Firestore-ID fuer einen lokalen Eintrag
+       * Wird aufgerufen wenn der Eintrag erfolgreich zu Firestore synchronisiert wurde
+       */
+      setFirestoreEntryId: (localId, firestoreId) => {
+        const { currentEntry, entries } = get();
+
+        // Update currentEntry falls es der aktive Eintrag ist
+        if (currentEntry && currentEntry.id === localId) {
+          set({
+            currentEntry: {
+              ...currentEntry,
+              firestoreEntryId: firestoreId,
+              pendingSync: false,
+            },
+          });
+        }
+
+        // Update auch in entries falls bereits abgeschlossen
+        const updatedEntries = entries.map((entry) =>
+          entry.id === localId
+            ? { ...entry, firestoreEntryId: firestoreId, pendingSync: false }
+            : entry
+        );
+
+        if (updatedEntries !== entries) {
+          set({ entries: updatedEntries });
+        }
+      },
+
+      /**
+       * Markiert einen Eintrag als synchronisiert
+       */
+      markEntryAsSynced: (localId) => {
+        const { currentEntry, entries } = get();
+
+        if (currentEntry && currentEntry.id === localId) {
+          set({
+            currentEntry: { ...currentEntry, pendingSync: false },
+          });
+        }
+
+        const updatedEntries = entries.map((entry) =>
+          entry.id === localId ? { ...entry, pendingSync: false } : entry
+        );
+
+        set({ entries: updatedEntries });
+      },
+
+      /**
+       * Gibt alle Eintraege zurueck die noch synchronisiert werden muessen
+       */
+      getPendingSyncEntries: () => {
+        const { currentEntry, entries } = get();
+        const pending: TimeEntry[] = [];
+
+        if (currentEntry && currentEntry.pendingSync) {
+          pending.push(currentEntry);
+        }
+
+        for (const entry of entries) {
+          if (entry.pendingSync) {
+            pending.push(entry);
+          }
+        }
+
+        return pending;
+      },
+
+      /**
+       * Gibt die lokale ID des aktuellen Eintrags zurueck
+       * Noetig fuer das Offline-Queue-Mapping
+       */
+      getCurrentEntryLocalId: () => {
+        const { currentEntry } = get();
+        return currentEntry?.id || null;
       },
     }),
     {

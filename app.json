@@ -11,7 +11,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.amelkantarevic.KifelServiceApp",
-      "appleTeamId": "B66382YV72"
+      "appleTeamId": "B66382YV72",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Kifel Service benoetigt Ihren Standort fuer die Zeiterfassung.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Kifel Service erfasst Ihren Standort waehrend der Arbeitszeit auch im Hintergrund.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +24,14 @@
         "foregroundImage": "./assets/images/kifel-service-logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -38,6 +50,14 @@
             "backgroundColor": "#0a0a0f",
             "image": "./assets/images/kifel-service-logo.png"
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Kifel Service erfasst Ihren Standort waehrend der Arbeitszeit auch im Hintergrund.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],

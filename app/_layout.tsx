@@ -1,9 +1,10 @@
 // app/_layout.tsx
 
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import 'react-native-reanimated';
 
@@ -11,6 +12,10 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { toastConfig } from '@/src/components/atoms/ToastConfig';
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
+import { OfflineIndicator } from '@/src/components/atoms/OfflineIndicator';
+import { initNetworkListener, cleanupNetworkListener, setSyncCallback } from '@/src/services/networkService';
+import { loadQueue, processSyncQueue } from '@/src/services/offlineQueueService';
+import { isFeatureEnabled } from '@/src/config/features';
 
 export default function RootLayout() {
   const { isDark } = useTheme();
@@ -18,6 +23,30 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+
+  // Offline-Services initialisieren
+  useEffect(() => {
+    if (isFeatureEnabled('offlineMode')) {
+      console.log('[App] Initializing offline services');
+
+      // Network-Listener starten
+      initNetworkListener();
+
+      // Offline-Queue laden
+      loadQueue();
+
+      // Callback setzen fuer automatische Sync bei Netzwerkwiederkehr
+      setSyncCallback(() => {
+        console.log('[App] Network restored - processing sync queue');
+        processSyncQueue();
+      });
+
+      return () => {
+        console.log('[App] Cleaning up offline services');
+        cleanupNetworkListener();
+      };
+    }
+  }, []);
 
   // Navigation basierend auf Auth-Status
   useEffect(() => {
@@ -63,6 +92,8 @@ export default function RootLayout() {
   return (
     <ErrorBoundary showDetails={__DEV__}>
       <SafeAreaProvider>
+        {/* Offline-Indikator am oberen Bildschirmrand */}
+        {isFeatureEnabled('offlineMode') && <OfflineIndicatorWrapper />}
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(public)" />
           <Stack.Screen name="(auth)" />
@@ -73,5 +104,18 @@ export default function RootLayout() {
         <Toast config={toastConfig} position="top" topOffset={50} />
       </SafeAreaProvider>
     </ErrorBoundary>
+  );
+}
+
+/**
+ * Wrapper-Komponente fuer OfflineIndicator mit SafeArea-Unterstuetzung
+ */
+function OfflineIndicatorWrapper() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={{ paddingTop: insets.top }}>
+      <OfflineIndicator />
+    </View>
   );
 }

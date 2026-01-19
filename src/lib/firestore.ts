@@ -16,7 +16,8 @@ import {
   addDoc,
   serverTimestamp,
   QueryConstraint,
-  Firestore
+  Firestore,
+  arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification } from '../types';
@@ -344,6 +345,13 @@ export interface TimeEntry {
     longitude: number;
     address?: string;
   };
+  locationHistory?: Array<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number | null;
+    timestamp: number;
+    address?: string | null;
+  }>;
   notes?: string;
 }
 
@@ -521,6 +529,65 @@ export const timeEntriesCollection = {
       },
       [],
       'timeEntries.getAllInRange'
+    );
+  },
+
+  // Update location history - fuegt einzelne Location hinzu
+  updateLocationHistory: async (
+    entryId: string,
+    location: {
+      latitude: number;
+      longitude: number;
+      accuracy?: number | null;
+      timestamp: number;
+      address?: string;
+    }
+  ): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.TIME_ENTRIES, entryId);
+        await updateDoc(docRef, {
+          locationHistory: arrayUnion({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy ?? null,
+            timestamp: location.timestamp,
+            address: location.address ?? null,
+          }),
+        });
+      },
+      undefined,
+      'timeEntries.updateLocationHistory'
+    );
+  },
+
+  // Batch-Update fuer mehrere Locations auf einmal
+  batchUpdateLocationHistory: async (
+    entryId: string,
+    locations: Array<{
+      latitude: number;
+      longitude: number;
+      accuracy?: number | null;
+      timestamp: number;
+      address?: string;
+    }>
+  ): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.TIME_ENTRIES, entryId);
+        const formattedLocations = locations.map((loc) => ({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          accuracy: loc.accuracy ?? null,
+          timestamp: loc.timestamp,
+          address: loc.address ?? null,
+        }));
+        await updateDoc(docRef, {
+          locationHistory: arrayUnion(...formattedLocations),
+        });
+      },
+      undefined,
+      'timeEntries.batchUpdateLocationHistory'
     );
   },
 };

@@ -34,6 +34,7 @@ import {
 import { de } from 'date-fns/locale';
 
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { useAuthStore } from '@/src/store/authStore';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
@@ -60,6 +61,7 @@ const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
 
 export default function EmployeeReportsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const [periodType, setPeriodType] = useState<PeriodType>('month');
@@ -264,8 +266,8 @@ export default function EmployeeReportsScreen() {
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>AUSWERTUNG</Text>
         </View>
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Meine Arbeitsstunden</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>Stundenübersicht</Text>
+        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('empReports.subtitle')}</Text>
+        <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empReports.title')}</Text>
 
         {/* Period Type Selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.periodSelector}>
@@ -316,7 +318,7 @@ export default function EmployeeReportsScreen() {
             <View style={styles.summaryItem}>
               <View style={styles.summaryIconRow}>
                 <Clock size={16} color={theme.primary} />
-                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Netto-Stunden</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('empReports.totalHours')}</Text>
               </View>
               <Text style={[styles.summaryValue, { color: theme.primary }]}>
                 {formatHoursMinutes(totals.totalMinutes)} h
@@ -325,7 +327,7 @@ export default function EmployeeReportsScreen() {
             <View style={styles.summaryItem}>
               <View style={styles.summaryIconRow}>
                 <Calendar size={16} color={theme.textSecondary} />
-                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Arbeitstage</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('empReports.workDays')}</Text>
               </View>
               <Text style={[styles.summaryValue, { color: theme.text }]}>{totals.daysWorked}</Text>
             </View>
@@ -344,7 +346,7 @@ export default function EmployeeReportsScreen() {
         </View>
 
         {/* Day Entries */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ARBEITSTAGE</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empReports.details')}</Text>
 
         {dayEntries.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>

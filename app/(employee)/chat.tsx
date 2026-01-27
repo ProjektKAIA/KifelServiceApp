@@ -20,6 +20,7 @@ import { Send, X, AtSign } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { chatCollection, usersCollection } from '@/src/lib/firestore';
 import { ChatMessage, ChatRoom, User } from '@/src/types';
 import { moderateMessage, parseMessageWithMentions, MessagePart } from '@/src/utils/chatModeration';
@@ -44,6 +45,7 @@ const getAvatarColor = (userId: string, theme: any): string => {
 
 export default function ChatScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
 
@@ -252,7 +254,7 @@ export default function ChatScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              Noch keine Nachrichten. Starte die Unterhaltung!
+              {t('empChat.noMessages')} {t('empChat.startConversation')}
             </Text>
           </View>
         }
@@ -272,7 +274,7 @@ export default function ChatScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
-            placeholder="Nachricht..."
+            placeholder={t('empChat.placeholder')}
             placeholderTextColor={theme.textMuted}
             value={inputText}
             onChangeText={setInputText}

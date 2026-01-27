@@ -29,6 +29,7 @@ import {
   FileText,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { usersCollection, companyCollection } from '@/src/lib/firestore';
@@ -44,6 +45,7 @@ try {
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user, setUser } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -132,7 +134,7 @@ export default function ProfileScreen() {
     if (!user) return;
 
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Fehler', 'Vor- und Nachname sind erforderlich.');
+      Alert.alert(t('common.error'), t('settingsProfile.nameRequired'));
       return;
     }
 
@@ -160,9 +162,9 @@ export default function ProfileScreen() {
         avatar: avatar,
       });
 
-      Alert.alert('Gespeichert', 'Ihre persönlichen Daten wurden aktualisiert.');
+      Alert.alert(t('common.success'), t('settingsProfile.personalDataSaved'));
     } catch (error) {
-      Alert.alert('Fehler', 'Daten konnten nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('settingsProfile.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -170,7 +172,7 @@ export default function ProfileScreen() {
 
   const saveCompanyData = async () => {
     if (!companyName.trim()) {
-      Alert.alert('Fehler', 'Firmenname ist erforderlich.');
+      Alert.alert(t('common.error'), t('settingsProfile.companyNameRequired'));
       return;
     }
 
@@ -188,10 +190,10 @@ export default function ProfileScreen() {
         taxId: companyTaxId.trim(),
       });
 
-      Alert.alert('Gespeichert', 'Die Firmendaten wurden aktualisiert.');
+      Alert.alert(t('common.success'), t('settingsProfile.companyDataSaved'));
       loadCompanyData();
     } catch (error) {
-      Alert.alert('Fehler', 'Firmendaten konnten nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('settingsProfile.companySaveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -229,35 +231,35 @@ export default function ProfileScreen() {
       <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
         <View style={styles.formRow}>
           <View style={styles.formHalf}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Vorname *</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.firstName')} *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Vorname"
+              placeholder={t('settingsProfile.firstName')}
               placeholderTextColor={theme.textMuted}
             />
           </View>
           <View style={styles.formHalf}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nachname *</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.lastName')} *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Nachname"
+              placeholder={t('settingsProfile.lastName')}
               placeholderTextColor={theme.textMuted}
             />
           </View>
         </View>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>E-Mail</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.email')}</Text>
         <View style={[styles.inputDisabled, { backgroundColor: theme.surface, borderColor: theme.inputBorder }]}>
           <Mail size={18} color={theme.textMuted} />
           <Text style={[styles.inputDisabledText, { color: theme.textMuted }]}>{email}</Text>
         </View>
-        <Text style={[styles.inputHint, { color: theme.textMuted }]}>E-Mail kann nicht geändert werden</Text>
+        <Text style={[styles.inputHint, { color: theme.textMuted }]}>{t('settingsProfile.emailReadonly')}</Text>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>Telefon</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>{t('settingsProfile.phone')}</Text>
         <View style={styles.inputWithIcon}>
           <Phone size={18} color={theme.textMuted} style={styles.inputIcon} />
           <TextInput
@@ -319,7 +321,7 @@ export default function ProfileScreen() {
         ) : (
           <>
             <Save size={20} color={theme.textInverse} />
-            <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>Speichern</Text>
+            <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>{t('settingsProfile.save')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -350,7 +352,7 @@ export default function ProfileScreen() {
 
       {/* Form */}
       <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Firmenname *</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.companyName')} *</Text>
         <View style={styles.inputWithIcon}>
           <Building2 size={18} color={theme.textMuted} style={styles.inputIcon} />
           <TextInput
@@ -364,7 +366,7 @@ export default function ProfileScreen() {
 
         <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>KONTAKT</Text>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Telefon</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.phone')}</Text>
         <View style={styles.inputWithIcon}>
           <Phone size={18} color={theme.textMuted} style={styles.inputIcon} />
           <TextInput
@@ -377,7 +379,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>E-Mail</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.email')}</Text>
         <View style={styles.inputWithIcon}>
           <Mail size={18} color={theme.textMuted} style={styles.inputIcon} />
           <TextInput
@@ -406,7 +408,7 @@ export default function ProfileScreen() {
 
         <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>ADRESSE</Text>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Straße & Hausnummer</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.companyAddress')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
           value={companyStreet}
@@ -467,7 +469,7 @@ export default function ProfileScreen() {
         ) : (
           <>
             <Save size={20} color={theme.textInverse} />
-            <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>Speichern</Text>
+            <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>{t('settingsProfile.save')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -498,7 +500,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Verwaltung</Text>
-              <Text style={[styles.headerLarge, { color: theme.text }]}>Profil & Firma</Text>
+              <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsProfile.title')}</Text>
             </View>
           </View>
 
@@ -518,7 +520,7 @@ export default function ProfileScreen() {
                   { color: activeTab === 'personal' ? theme.textInverse : theme.textSecondary },
                 ]}
               >
-                Persönlich
+                {t('settingsProfile.personalData')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -535,7 +537,7 @@ export default function ProfileScreen() {
                   { color: activeTab === 'company' ? theme.textInverse : theme.textSecondary },
                 ]}
               >
-                Firma
+                {t('settingsProfile.companyData')}
               </Text>
             </TouchableOpacity>
           </View>

@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Send, Mail, Phone, MessageCircle } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 
@@ -27,6 +28,7 @@ const SUPPORT_PHONE = '0176 66816778';
 export default function SupportScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const [subject, setSubject] = useState('');
@@ -35,7 +37,7 @@ export default function SupportScreen() {
 
   const handleSendEmail = async () => {
     if (!subject.trim() || !message.trim()) {
-      Alert.alert('Fehler', 'Bitte Betreff und Nachricht ausfüllen.');
+      Alert.alert(t('common.error'), t('settingsSupport.fillRequired'));
       return;
     }
 
@@ -73,7 +75,7 @@ App Version: 1.0.0
         );
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Email konnte nicht geöffnet werden.');
+      Alert.alert(t('common.error'), t('settingsSupport.emailFailed'));
     } finally {
       setIsSending(false);
     }
@@ -82,13 +84,13 @@ App Version: 1.0.0
   const quickActions = [
     {
       icon: Mail,
-      label: 'Email senden',
+      label: t('settingsSupport.emailUs'),
       subtitle: SUPPORT_EMAIL,
       onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`),
     },
     {
       icon: Phone,
-      label: 'Anrufen',
+      label: t('settingsSupport.callUs'),
       subtitle: SUPPORT_PHONE,
       onPress: () => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`),
     },
@@ -108,7 +110,7 @@ App Version: 1.0.0
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Hilfe</Text>
-              <Text style={[styles.headerLarge, { color: theme.text }]}>Support kontaktieren</Text>
+              <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsSupport.title')}</Text>
             </View>
           </View>
 
@@ -116,7 +118,7 @@ App Version: 1.0.0
           <View style={[styles.infoCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
             <MessageCircle size={20} color={theme.primary} />
             <Text style={[styles.infoText, { color: theme.text }]}>
-              Wir helfen Ihnen gerne! Beschreiben Sie Ihr Anliegen und wir melden uns schnellstmöglich.
+              {t('settingsSupport.subtitle')}
             </Text>
           </View>
 

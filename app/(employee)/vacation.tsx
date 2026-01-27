@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Sun, AlertCircle, Calendar } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { useAuthStore } from '@/src/store/authStore';
 import { vacationRequestsCollection, statsCollection } from '@/src/lib/firestore';
 import { VacationRequest } from '@/src/types';
@@ -17,6 +18,7 @@ import { toast } from '@/src/utils/toast';
 
 export default function VacationScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const [requests, setRequests] = useState<VacationRequest[]>([]);
@@ -65,20 +67,20 @@ export default function VacationScreen() {
   const getStatusStyle = (status: VacationRequest['status']) => {
     switch (status) {
       case 'approved':
-        return { bg: theme.pillSuccess, text: theme.pillSuccessText, label: 'Genehmigt' };
+        return { bg: theme.pillSuccess, text: theme.pillSuccessText, label: t('empVacation.approved') };
       case 'rejected':
-        return { bg: theme.pillDanger, text: theme.pillDangerText, label: 'Abgelehnt' };
+        return { bg: theme.pillDanger, text: theme.pillDangerText, label: t('empVacation.rejected') };
       case 'pending':
       default:
-        return { bg: theme.pillWarning, text: theme.pillWarningText, label: 'Ausstehend' };
+        return { bg: theme.pillWarning, text: theme.pillWarningText, label: t('empVacation.pendingStatus') };
     }
   };
 
   const getTypeLabel = (type: VacationRequest['type']) => {
     switch (type) {
-      case 'vacation': return 'Urlaub';
-      case 'sick': return 'Krankmeldung';
-      case 'other': return 'Sonstiges';
+      case 'vacation': return t('empVacation.typeVacation');
+      case 'sick': return t('empVacation.typeSick');
+      case 'other': return t('empVacation.typeOther');
       default: return type;
     }
   };
@@ -110,14 +112,14 @@ export default function VacationScreen() {
 
   const handleSubmitRequest = async () => {
     if (!user?.id || !startDate || !endDate) {
-      Alert.alert('Fehler', 'Bitte Start- und Enddatum angeben.');
+      Alert.alert(t('common.error'), 'Bitte Start- und Enddatum angeben.');
       return;
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-      Alert.alert('Fehler', 'Bitte Datum im Format JJJJ-MM-TT eingeben (z.B. 2025-01-15).');
+      Alert.alert(t('common.error'), 'Bitte Datum im Format JJJJ-MM-TT eingeben (z.B. 2025-01-15).');
       return;
     }
 
@@ -126,7 +128,7 @@ export default function VacationScreen() {
       const end = parseISO(endDate);
 
       if (end < start) {
-        Alert.alert('Fehler', 'Das Enddatum muss nach dem Startdatum liegen.');
+        Alert.alert(t('common.error'), 'Das Enddatum muss nach dem Startdatum liegen.');
         return;
       }
 
@@ -178,8 +180,8 @@ export default function VacationScreen() {
         </View>
 
         {/* Header */}
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Verwalten</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>Urlaub & Krankheit</Text>
+        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('empVacation.subtitle')}</Text>
+        <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empVacation.title')}</Text>
 
         {/* Vacation Balance Card */}
         <View style={[styles.balanceCard, {
@@ -188,11 +190,11 @@ export default function VacationScreen() {
         }]}>
           <View style={styles.balanceRow}>
             <View style={styles.balanceItem}>
-              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Resturlaub {new Date().getFullYear()}</Text>
-              <Text style={[styles.balanceValue, { color: theme.primary }]}>{remainingDays} Tage</Text>
+              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>{t('empVacation.remaining')} {new Date().getFullYear()}</Text>
+              <Text style={[styles.balanceValue, { color: theme.primary }]}>{remainingDays} {t('empVacation.days')}</Text>
             </View>
             <View style={styles.balanceItem}>
-              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Genommen</Text>
+              <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>{t('empVacation.used')}</Text>
               <Text style={[styles.balanceValue, { color: theme.text }]}>{usedDays}</Text>
             </View>
           </View>
@@ -206,7 +208,7 @@ export default function VacationScreen() {
             onPress={() => openNewRequest('vacation')}
           >
             <Sun size={18} color={theme.textInverse} />
-            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>Urlaub</Text>
+            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>{t('empVacation.typeVacation')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder, borderWidth: 1 }]}
@@ -219,11 +221,11 @@ export default function VacationScreen() {
         </View>
 
         {/* Requests */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MEINE ANTRÄGE</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empVacation.myRequests')}</Text>
 
         {requests.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Anträge vorhanden</Text>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>{t('empVacation.noRequests')}</Text>
           </View>
         ) : (
           requests.map((request) => {
@@ -262,7 +264,7 @@ export default function VacationScreen() {
 
         <View style={styles.dateRow}>
           <View style={styles.dateInput}>
-            <Typography variant="caption" color="muted">Von (JJJJ-MM-TT)</Typography>
+            <Typography variant="caption" color="muted">{t('empVacation.from')} (JJJJ-MM-TT)</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={startDate}
@@ -272,7 +274,7 @@ export default function VacationScreen() {
             />
           </View>
           <View style={styles.dateInput}>
-            <Typography variant="caption" color="muted">Bis (JJJJ-MM-TT)</Typography>
+            <Typography variant="caption" color="muted">{t('empVacation.to')} (JJJJ-MM-TT)</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={endDate}
@@ -300,7 +302,7 @@ export default function VacationScreen() {
           disabled={isSubmitting}
         >
           <Typography variant="label" style={{ color: theme.textInverse }}>
-            {isSubmitting ? 'Wird eingereicht...' : 'Antrag einreichen'}
+            {isSubmitting ? 'Wird eingereicht...' : t('empVacation.submitRequest')}
           </Typography>
         </TouchableOpacity>
       </Modal>

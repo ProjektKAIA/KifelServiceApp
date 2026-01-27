@@ -9,9 +9,11 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTimeStore, LocationData } from '@/src/store/timeStore';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { user } = useAuthStore();
   const {
@@ -141,7 +143,7 @@ export default function TimeTrackingScreen() {
 
         {/* Header */}
         <Text style={[styles.headerSmall, { color: theme.textMuted }]}>GPS-gestützt</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>Zeiterfassung</Text>
+        <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empTime.title')}</Text>
 
         {/* Big Time Display */}
         <Text style={[styles.timeDisplay, { color: theme.text }]}>{currentTime}</Text>
@@ -153,8 +155,8 @@ export default function TimeTrackingScreen() {
             {isLocationLoading
               ? 'Standort wird ermittelt...'
               : hasLocation
-              ? 'GPS aktiv · Standort erkannt'
-              : locationError || 'GPS nicht verfügbar'}
+              ? `${t('empTime.gpsActive')} · Standort erkannt`
+              : locationError || t('empTime.gpsInactive')}
           </Text>
         </View>
 
@@ -183,12 +185,12 @@ export default function TimeTrackingScreen() {
         {/* Action Button */}
         {!isTracking ? (
           <TouchableOpacity style={[styles.clockInButton, { backgroundColor: theme.success }]} onPress={handleClockIn} activeOpacity={0.8}>
-            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>▶ Arbeitsbeginn</Text>
+            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>▶ {t('empTime.clockIn')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.clockOutButton, { backgroundColor: theme.danger }]} onPress={handleClockOut} activeOpacity={0.8}>
             <Square size={18} color={theme.textInverse} fill={theme.textInverse} />
-            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>Arbeitsende</Text>
+            <Text style={[styles.clockButtonText, { color: theme.textInverse }]}>{t('empTime.clockOut')}</Text>
           </TouchableOpacity>
         )}
 

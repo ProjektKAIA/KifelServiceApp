@@ -54,6 +54,7 @@ import {
 import { de } from 'date-fns/locale';
 
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/firestore';
 import { User } from '@/src/types';
@@ -105,6 +106,7 @@ const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description
 
 export default function AdminReportsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<ReportTab>('stunden');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
@@ -317,7 +319,7 @@ export default function AdminReportsScreen() {
       });
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Fehler', 'Export konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('adminReports.exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -487,10 +489,10 @@ export default function AdminReportsScreen() {
               <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>AUSWERTUNG</Text>
             </View>
             <Text style={[styles.headerSmall, { color: theme.textMuted }]}>
-              {activeTab === 'stunden' ? 'Arbeitsstunden' : 'GPS-Tracking'}
+              {activeTab === 'stunden' ? t('adminReports.workHours') : t('adminReports.gpsTracking')}
             </Text>
             <Text style={[styles.headerLarge, { color: theme.text }]}>
-              {activeTab === 'stunden' ? 'Stundenübersicht' : 'Standort-Auswertung'}
+              {activeTab === 'stunden' ? t('adminReports.hoursOverview') : t('adminReports.locationAnalysis')}
             </Text>
           </View>
           {activeTab === 'stunden' && (
@@ -524,7 +526,7 @@ export default function AdminReportsScreen() {
                 { color: activeTab === 'stunden' ? theme.textInverse : theme.textSecondary },
               ]}
             >
-              Stunden
+              {t('adminReports.hours')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -541,7 +543,7 @@ export default function AdminReportsScreen() {
                 { color: activeTab === 'standort' ? theme.textInverse : theme.textSecondary },
               ]}
             >
-              Standort
+              {t('adminReports.location')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -889,7 +891,7 @@ export default function AdminReportsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
           <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Export-Format wählen</Text>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
               <TouchableOpacity onPress={() => setShowExportModal(false)}>
                 <X size={24} color={theme.textMuted} />
               </TouchableOpacity>
@@ -931,7 +933,7 @@ export default function AdminReportsScreen() {
             <TouchableOpacity onPress={() => setShowDetailModal(false)} style={styles.detailCloseButton}>
               <X size={24} color={theme.text} />
             </TouchableOpacity>
-            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>Mitarbeiter-Details</Text>
+            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>{t('adminReports.employeeDetails')}</Text>
             <View style={{ width: 40 }} />
           </View>
 
@@ -1085,7 +1087,7 @@ export default function AdminReportsScreen() {
             <TouchableOpacity onPress={() => setShowLocationDetailModal(false)} style={styles.detailCloseButton}>
               <X size={24} color={theme.text} />
             </TouchableOpacity>
-            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>Standort-Details</Text>
+            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>{t('adminReports.locationDetails')}</Text>
             <View style={{ width: 40 }} />
           </View>
 

@@ -9,6 +9,7 @@ import { FilterTabs } from '@/src/components/molecules';
 import { ScreenHeader, RequestCard } from '@/src/components/organisms';
 
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
 
 type RequestType = 'vacation' | 'sick';
@@ -32,11 +33,12 @@ const mockRequests: Request[] = [
 
 export default function RequestsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<'all' | RequestType>('all');
   const [requests, setRequests] = useState(mockRequests);
 
   const filterOptions = [
-    { key: 'all', label: 'Alle' },
+    { key: 'all', label: t('adminRequests.all') },
     { key: 'vacation', label: 'Urlaub' },
     { key: 'sick', label: 'Krank' },
   ];
@@ -58,7 +60,7 @@ export default function RequestsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader overline="VERWALTUNG" title="Anträge" />
+        <ScreenHeader overline="VERWALTUNG" title={t('adminRequests.title')} />
 
         <FilterTabs
           options={filterOptions}

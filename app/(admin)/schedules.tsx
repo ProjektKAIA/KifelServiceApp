@@ -33,6 +33,7 @@ import { Card, Modal } from '@/src/components/molecules';
 import { ScreenHeader } from '@/src/components/organisms';
 
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
 import { shiftsCollection, usersCollection } from '@/src/lib/firestore';
 import { Shift, User } from '@/src/types';
@@ -60,6 +61,7 @@ const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description
 
 export default function ScheduleManagementScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   // Store date as ISO string to prevent reference comparison issues
   const [currentDateStr, setCurrentDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -154,7 +156,7 @@ export default function ScheduleManagementScreen() {
       setEmployees(employeesData.filter(e => e.status !== 'inactive' && e.status !== 'deleted'));
     } catch (error) {
       console.error('Error loading schedules:', error);
-      Alert.alert('Fehler', 'Daten konnten nicht geladen werden.');
+      Alert.alert(t('common.error'), t('adminSchedules.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -241,7 +243,7 @@ export default function ScheduleManagementScreen() {
 
   const handleAddShift = async () => {
     if (!selectedDate || !selectedEmployeeId) {
-      Alert.alert('Fehler', 'Bitte Mitarbeiter auswählen.');
+      Alert.alert(t('common.error'), t('adminSchedules.selectEmployee'));
       return;
     }
 
@@ -263,18 +265,18 @@ export default function ScheduleManagementScreen() {
       setShowAddModal(false);
       resetForm();
       loadData();
-      Alert.alert('Erfolg', 'Schicht wurde hinzugefügt.');
+      Alert.alert(t('adminSchedules.success'), t('adminSchedules.shiftAdded'));
     } catch (error) {
       console.error('Error adding shift:', error);
-      Alert.alert('Fehler', 'Schicht konnte nicht hinzugefügt werden.');
+      Alert.alert(t('common.error'), t('adminSchedules.shiftAddError'));
     }
   };
 
   const handleDeleteShift = (shiftId: string) => {
-    Alert.alert('Schicht löschen', 'Möchten Sie diese Schicht wirklich löschen?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('adminSchedules.deleteShift'), t('adminSchedules.deleteShiftConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Löschen',
+        text: t('adminSchedules.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -282,7 +284,7 @@ export default function ScheduleManagementScreen() {
             loadData();
           } catch (error) {
             console.error('Error deleting shift:', error);
-            Alert.alert('Fehler', 'Schicht konnte nicht gelöscht werden.');
+            Alert.alert(t('common.error'), t('adminSchedules.shiftDeleteError'));
           }
         },
       },
@@ -445,7 +447,7 @@ export default function ScheduleManagementScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <ScreenHeader overline="VERWALTUNG" title="Dienstplan" />
+            <ScreenHeader overline="VERWALTUNG" title={t('adminSchedules.title')} />
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity

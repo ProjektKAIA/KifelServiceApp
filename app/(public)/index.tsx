@@ -7,11 +7,13 @@ import { useRouter } from 'expo-router';
 import { Info, Mail, Users, Lock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { SocialMediaButtons } from '@/src/components/molecules';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -23,7 +25,7 @@ export default function WelcomeScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.slogan, { color: theme.textMuted }]}>Aus reinem Herzen</Text>
+          <Text style={[styles.slogan, { color: theme.textMuted }]}>{t('public.slogan')}</Text>
         </View>
 
         {/* Menu Buttons */}
@@ -33,7 +35,7 @@ export default function WelcomeScreen() {
           activeOpacity={0.7}
         >
           <Info size={22} color={theme.textSecondary} />
-          <Text style={[styles.menuButtonText, { color: theme.text }]}>Über uns</Text>
+          <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('public.about')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -42,7 +44,7 @@ export default function WelcomeScreen() {
           activeOpacity={0.7}
         >
           <Mail size={22} color={theme.textSecondary} />
-          <Text style={[styles.menuButtonText, { color: theme.text }]}>Kontakt</Text>
+          <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('public.contact')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -51,7 +53,7 @@ export default function WelcomeScreen() {
           activeOpacity={0.7}
         >
           <Users size={22} color={theme.textSecondary} />
-          <Text style={[styles.menuButtonText, { color: theme.text }]}>Karriere</Text>
+          <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('public.career')}</Text>
         </TouchableOpacity>
 
         {/* Social Media Links */}
@@ -68,9 +70,9 @@ export default function WelcomeScreen() {
             activeOpacity={0.8}
           >
             <Lock size={22} color={theme.textInverse} />
-            <Text style={[styles.loginButtonText, { color: theme.textInverse }]}>Mitarbeiter-Login</Text>
+            <Text style={[styles.loginButtonText, { color: theme.textInverse }]}>{t('public.employeeLogin')}</Text>
           </TouchableOpacity>
-          <Text style={[styles.loginHint, { color: theme.textMuted }]}>Nur für Mitarbeitende</Text>
+          <Text style={[styles.loginHint, { color: theme.textMuted }]}>{t('public.employeesOnly')}</Text>
         </View>
       </View>
     </SafeAreaView>

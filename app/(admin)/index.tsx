@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Calendar, Users, Check, X, Bell, ChevronRight, User } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { vacationRequestsCollection, statsCollection, usersCollection, adminNotificationsCollection } from '@/src/lib/firestore';
 import { VacationRequest, User as UserType, AdminStats, AdminNotification } from '@/src/types';
 import { useAuthStore } from '@/src/store/authStore';
@@ -21,6 +22,7 @@ interface OpenRequest extends VacationRequest {
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const greeting = getGreeting();
@@ -328,7 +330,7 @@ export default function AdminDashboardScreen() {
         )}
 
         {/* Management Section */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: notifications.length > 0 ? spacing.lg : 0 }]}>VERWALTUNG</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: notifications.length > 0 ? spacing.lg : 0 }]}>{t('adminDashboard.admin')}</Text>
 
         <TouchableOpacity
           style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
@@ -355,7 +357,7 @@ export default function AdminDashboardScreen() {
 
         {openRequests.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine offenen Anträge</Text>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>{t('adminDashboard.noActivity')}</Text>
           </View>
         ) : (
           openRequests.map((request) => (

@@ -24,6 +24,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 const LAST_UPDATED = '14. Januar 2026';
@@ -31,6 +32,7 @@ const LAST_UPDATED = '14. Januar 2026';
 export default function WorkingHoursScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const legalSources = [
     {
@@ -183,7 +185,7 @@ Die Erfassung kann durch den Arbeitnehmer selbst erfolgen.`,
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Rechtliches</Text>
-            <Text style={[styles.headerLarge, { color: theme.text }]}>Arbeitszeit-Regeln</Text>
+            <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsHours.title')}</Text>
           </View>
         </View>
 

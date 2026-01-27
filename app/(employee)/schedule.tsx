@@ -8,15 +8,25 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { de } from 'date-fns/locale';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { useAuthStore } from '@/src/store/authStore';
 import { shiftsCollection } from '@/src/lib/firestore';
 import { Shift } from '@/src/types';
 
-const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-
 export default function ScheduleScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
+
+  const WEEKDAYS = [
+    t('empSchedule.weekdays.mo'),
+    t('empSchedule.weekdays.tu'),
+    t('empSchedule.weekdays.we'),
+    t('empSchedule.weekdays.th'),
+    t('empSchedule.weekdays.fr'),
+    t('empSchedule.weekdays.sa'),
+    t('empSchedule.weekdays.su'),
+  ];
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +113,7 @@ export default function ScheduleScreen() {
       >
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>DIENSTPLAN</Text>
+          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empSchedule.title')}</Text>
         </View>
 
         {/* Month Header */}
@@ -119,7 +129,7 @@ export default function ScheduleScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Dienstplan</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('empSchedule.title')}</Text>
 
         {/* Calendar */}
         <View style={[styles.calendar, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
@@ -171,11 +181,11 @@ export default function ScheduleScreen() {
         </View>
 
         {/* Upcoming Shifts */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>KOMMENDE SCHICHTEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empSchedule.upcomingShifts')}</Text>
 
         {upcomingShifts.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine kommenden Schichten</Text>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>{t('empSchedule.noUpcoming')}</Text>
           </View>
         ) : (
           upcomingShifts.map((shift) => {
@@ -190,7 +200,7 @@ export default function ScheduleScreen() {
               >
                 <View style={styles.shiftInfo}>
                   <Text style={[styles.shiftDate, { color: theme.text }]}>
-                    {shiftIsToday ? 'Heute' : format(shiftDate, 'EEE, d. MMM', { locale: de })}
+                    {shiftIsToday ? t('common.today') : format(shiftDate, 'EEE, d. MMM', { locale: de })}
                   </Text>
                   <Text style={[styles.shiftTime, { color: theme.textMuted }]}>
                     {shift.startTime} – {shift.endTime} Uhr
@@ -215,7 +225,7 @@ export default function ScheduleScreen() {
                     ]}
                   />
                   <Text style={{ color: active ? theme.pillSuccessText : theme.pillInfoText, fontSize: 11, fontWeight: '600' }}>
-                    {active ? 'Aktiv' : 'Geplant'}
+                    {active ? t('empSchedule.active') : t('empSchedule.planned')}
                   </Text>
                 </View>
               </View>

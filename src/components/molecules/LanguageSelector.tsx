@@ -1,53 +1,38 @@
-// src/components/molecules/ThemeToggle.tsx
+// src/components/molecules/LanguageSelector.tsx
 
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Sun, Moon, Smartphone } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
-import { ThemePreference } from '@/src/store/themeStore';
+import { LANGUAGES } from '@/src/i18n';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
-interface ThemeOption {
-  value: ThemePreference;
-  label: string;
-  icon: React.ComponentType<{ size: number; color: string }>;
-}
-
-export const ThemeToggle: React.FC = () => {
-  const { theme, themePreference, setThemePreference } = useTheme();
-  const { t } = useTranslation();
-
-  const options: ThemeOption[] = [
-    { value: 'light', label: t('theme.light'), icon: Sun },
-    { value: 'system', label: t('theme.system'), icon: Smartphone },
-    { value: 'dark', label: t('theme.dark'), icon: Moon },
-  ];
+export const LanguageSelector: React.FC = () => {
+  const { theme } = useTheme();
+  const { language, setLanguage } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      {options.map((option) => {
-        const isActive = themePreference === option.value;
-        const Icon = option.icon;
+      {LANGUAGES.map((lang) => {
+        const isActive = language === lang.code;
 
         return (
           <TouchableOpacity
-            key={option.value}
+            key={lang.code}
             style={[
               styles.option,
               isActive && { backgroundColor: theme.primary },
             ]}
-            onPress={() => setThemePreference(option.value)}
+            onPress={() => setLanguage(lang.code)}
             activeOpacity={0.7}
           >
-            <Icon size={16} color={isActive ? '#fff' : theme.textSecondary} />
             <Text
               style={[
                 styles.label,
                 { color: isActive ? '#fff' : theme.textSecondary },
               ]}
             >
-              {option.label}
+              {lang.label}
             </Text>
           </TouchableOpacity>
         );
@@ -66,16 +51,14 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: borderRadius.md,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

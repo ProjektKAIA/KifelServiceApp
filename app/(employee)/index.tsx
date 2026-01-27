@@ -9,10 +9,12 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTimeStore } from '@/src/store/timeStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { isTracking } = useTimeStore();
 
@@ -106,7 +108,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* Quick Access */}
-        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>SCHNELLZUGRIFF</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>{t('empDashboard.quickActions')}</Text>
         
         <View style={styles.actionsGrid}>
           <TouchableOpacity
@@ -133,7 +135,7 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
           >
             <Sun size={18} color={theme.textSecondary} />
-            <Text style={[styles.actionButtonText, { color: theme.text }]}>Urlaub</Text>
+            <Text style={[styles.actionButtonText, { color: theme.text }]}>{t('empDashboard.vacation')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

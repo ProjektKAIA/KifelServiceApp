@@ -7,22 +7,24 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Briefcase, MapPin, Clock, ChevronRight, Heart, TrendingUp, Users } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
-
-const benefits = [
-  { icon: Heart, title: 'Work-Life-Balance', desc: 'Flexible Arbeitszeiten' },
-  { icon: TrendingUp, title: 'Entwicklung', desc: 'Weiterbildungsmöglichkeiten' },
-  { icon: Users, title: 'Teamgeist', desc: 'Tolles Arbeitsklima' },
-];
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 const jobs = [
-  { id: '1', title: 'Servicetechniker (m/w/d)', location: 'Forst', type: 'Vollzeit' },
-  { id: '2', title: 'Reinigungskraft (m/w/d)', location: 'Cottbus', type: 'Teilzeit' },
-  { id: '3', title: 'Teamleiter (m/w/d)', location: 'Forst', type: 'Vollzeit' },
+  { id: '1', title: 'Servicetechniker (m/w/d)', location: 'Forst', typeKey: 'career.fullTime' as const },
+  { id: '2', title: 'Reinigungskraft (m/w/d)', location: 'Cottbus', typeKey: 'career.partTime' as const },
+  { id: '3', title: 'Teamleiter (m/w/d)', location: 'Forst', typeKey: 'career.fullTime' as const },
 ];
 
 export default function CareerScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
+
+  const benefits = [
+    { icon: Heart, title: t('career.workLife'), desc: t('career.workLifeDesc') },
+    { icon: TrendingUp, title: t('career.development'), desc: t('career.developmentDesc') },
+    { icon: Users, title: t('career.teamSpirit'), desc: t('career.teamSpiritDesc') },
+  ];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -32,14 +34,14 @@ export default function CareerScreen() {
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>{t('public.badge')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>Karriere</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('career.title')}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Werden Sie Teil unseres Teams
+          {t('career.subtitle')}
         </Text>
 
         {/* Benefits */}
@@ -59,7 +61,7 @@ export default function CareerScreen() {
         </View>
 
         {/* Jobs */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>OFFENE STELLEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('career.openPositions')}</Text>
 
         {jobs.map((job) => (
           <TouchableOpacity
@@ -80,7 +82,7 @@ export default function CareerScreen() {
                   </View>
                   <View style={styles.jobMetaItem}>
                     <Clock size={12} color={theme.textMuted} />
-                    <Text style={[styles.jobMetaText, { color: theme.textMuted }]}>{job.type}</Text>
+                    <Text style={[styles.jobMetaText, { color: theme.textMuted }]}>{t(job.typeKey)}</Text>
                   </View>
                 </View>
               </View>
@@ -91,12 +93,12 @@ export default function CareerScreen() {
 
         {/* CTA */}
         <View style={[styles.ctaCard, { backgroundColor: 'rgba(59,130,246,0.1)', borderColor: 'rgba(99,102,241,0.2)' }]}>
-          <Text style={[styles.ctaTitle, { color: theme.text }]}>Initiativbewerbung</Text>
+          <Text style={[styles.ctaTitle, { color: theme.text }]}>{t('career.initiative')}</Text>
           <Text style={[styles.ctaText, { color: theme.textMuted }]}>
-            Keine passende Stelle dabei? Bewerben Sie sich initiativ!
+            {t('career.noMatch')}
           </Text>
           <TouchableOpacity style={styles.ctaButton} activeOpacity={0.8}>
-            <Text style={styles.ctaButtonText}>Jetzt bewerben</Text>
+            <Text style={styles.ctaButtonText}>{t('career.applyNow')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

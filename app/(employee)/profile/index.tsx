@@ -8,12 +8,14 @@ import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, 
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { ThemePreference } from '@/src/store/themeStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme, themePreference, setThemePreference, colorScheme } = useTheme();
   const { user, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
@@ -21,16 +23,16 @@ export default function ProfileScreen() {
   const userInitials = `${user?.firstName?.[0] || 'M'}${user?.lastName?.[0] || 'M'}`;
 
   const themeOptions: { value: ThemePreference; label: string; icon: any }[] = [
-    { value: 'light', label: 'Hell', icon: Sun },
-    { value: 'system', label: 'System', icon: Smartphone },
-    { value: 'dark', label: 'Dunkel', icon: Moon },
+    { value: 'light', label: t('empProfile.themeLight'), icon: Sun },
+    { value: 'system', label: t('empProfile.themeSystem'), icon: Smartphone },
+    { value: 'dark', label: t('empProfile.themeDark'), icon: Moon },
   ];
 
   const handleLogout = () => {
-    Alert.alert('Abmelden', 'Möchten Sie sich wirklich abmelden?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('empProfile.logout'), t('empProfile.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Abmelden',
+        text: t('empProfile.logout'),
         style: 'destructive',
         onPress: () => {
           logout();
@@ -95,17 +97,17 @@ export default function ProfileScreen() {
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Calendar size={20} color={theme.primary} />
             <Text style={[styles.statValue, { color: theme.text }]}>seit 2022</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Dabei</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empProfile.since')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Clock size={20} color={theme.primary} />
             <Text style={[styles.statValue, { color: theme.text }]}>1.248h</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Gearbeitet</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empProfile.worked')}</Text>
           </View>
         </View>
 
         {/* Settings */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>EINSTELLUNGEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empProfile.settings')}</Text>
 
         <TouchableOpacity
           style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
@@ -118,11 +120,11 @@ export default function ProfileScreen() {
             ) : (
               <Sun size={20} color={theme.textSecondary} />
             )}
-            <Text style={[styles.menuButtonText, { color: theme.text }]}>Erscheinungsbild</Text>
+            <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('empProfile.appearance')}</Text>
           </View>
           <View style={styles.menuButtonRight}>
             <Text style={[styles.menuButtonValue, { color: theme.textMuted }]}>
-              {themePreference === 'system' ? 'System' : themePreference === 'dark' ? 'Dunkel' : 'Hell'}
+              {themePreference === 'system' ? t('empProfile.themeSystem') : themePreference === 'dark' ? t('empProfile.themeDark') : t('empProfile.themeLight')}
             </Text>
             <ChevronRight size={18} color={theme.textMuted} />
           </View>
@@ -147,7 +149,7 @@ export default function ProfileScreen() {
           activeOpacity={0.7}
         >
           <LogOut size={20} color={theme.danger} />
-          <Text style={[styles.logoutText, { color: theme.danger }]}>Abmelden</Text>
+          <Text style={[styles.logoutText, { color: theme.danger }]}>{t('empProfile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -164,7 +166,7 @@ export default function ProfileScreen() {
           onPress={() => setShowAppearanceModal(false)}
         >
           <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Erscheinungsbild</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>{t('empProfile.appearance')}</Text>
             
             <View style={styles.themeOptions}>
               {themeOptions.map((option) => {

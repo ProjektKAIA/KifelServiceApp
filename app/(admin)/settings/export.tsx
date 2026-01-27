@@ -36,6 +36,7 @@ import {
   File,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { usersCollection, shiftsCollection, timeEntriesCollection, vacationRequestsCollection, companyCollection } from '@/src/lib/firestore';
 import { User, Shift, VacationRequest } from '@/src/types';
@@ -54,6 +55,7 @@ interface ExportOption {
 export default function ExportScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [selectedType, setSelectedType] = useState<ExportType | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('excel');
@@ -100,10 +102,10 @@ export default function ExportScreen() {
   ];
 
   const dateRangeOptions: { id: typeof dateRange; label: string }[] = [
-    { id: 'month', label: 'Dieser Monat' },
-    { id: 'quarter', label: 'Dieses Quartal' },
-    { id: 'year', label: 'Dieses Jahr' },
-    { id: 'all', label: 'Alle Daten' },
+    { id: 'month', label: t('settingsExport.thisMonth') },
+    { id: 'quarter', label: t('settingsExport.thisQuarter') },
+    { id: 'year', label: t('settingsExport.thisYear') },
+    { id: 'all', label: t('settingsExport.allData') },
   ];
 
   const getDateRange = (): { start: string; end: string } => {
@@ -419,7 +421,7 @@ export default function ExportScreen() {
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={[styles.headerSmall, { color: theme.textMuted }]}>System</Text>
-            <Text style={[styles.headerLarge, { color: theme.text }]}>Daten exportieren</Text>
+            <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsExport.title')}</Text>
           </View>
         </View>
 
@@ -459,7 +461,7 @@ export default function ExportScreen() {
         {/* Date Range (for time-based exports) */}
         {selectedType && ['timeentries', 'shifts', 'vacation', 'all'].includes(selectedType) && (
           <>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ZEITRAUM</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('settingsExport.period')}</Text>
             <View style={styles.dateRangeRow}>
               {dateRangeOptions.map(option => (
                 <TouchableOpacity
@@ -486,7 +488,7 @@ export default function ExportScreen() {
         )}
 
         {/* Format Selection */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FORMAT</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('settingsExport.format')}</Text>
         <View style={styles.formatRow}>
           {formatOptions.map(option => {
             const isSelected = selectedFormat === option.id;
@@ -547,14 +549,14 @@ export default function ExportScreen() {
             <>
               <ActivityIndicator size="small" color={theme.textInverse} />
               <Text style={[styles.exportButtonText, { color: theme.textInverse }]}>
-                Export wird erstellt...
+                {t('settingsExport.exporting')}
               </Text>
             </>
           ) : (
             <>
               <Download size={20} color={theme.textInverse} />
               <Text style={[styles.exportButtonText, { color: theme.textInverse }]}>
-                Jetzt exportieren
+                {t('settingsExport.export')}
               </Text>
             </>
           )}

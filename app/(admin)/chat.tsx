@@ -20,6 +20,7 @@ import { Send, X, AtSign, Trash2, Users, Shield } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { chatCollection, usersCollection } from '@/src/lib/firestore';
 import { ChatMessage, ChatRoom, User } from '@/src/types';
 import { moderateMessage, parseMessageWithMentions, MessagePart } from '@/src/utils/chatModeration';
@@ -44,6 +45,7 @@ const getAvatarColor = (userId: string, theme: any): string => {
 
 export default function AdminChatScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
 
@@ -154,12 +156,12 @@ export default function AdminChatScreen() {
     if (!selectedMessage) return;
 
     Alert.alert(
-      'Nachricht löschen',
-      'Möchtest du diese Nachricht wirklich löschen?',
+      t('adminChat.deleteMessage'),
+      t('adminChat.deleteMessageConfirm'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('adminChat.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -168,7 +170,7 @@ export default function AdminChatScreen() {
               setSelectedMessage(null);
             } catch (error) {
               console.error('Error deleting message:', error);
-              Alert.alert('Fehler', 'Nachricht konnte nicht gelöscht werden.');
+              Alert.alert(t('common.error'), t('adminChat.deleteError'));
             }
           },
         },
@@ -299,9 +301,9 @@ export default function AdminChatScreen() {
           </View>
         </View>
         <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} Mitglieder</Text>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Team-Chat</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('adminChat.title')}</Text>
         <Text style={[styles.adminHint, { color: theme.textMuted }]}>
-          Lange auf Nachricht drücken zum Löschen
+          {t('adminChat.longPressHint')}
         </Text>
       </View>
 
@@ -317,7 +319,7 @@ export default function AdminChatScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              Noch keine Nachrichten. Starte die Unterhaltung!
+              {t('adminChat.noMessages')}
             </Text>
           </View>
         }
@@ -365,7 +367,7 @@ export default function AdminChatScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.mentionPickerContainer, { backgroundColor: theme.background }]}>
             <View style={styles.mentionPickerHeader}>
-              <Text style={[styles.mentionPickerTitle, { color: theme.text }]}>Person erwähnen</Text>
+              <Text style={[styles.mentionPickerTitle, { color: theme.text }]}>{t('adminChat.mentionPerson')}</Text>
               <TouchableOpacity onPress={() => setShowMentionPicker(false)}>
                 <X size={24} color={theme.text} />
               </TouchableOpacity>
@@ -433,7 +435,7 @@ export default function AdminChatScreen() {
           onPress={() => setShowMessageOptions(false)}
         >
           <View style={[styles.optionsContainer, { backgroundColor: theme.background }]}>
-            <Text style={[styles.optionsTitle, { color: theme.text }]}>Nachricht-Optionen</Text>
+            <Text style={[styles.optionsTitle, { color: theme.text }]}>{t('adminChat.messageOptions')}</Text>
 
             {selectedMessage && (
               <View style={[styles.selectedMessagePreview, { backgroundColor: theme.surface }]}>
@@ -449,7 +451,7 @@ export default function AdminChatScreen() {
               activeOpacity={0.8}
             >
               <Trash2 size={20} color="#ffffff" />
-              <Text style={styles.optionButtonText}>Nachricht löschen</Text>
+              <Text style={styles.optionButtonText}>{t('adminChat.deleteMessage')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -457,7 +459,7 @@ export default function AdminChatScreen() {
               onPress={() => setShowMessageOptions(false)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.cancelButtonText, { color: theme.text }]}>Abbrechen</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

@@ -10,6 +10,7 @@ import { Modal, Card } from '@/src/components/molecules';
 import { ScreenHeader } from '@/src/components/organisms';
 
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
 import { User, Invite } from '@/src/types';
 import { usersCollection, invitesCollection, timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
@@ -48,6 +49,7 @@ const initialFormData: EmployeeFormData = {
 
 export default function TeamManagementScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user: currentUser } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [employees, setEmployees] = useState<User[]>([]);
@@ -538,13 +540,13 @@ export default function TeamManagementScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        <ScreenHeader overline="VERWALTUNG" title="Team" />
+        <ScreenHeader overline="VERWALTUNG" title={t('adminTeam.title')} />
 
         {/* Search & Add */}
         <View style={styles.searchRow}>
           <Input
             icon={Search}
-            placeholder="Mitarbeiter suchen..."
+            placeholder={t('adminTeam.searchPlaceholder')}
             value={searchQuery}
             onChangeText={setSearchQuery}
             containerStyle={styles.searchInput}
@@ -565,11 +567,11 @@ export default function TeamManagementScreen() {
           </Card>
           <Card variant="default" style={styles.statCard}>
             <Typography variant="h2" style={{ color: theme.success }}>{activeEmployees.length}</Typography>
-            <Typography variant="caption" color="muted">Aktiv</Typography>
+            <Typography variant="caption" color="muted">{t('adminTeam.active')}</Typography>
           </Card>
           <Card variant="default" style={styles.statCard}>
             <Typography variant="h2" style={{ color: theme.textMuted }}>{inactiveEmployees.length}</Typography>
-            <Typography variant="caption" color="muted">Inaktiv</Typography>
+            <Typography variant="caption" color="muted">{t('adminTeam.inactive')}</Typography>
           </Card>
         </View>
 
@@ -645,7 +647,7 @@ export default function TeamManagementScreen() {
 
         {employees.length === 0 && pendingInvites.length === 0 && (
           <View style={styles.emptyState}>
-            <Typography variant="body" color="muted">Noch keine Mitarbeiter vorhanden.</Typography>
+            <Typography variant="body" color="muted">{t('adminTeam.noMembers')}</Typography>
             <Button title="Ersten Mitarbeiter einladen" onPress={handleAddEmployee} style={{ marginTop: spacing.md }} />
           </View>
         )}

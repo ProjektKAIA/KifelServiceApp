@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 // Contact Data
 const CONTACT = {
@@ -22,6 +23,7 @@ const CONTACT = {
 export default function ContactScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,10 +31,10 @@ export default function ContactScreen() {
 
   const handleSubmit = () => {
     if (!name.trim() || !email.trim() || !message.trim()) {
-      Alert.alert('Fehler', 'Bitte füllen Sie alle Felder aus.');
+      Alert.alert(t('common.error'), t('contact.fillAll'));
       return;
     }
-    Alert.alert('Gesendet', 'Vielen Dank für Ihre Nachricht. Wir melden uns in Kürze.');
+    Alert.alert(t('contact.sent'), t('contact.thankYou'));
     setName('');
     setEmail('');
     setMessage('');
@@ -46,14 +48,14 @@ export default function ContactScreen() {
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>{t('public.badge')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>Kontakt</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('contact.title')}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Wir freuen uns auf Ihre Nachricht
+          {t('contact.subtitle')}
         </Text>
 
         {/* Contact Info */}
@@ -88,11 +90,11 @@ export default function ContactScreen() {
         </View>
 
         {/* Contact Form */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>NACHRICHT SENDEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('contact.sendMessage')}</Text>
 
         <TextInput
           style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
-          placeholder="Ihr Name"
+          placeholder={t('contact.namePlaceholder')}
           placeholderTextColor={theme.textMuted}
           value={name}
           onChangeText={setName}
@@ -100,7 +102,7 @@ export default function ContactScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
-          placeholder="Ihre E-Mail"
+          placeholder={t('contact.emailPlaceholder')}
           placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
@@ -110,7 +112,7 @@ export default function ContactScreen() {
 
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
-          placeholder="Ihre Nachricht"
+          placeholder={t('contact.messagePlaceholder')}
           placeholderTextColor={theme.textMuted}
           value={message}
           onChangeText={setMessage}
@@ -125,7 +127,7 @@ export default function ContactScreen() {
           activeOpacity={0.8}
         >
           <Send size={18} color={theme.textInverse} />
-          <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>Nachricht senden</Text>
+          <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>{t('contact.sendButton')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

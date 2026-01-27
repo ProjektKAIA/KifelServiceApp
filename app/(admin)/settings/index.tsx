@@ -29,12 +29,15 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { ThemeToggle } from '@/src/components/molecules/ThemeToggle';
+import { LanguageSelector } from '@/src/components/molecules/LanguageSelector';
 import { LocationPermissionModal } from '@/src/components/molecules/LocationPermissionModal';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   const [notifications, setNotifications] = useState(true);
   const [gpsTracking, setGpsTracking] = useState(false);
@@ -70,11 +73,11 @@ export default function SettingsScreen() {
       } else {
         // Permission was denied before - show alert to go to settings
         Alert.alert(
-          'Standortberechtigung erforderlich',
-          'Die Standortberechtigung wurde zuvor verweigert. Bitte aktivieren Sie sie in den Geräte-Einstellungen.',
+          t('settings.locationRequired'),
+          t('settings.locationDenied'),
           [
-            { text: 'Abbrechen', style: 'cancel' },
-            { text: 'Einstellungen öffnen', onPress: () => Linking.openSettings() },
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('settings.openSettings'), onPress: () => Linking.openSettings() },
           ]
         );
       }
@@ -95,9 +98,9 @@ export default function SettingsScreen() {
       setGpsTracking(true);
     } else {
       Alert.alert(
-        'Berechtigung verweigert',
-        'Ohne Standortberechtigung kann GPS-Tracking nicht aktiviert werden.',
-        [{ text: 'OK' }]
+        t('settings.permissionDenied'),
+        t('settings.noGpsWithoutPermission'),
+        [{ text: t('common.ok') }]
       );
     }
   };
@@ -108,10 +111,10 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Abmelden', 'Möchten Sie sich wirklich abmelden?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('settings.logout'), t('settings.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Abmelden',
+        text: t('settings.logout'),
         style: 'destructive',
         onPress: () => {
           logout();
@@ -128,24 +131,24 @@ export default function SettingsScreen() {
 
   const menuSections = [
     {
-      title: 'APP-EINSTELLUNGEN',
+      title: t('settings.appSettings'),
       items: [
-        { icon: Bell, label: 'Benachrichtigungen', toggle: true, value: notifications, onToggle: setNotifications },
-        { icon: MapPin, label: 'GPS-Tracking aktiv', toggle: true, value: gpsTracking, onToggle: handleGpsToggle },
+        { icon: Bell, label: t('settings.notifications'), toggle: true, value: notifications, onToggle: setNotifications },
+        { icon: MapPin, label: t('settings.gpsTracking'), toggle: true, value: gpsTracking, onToggle: handleGpsToggle },
       ],
     },
     {
-      title: 'SYSTEM',
+      title: t('settings.system'),
       items: [
-        { icon: Clock, label: 'Arbeitszeit-Regeln', onPress: () => router.push('/(admin)/settings/workinghours') },
-        { icon: Database, label: 'Daten exportieren', onPress: () => router.push('/(admin)/settings/export') },
-        { icon: Shield, label: 'Datenschutz & Sicherheit', onPress: () => router.push('/(admin)/settings/privacy') },
+        { icon: Clock, label: t('settings.workingHours'), onPress: () => router.push('/(admin)/settings/workinghours') },
+        { icon: Database, label: t('settings.exportData'), onPress: () => router.push('/(admin)/settings/export') },
+        { icon: Shield, label: t('settings.privacySecurity'), onPress: () => router.push('/(admin)/settings/privacy') },
       ],
     },
     {
-      title: 'HILFE',
+      title: t('settings.help'),
       items: [
-        { icon: HelpCircle, label: 'Support kontaktieren', onPress: () => router.push('/(admin)/settings/support') },
+        { icon: HelpCircle, label: t('settings.contactSupport'), onPress: () => router.push('/(admin)/settings/support') },
       ],
     },
   ];
@@ -154,8 +157,8 @@ export default function SettingsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Verwaltung</Text>
-          <Text style={[styles.headerLarge, { color: theme.text }]}>Einstellungen</Text>
+          <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settings.admin')}</Text>
+          <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settings.title')}</Text>
         </View>
 
         <TouchableOpacity
@@ -174,17 +177,24 @@ export default function SettingsScreen() {
             <Text style={[styles.profileName, { color: theme.text }]}>
               {user?.firstName} {user?.lastName}
             </Text>
-            <Text style={[styles.profileRole, { color: theme.textMuted }]}>Administrator</Text>
-            <Text style={[styles.profileHint, { color: theme.primary }]}>Profil & Firma bearbeiten</Text>
+            <Text style={[styles.profileRole, { color: theme.textMuted }]}>{t('settings.administrator')}</Text>
+            <Text style={[styles.profileHint, { color: theme.primary }]}>{t('settings.editProfile')}</Text>
           </View>
           <ChevronRight size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
         {/* Theme Selection */}
-        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>ERSCHEINUNGSBILD</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>{t('settings.appearance')}</Text>
         <View style={[styles.themeCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-          <Text style={[styles.themeLabel, { color: theme.text }]}>Farbschema</Text>
+          <Text style={[styles.themeLabel, { color: theme.text }]}>{t('settings.colorScheme')}</Text>
           <ThemeToggle />
+        </View>
+
+        {/* Language Selection */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>{t('settings.language')}</Text>
+        <View style={[styles.themeCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+          <Text style={[styles.themeLabel, { color: theme.text }]}>{t('settings.languageLabel')}</Text>
+          <LanguageSelector />
         </View>
 
         {menuSections.map((section, sectionIndex) => (
@@ -224,7 +234,7 @@ export default function SettingsScreen() {
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
           <LogOut size={18} color={theme.danger} />
-          <Text style={[styles.logoutText, { color: theme.danger }]}>Abmelden</Text>
+          <Text style={[styles.logoutText, { color: theme.danger }]}>{t('settings.logout')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: theme.textMuted }]}>Version 1.0.0 (Admin)</Text>

@@ -8,6 +8,7 @@ import { X, Users, Shield, Eye, EyeOff, Check, Phone } from 'lucide-react-native
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { firebaseAuth } from '@/src/lib/firebase';
 import { usersCollection } from '@/src/lib/firestore';
 import { SocialMediaButtons } from '@/src/components/molecules';
@@ -18,6 +19,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { login, isLoading } = useAuthStore();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,14 +30,14 @@ export default function LoginScreen() {
     // Input Validation
     const validation = validateLoginInput(email, password);
     if (!validation.isValid) {
-      Alert.alert('Fehler', validation.error || 'Ungültige Eingabe');
+      Alert.alert(t('common.error'), validation.error || t('auth.invalidInput'));
       return;
     }
 
     // Rate Limiting Check
     const rateLimit = await checkLoginAllowed(validation.email);
     if (!rateLimit.allowed) {
-      Alert.alert('Gesperrt', rateLimit.message || 'Zu viele Versuche');
+      Alert.alert(t('auth.locked'), rateLimit.message || t('auth.tooManyAttempts'));
       return;
     }
 
@@ -49,9 +51,9 @@ export default function LoginScreen() {
       const result = await recordFailedLogin(validation.email);
 
       if (result.message) {
-        Alert.alert('Fehler', `Ungültige Anmeldedaten.\n${result.message}`);
+        Alert.alert(t('common.error'), `${t('auth.invalidCredentials')}\n${result.message}`);
       } else {
-        Alert.alert('Fehler', 'Ungültige Anmeldedaten.');
+        Alert.alert(t('common.error'), t('auth.invalidCredentials'));
       }
     }
   };
@@ -112,7 +114,7 @@ export default function LoginScreen() {
             <X size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>LOGIN</Text>
+            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('auth.login')}</Text>
           </View>
         </View>
 
@@ -126,8 +128,8 @@ export default function LoginScreen() {
         </View>
 
         {/* Header */}
-        <Text style={[styles.title, { color: theme.text }]}>Mitarbeiter-Login</Text>
-        <Text style={[styles.subtitle, { color: theme.textMuted }]}>Zugang zum Mitarbeiterbereich</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('auth.employeeLogin')}</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>{t('auth.accessArea')}</Text>
 
         {/* Form */}
         <View style={styles.form}>
@@ -137,7 +139,7 @@ export default function LoginScreen() {
               borderColor: theme.inputBorder,
               color: theme.text 
             }]}
-            placeholder="E-Mail oder Benutzername"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={theme.textMuted}
             value={email}
             onChangeText={setEmail}
@@ -151,7 +153,7 @@ export default function LoginScreen() {
           }]}>
             <TextInput
               style={[styles.passwordInput, { color: theme.text }]}
-              placeholder="Passwort"
+              placeholder={t('auth.passwordPlaceholder')}
               placeholderTextColor={theme.textMuted}
               value={password}
               onChangeText={setPassword}
@@ -186,7 +188,7 @@ export default function LoginScreen() {
               {stayLoggedIn && <Check size={14} color={theme.textInverse} />}
             </View>
             <Text style={[styles.stayLoggedInText, { color: theme.text }]}>
-              Angemeldet bleiben
+              {t('auth.stayLoggedIn')}
             </Text>
           </TouchableOpacity>
 
@@ -197,13 +199,13 @@ export default function LoginScreen() {
             disabled={isLoading}
           >
             <Text style={[styles.loginButtonText, { color: theme.textInverse }]}>
-              {isLoading ? 'Wird angemeldet...' : 'Einloggen'}
+              {isLoading ? t('auth.loggingIn') : t('auth.loginButton')}
             </Text>
           </TouchableOpacity>
 
           <View style={styles.helpSection}>
             <Text style={[styles.helpText, { color: theme.textMuted }]}>
-              Passwort vergessen? Bitte an den Support wenden.
+              {t('auth.forgotPassword')}
             </Text>
             <TouchableOpacity
               style={[styles.supportButton, { backgroundColor: theme.primary }]}
@@ -211,13 +213,13 @@ export default function LoginScreen() {
               activeOpacity={0.7}
             >
               <Phone size={16} color={theme.textInverse} />
-              <Text style={[styles.supportButtonText, { color: theme.textInverse }]}>Support anrufen</Text>
+              <Text style={[styles.supportButtonText, { color: theme.textInverse }]}>{t('auth.callSupport')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Dev Access */}
           <View style={[styles.devSection, { borderTopColor: theme.borderLight }]}>
-            <Text style={[styles.devLabel, { color: theme.textMuted }]}>ENTWICKLER-ZUGANG</Text>
+            <Text style={[styles.devLabel, { color: theme.textMuted }]}>{t('auth.devAccess')}</Text>
             <View style={styles.devButtons}>
               <TouchableOpacity
                 style={[styles.devButton, { backgroundColor: theme.pillSuccess, borderColor: theme.success }]}
@@ -225,7 +227,7 @@ export default function LoginScreen() {
                 activeOpacity={0.7}
               >
                 <Users size={20} color={theme.pillSuccessText} />
-                <Text style={[styles.devButtonText, { color: theme.pillSuccessText }]}>Mitarbeiter</Text>
+                <Text style={[styles.devButtonText, { color: theme.pillSuccessText }]}>{t('auth.devEmployee')}</Text>
                 <Text style={[styles.devButtonHint, { color: theme.pillSuccessText }]}>max@kifel.de</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -234,7 +236,7 @@ export default function LoginScreen() {
                 activeOpacity={0.7}
               >
                 <Shield size={20} color={theme.pillSecondaryText} />
-                <Text style={[styles.devButtonText, { color: theme.pillSecondaryText }]}>Admin</Text>
+                <Text style={[styles.devButtonText, { color: theme.pillSecondaryText }]}>{t('auth.devAdmin')}</Text>
                 <Text style={[styles.devButtonHint, { color: theme.pillSecondaryText }]}>admin@kifel.de</Text>
               </TouchableOpacity>
             </View>
@@ -242,7 +244,7 @@ export default function LoginScreen() {
 
           {/* Social Media Links */}
           <View style={styles.socialSection}>
-            <SocialMediaButtons size="small" labelText="BESUCHEN SIE UNS" />
+            <SocialMediaButtons size="small" labelText={t('auth.visitUs')} />
           </View>
         </View>
       </View>

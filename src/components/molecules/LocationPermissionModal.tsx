@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MapPin, Shield, X } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 interface LocationPermissionModalProps {
@@ -27,17 +28,18 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
   onClose,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const features = [
     {
       icon: MapPin,
-      title: 'Nur bei App-Nutzung',
-      description: 'Der Standort wird nur erfasst, wenn Sie die App aktiv nutzen – niemals im Hintergrund.',
+      title: t('location.appUsageOnly'),
+      description: t('location.appUsageDesc'),
     },
     {
       icon: Shield,
-      title: 'DSGVO-konform',
-      description: 'Daten werden nur während der Arbeitszeit erfasst, verschlüsselt und nicht an Dritte weitergegeben.',
+      title: t('location.gdprCompliant'),
+      description: t('location.gdprDesc'),
     },
   ];
 
@@ -62,12 +64,12 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
 
           {/* Title */}
           <Text style={[styles.title, { color: theme.text }]}>
-            Standortzugriff erlauben
+            {t('location.allowAccess')}
           </Text>
 
           {/* Subtitle */}
           <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-            Kifel Service benötigt Zugriff auf Ihren Standort für die Zeiterfassung.
+            {t('location.needAccess')}
           </Text>
 
           {/* Features */}
@@ -97,7 +99,7 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
               activeOpacity={0.8}
             >
               <Text style={[styles.buttonText, { color: theme.textInverse }]}>
-                Standort erlauben
+                {t('location.allow')}
               </Text>
             </TouchableOpacity>
 
@@ -107,14 +109,14 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
               activeOpacity={0.8}
             >
               <Text style={[styles.denyButtonText, { color: theme.textSecondary }]}>
-                Nicht jetzt
+                {t('location.notNow')}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <Text style={[styles.footer, { color: theme.textMuted }]}>
-            Sie können diese Einstellung jederzeit in den App-Einstellungen ändern.
+            {t('location.changeInSettings')}
           </Text>
         </Pressable>
       </Pressable>

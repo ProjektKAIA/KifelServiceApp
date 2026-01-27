@@ -28,6 +28,7 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { invitesCollection } from '@/src/lib/firestore';
 import { firebaseAuth } from '@/src/lib/firebase';
@@ -38,6 +39,7 @@ type InviteStatus = 'loading' | 'valid' | 'expired' | 'used' | 'not_found' | 'er
 export default function InviteScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { token } = useLocalSearchParams<{ token: string }>();
 
   const [status, setStatus] = useState<InviteStatus>('loading');
@@ -83,12 +85,12 @@ export default function InviteScreen() {
   };
 
   const validatePassword = (): boolean => {
-    if (password.length < 6) {
-      Alert.alert('Fehler', 'Das Passwort muss mindestens 6 Zeichen lang sein.');
+    if (password.length < 8) {
+      Alert.alert(t('common.error'), t('invite.passwordMin'));
       return false;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Fehler', 'Die Passwörter stimmen nicht überein.');
+      Alert.alert(t('common.error'), t('invite.passwordMismatch'));
       return false;
     }
     return true;
@@ -113,14 +115,14 @@ export default function InviteScreen() {
         `Hallo ${invite.firstName}, dein Konto wurde erfolgreich erstellt. Du kannst dich jetzt anmelden.`,
         [
           {
-            text: 'Zur Anmeldung',
+            text: t('invite.goToLogin'),
             onPress: () => router.replace('/(auth)/login'),
           },
         ]
       );
     } catch (error: any) {
       console.error('Error accepting invite:', error);
-      let message = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+      let message = t('invite.registrationFailed');
 
       if (error.code === 'auth/email-already-in-use') {
         message = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.';
@@ -130,7 +132,7 @@ export default function InviteScreen() {
         message = 'Ungültige E-Mail-Adresse.';
       }
 
-      Alert.alert('Fehler', message);
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +144,7 @@ export default function InviteScreen() {
       <SafeAreaView style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.textMuted }]}>
-          Einladung wird geladen...
+          {t('invite.loading')}
         </Text>
       </SafeAreaView>
     );
@@ -154,26 +156,26 @@ export default function InviteScreen() {
       not_found: {
         icon: XCircle,
         color: theme.danger,
-        title: 'Einladung nicht gefunden',
-        message: 'Diese Einladung existiert nicht oder der Link ist ungültig.',
+        title: t('invite.notFoundTitle'),
+        message: t('invite.notFoundDesc'),
       },
       expired: {
         icon: Clock,
         color: theme.warning,
-        title: 'Einladung abgelaufen',
-        message: 'Diese Einladung ist leider abgelaufen. Bitte kontaktiere deinen Administrator für eine neue Einladung.',
+        title: t('invite.expiredTitle'),
+        message: t('invite.expiredDesc'),
       },
       used: {
         icon: CheckCircle,
         color: theme.success,
-        title: 'Bereits verwendet',
-        message: 'Diese Einladung wurde bereits verwendet. Du kannst dich mit deiner E-Mail-Adresse anmelden.',
+        title: t('invite.usedTitle'),
+        message: t('invite.usedDesc'),
       },
       error: {
         icon: XCircle,
         color: theme.danger,
-        title: 'Fehler',
-        message: 'Ein Fehler ist aufgetreten. Bitte versuche es später erneut.',
+        title: t('common.error'),
+        message: t('invite.registrationFailed'),
       },
     }[status];
 
@@ -194,7 +196,7 @@ export default function InviteScreen() {
               onPress={() => router.replace('/(auth)/login')}
             >
               <Text style={[styles.primaryButtonText, { color: theme.textInverse }]}>
-                Zur Anmeldung
+                {t('invite.goToLogin')}
               </Text>
             </TouchableOpacity>
           )}
@@ -234,10 +236,10 @@ export default function InviteScreen() {
               <Shield size={32} color={theme.primary} />
             </View>
             <Text style={[styles.welcomeTitle, { color: theme.text }]}>
-              Willkommen bei Kifel Service
+              {t('invite.title')}
             </Text>
             <Text style={[styles.welcomeSubtitle, { color: theme.textMuted }]}>
-              Du wurdest eingeladen, der App beizutreten. Erstelle jetzt dein Konto.
+              {t('invite.subtitle')}
             </Text>
           </View>
 
@@ -248,7 +250,7 @@ export default function InviteScreen() {
             <View style={styles.infoRow}>
               <User size={18} color={theme.textMuted} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Name</Text>
+                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{t('invite.firstName')}</Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {invite?.firstName} {invite?.lastName}
                 </Text>
@@ -260,7 +262,7 @@ export default function InviteScreen() {
             <View style={styles.infoRow}>
               <Mail size={18} color={theme.textMuted} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>E-Mail</Text>
+                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{t('invite.email')}</Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{invite?.email}</Text>
               </View>
             </View>
@@ -283,14 +285,14 @@ export default function InviteScreen() {
           <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PASSWORT ERSTELLEN</Text>
 
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Passwort</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('invite.password')}</Text>
             <View style={styles.passwordInput}>
               <Lock size={18} color={theme.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Mindestens 6 Zeichen"
+                placeholder={t('invite.passwordReq')}
                 placeholderTextColor={theme.textMuted}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -308,7 +310,7 @@ export default function InviteScreen() {
             </View>
 
             <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>
-              Passwort bestätigen
+              {t('invite.confirmPassword')}
             </Text>
             <View style={styles.passwordInput}>
               <Lock size={18} color={theme.textMuted} style={styles.inputIcon} />
@@ -316,7 +318,7 @@ export default function InviteScreen() {
                 style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Passwort wiederholen"
+                placeholder={t('invite.confirmPassword')}
                 placeholderTextColor={theme.textMuted}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -343,7 +345,7 @@ export default function InviteScreen() {
               <ActivityIndicator size="small" color={theme.textInverse} />
             ) : (
               <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>
-                Konto erstellen
+                {t('invite.createAccount')}
               </Text>
             )}
           </TouchableOpacity>

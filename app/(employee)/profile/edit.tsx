@@ -27,6 +27,7 @@ import {
   Calendar,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { usersCollection, adminNotificationsCollection } from '@/src/lib/firestore';
@@ -34,6 +35,7 @@ import { usersCollection, adminNotificationsCollection } from '@/src/lib/firesto
 export default function EditProfileScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user, setUser } = useAuthStore();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -55,7 +57,7 @@ export default function EditProfileScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+      Alert.alert(t('common.error'), t('empProfileEdit.permissionRequired'));
       return;
     }
 
@@ -76,7 +78,7 @@ export default function EditProfileScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Kamerazugriff.');
+      Alert.alert(t('common.error'), t('empProfileEdit.cameraPermissionRequired'));
       return;
     }
 
@@ -95,13 +97,13 @@ export default function EditProfileScreen() {
 
   const showImageOptions = () => {
     Alert.alert(
-      'Profilfoto ändern',
-      'Woher möchten Sie das Bild auswählen?',
+      t('empProfileEdit.changePhoto'),
+      '',
       [
-        { text: 'Kamera', onPress: takePhoto },
-        { text: 'Galerie', onPress: pickImage },
-        avatar ? { text: 'Foto entfernen', style: 'destructive', onPress: () => setAvatar('') } : null,
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('empProfileEdit.takePhoto'), onPress: takePhoto },
+        { text: t('empProfileEdit.selectPhoto'), onPress: pickImage },
+        avatar ? { text: t('empProfileEdit.removePhoto'), style: 'destructive', onPress: () => setAvatar('') } : null,
+        { text: t('common.cancel'), style: 'cancel' },
       ].filter(Boolean) as any
     );
   };
@@ -110,7 +112,7 @@ export default function EditProfileScreen() {
     if (!user) return;
 
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Fehler', 'Vor- und Nachname sind erforderlich.');
+      Alert.alert(t('common.error'), t('empProfileEdit.nameRequired'));
       return;
     }
 
@@ -181,11 +183,11 @@ export default function EditProfileScreen() {
         avatar: avatar,
       });
 
-      Alert.alert('Gespeichert', 'Ihre Daten wurden erfolgreich aktualisiert.', [
+      Alert.alert(t('empProfileEdit.saved'), t('empProfileEdit.savedMessage'), [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
-      Alert.alert('Fehler', 'Daten konnten nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('empProfileEdit.errorSaving'));
     } finally {
       setIsSaving(false);
     }
@@ -205,7 +207,7 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Profil</Text>
-              <Text style={[styles.headerLarge, { color: theme.text }]}>Daten bearbeiten</Text>
+              <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empProfileEdit.title')}</Text>
             </View>
           </View>
 
@@ -233,11 +235,11 @@ export default function EditProfileScreen() {
 
           {/* Form */}
           <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PERSÖNLICHE DATEN</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empProfileEdit.personalData')}</Text>
 
             <View style={styles.formRow}>
               <View style={styles.formHalf}>
-                <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Vorname *</Text>
+                <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('empProfileEdit.firstName')} *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                   value={firstName}
@@ -247,7 +249,7 @@ export default function EditProfileScreen() {
                 />
               </View>
               <View style={styles.formHalf}>
-                <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nachname *</Text>
+                <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('empProfileEdit.lastName')} *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
                   value={lastName}
@@ -258,14 +260,14 @@ export default function EditProfileScreen() {
               </View>
             </View>
 
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>E-Mail</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('empProfileEdit.email')}</Text>
             <View style={[styles.inputDisabled, { backgroundColor: theme.surface, borderColor: theme.inputBorder }]}>
               <Mail size={18} color={theme.textMuted} />
               <Text style={[styles.inputDisabledText, { color: theme.textMuted }]}>{user?.email}</Text>
             </View>
             <Text style={[styles.inputHint, { color: theme.textMuted }]}>E-Mail kann nicht geändert werden</Text>
 
-            <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>Telefon</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>{t('empProfileEdit.phone')}</Text>
             <View style={styles.inputWithIcon}>
               <Phone size={18} color={theme.textMuted} style={styles.inputIcon} />
               <TextInput
@@ -290,7 +292,7 @@ export default function EditProfileScreen() {
               />
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.xl }]}>ADRESSE</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.xl }]}>{t('empProfileEdit.address')}</Text>
 
             <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Straße & Hausnummer</Text>
             <View style={styles.inputWithIcon}>
@@ -347,7 +349,7 @@ export default function EditProfileScreen() {
             ) : (
               <>
                 <Save size={20} color={theme.textInverse} />
-                <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>Änderungen speichern</Text>
+                <Text style={[styles.saveButtonText, { color: theme.textInverse }]}>{t('empProfileEdit.save')}</Text>
               </>
             )}
           </TouchableOpacity>

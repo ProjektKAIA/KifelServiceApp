@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Shield, MapPin, Clock, Database, Lock, Eye, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 const LAST_UPDATED = '14. Januar 2026';
@@ -22,6 +23,7 @@ const DATA_PROTECTION_OFFICER = 'info@kaiashapes.de';
 export default function PrivacyScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const sections = [
     {
@@ -125,7 +127,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Rechtliches</Text>
-            <Text style={[styles.headerLarge, { color: theme.text }]}>Datenschutz & Sicherheit</Text>
+            <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsPrivacy.title')}</Text>
           </View>
         </View>
 

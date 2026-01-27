@@ -12,6 +12,7 @@ import { Card, StatusPill, LocationPermissionModal } from '@/src/components/mole
 import { ScreenHeader, StatsGrid } from '@/src/components/organisms';
 
 import { useTheme, useLocation } from '@/src/hooks';
+import { useTranslation } from '@/src/hooks/useTranslation';
 import { useTimeStore } from '@/src/store/timeStore';
 import { useAuthStore } from '@/src/store/authStore';
 import { spacing } from '@/src/constants/spacing';
@@ -21,6 +22,7 @@ import { timeEntriesCollection } from '@/src/lib/firestore';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const {
     isWorking,
@@ -116,8 +118,8 @@ export default function TimeTrackingScreen() {
   }, [elapsedSeconds]);
 
   const stats = [
-    { value: todayHours.toFixed(1), label: 'Stunden heute', icon: Clock },
-    { value: '38.5', label: 'Diese Woche', icon: Clock },
+    { value: todayHours.toFixed(1), label: t('timetracking.hoursToday'), icon: Clock },
+    { value: '38.5', label: t('timetracking.thisWeek'), icon: Clock },
   ];
 
   // Start/stop GPS tracking when working status changes
@@ -307,7 +309,7 @@ export default function TimeTrackingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader overline="ZEITERFASSUNG" title="Stempeluhr" />
+        <ScreenHeader overline={t('timetracking.title')} title={t('timetracking.title')} />
 
         {/* Current Time Card */}
         <Card variant="accent" accentColor={theme.secondary} style={styles.timeCard}>
@@ -317,7 +319,7 @@ export default function TimeTrackingScreen() {
           </View>
           <StatusPill
             status={isWorking ? (isOnBreak ? 'warning' : 'active') : 'inactive'}
-            label={isWorking ? (isOnBreak ? 'In Pause' : 'Arbeitet') : 'Nicht aktiv'}
+            label={isWorking ? (isOnBreak ? t('timetracking.onBreak') : t('timetracking.working')) : t('timetracking.notStarted')}
           />
         </Card>
 
@@ -407,7 +409,7 @@ export default function TimeTrackingScreen() {
         {!isWorking && (
           <View style={styles.actionContainer}>
             <Button
-              title={isLocationLoading ? 'Standort wird ermittelt...' : 'Arbeitsbeginn'}
+              title={isLocationLoading ? 'Standort wird ermittelt...' : t('timetracking.startWork')}
               icon={Play}
               onPress={handleClockIn}
               fullWidth
@@ -424,7 +426,7 @@ export default function TimeTrackingScreen() {
         {isWorking === true && isOnBreak !== true && (
           <View style={styles.actionContainer}>
             <Button
-              title="Arbeitsende"
+              title={t('timetracking.endWork')}
               icon={Square}
               variant="danger"
               onPress={handleClockOut}
@@ -432,7 +434,7 @@ export default function TimeTrackingScreen() {
               style={styles.primaryActionButton}
             />
             <Button
-              title="Pause"
+              title={t('timetracking.startBreak')}
               icon={Coffee}
               onPress={handleStartBreak}
               fullWidth
@@ -445,14 +447,14 @@ export default function TimeTrackingScreen() {
         {isWorking && isOnBreak && (
           <View style={styles.actionContainer}>
             <Button
-              title="Pause beenden"
+              title={t('timetracking.endBreak')}
               icon={Play}
               onPress={handleEndBreak}
               fullWidth
               style={{ ...styles.primaryActionButton, backgroundColor: theme.success }}
             />
             <Button
-              title="Arbeit beenden"
+              title={t('timetracking.endWork')}
               icon={Square}
               variant="danger"
               onPress={handleClockOut}

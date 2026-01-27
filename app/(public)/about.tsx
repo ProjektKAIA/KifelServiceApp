@@ -7,40 +7,40 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Shield, Sparkles, Users, Leaf, Globe, Building, Lock, Truck } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
+import { useTranslation } from '@/src/hooks/useTranslation';
 
 // Company Data
 const COMPANY = {
   website: 'https://kifel-service.com',
-  description: 'Kifel Service ist Ihr Partner für professionelle Reinigungsdienstleistungen und Sicherheitsdienst in Kaarst und Umgebung.',
-  environmentNote: 'Wir setzen auf gründliche Reinigungsmethoden, die Ihre Räumlichkeiten strahlen lassen, ohne dabei die Umwelt zu belasten.',
-};
-
-const features = [
-  { icon: Shield, title: 'Sicherheit', desc: 'Objektschutz, Revierschutz, Bewachung & Pfortendienst' },
-  { icon: Sparkles, title: 'Reinigung', desc: 'Gebäude-, Büro- & Gewerbereinigung' },
-  { icon: Users, title: 'Eigenes Team', desc: 'Festangestellte Mitarbeiter, keine Subunternehmer' },
-  { icon: Leaf, title: 'Umweltbewusst', desc: 'Umweltfreundliche Reinigungsmethoden' },
-];
-
-const services = {
-  reinigung: [
-    'Gebäudereinigung',
-    'Büroreinigung',
-    'Gewerbeimmobilien',
-    'Hausmeisterservice',
-    'Gartenpflege',
-  ],
-  sicherheit: [
-    'Objektschutz',
-    'Revierschutzfahrten',
-    'Bewachung',
-    'Pfortendienst',
-  ],
 };
 
 export default function AboutScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
+
+  const features = [
+    { icon: Shield, title: t('about.security'), desc: t('about.securityDesc') },
+    { icon: Sparkles, title: t('about.cleaning'), desc: t('about.cleaningDesc') },
+    { icon: Users, title: t('about.ownTeam'), desc: t('about.ownTeamDesc') },
+    { icon: Leaf, title: t('about.eco'), desc: t('about.ecoDesc') },
+  ];
+
+  const services = {
+    reinigung: [
+      t('about.buildingCleaning'),
+      t('about.officeCleaning'),
+      t('about.commercial'),
+      t('about.janitor'),
+      t('about.garden'),
+    ],
+    sicherheit: [
+      t('about.objectProtection'),
+      t('about.patrol'),
+      t('about.guarding'),
+      t('about.gate'),
+    ],
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -50,28 +50,28 @@ export default function AboutScreen() {
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>ÖFFENTLICH</Text>
+          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>{t('public.badge')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>Über uns</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('about.title')}</Text>
         <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Lernen Sie Kifel Service kennen
+          {t('about.subtitle')}
         </Text>
 
         {/* Intro Card */}
         <View style={[styles.introCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           <Text style={[styles.introText, { color: theme.textSecondary }]}>
-            {COMPANY.description}
+            {t('about.companyDesc')}
           </Text>
           <Text style={[styles.introText, { color: theme.textSecondary, marginTop: spacing.sm }]}>
-            {COMPANY.environmentNote}
+            {t('about.environmentNote')}
           </Text>
         </View>
 
         {/* Features */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>UNSERE STÄRKEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('about.strengths')}</Text>
 
         {features.map((feature, index) => (
           <View
@@ -89,14 +89,14 @@ export default function AboutScreen() {
         ))}
 
         {/* Services */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>UNSERE DIENSTLEISTUNGEN</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>{t('about.services')}</Text>
 
         <View style={[styles.servicesRow, { gap: spacing.sm }]}>
           {/* Reinigung */}
           <View style={[styles.serviceCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <View style={[styles.serviceHeader, { borderBottomColor: theme.borderLight }]}>
               <Sparkles size={18} color={theme.primary} />
-              <Text style={[styles.serviceTitle, { color: theme.text }]}>Reinigung</Text>
+              <Text style={[styles.serviceTitle, { color: theme.text }]}>{t('about.cleaning')}</Text>
             </View>
             {services.reinigung.map((service, index) => (
               <Text key={index} style={[styles.serviceItem, { color: theme.textSecondary }]}>
@@ -109,7 +109,7 @@ export default function AboutScreen() {
           <View style={[styles.serviceCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <View style={[styles.serviceHeader, { borderBottomColor: theme.borderLight }]}>
               <Shield size={18} color={theme.primary} />
-              <Text style={[styles.serviceTitle, { color: theme.text }]}>Sicherheit</Text>
+              <Text style={[styles.serviceTitle, { color: theme.text }]}>{t('about.security')}</Text>
             </View>
             {services.sicherheit.map((service, index) => (
               <Text key={index} style={[styles.serviceItem, { color: theme.textSecondary }]}>
@@ -126,7 +126,7 @@ export default function AboutScreen() {
           activeOpacity={0.8}
         >
           <Globe size={18} color={theme.textInverse} />
-          <Text style={[styles.websiteButtonText, { color: theme.textInverse }]}>Zur Website</Text>
+          <Text style={[styles.websiteButtonText, { color: theme.textInverse }]}>{t('about.website')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -9,9 +9,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp, Download, FileText, FileSpreadsheet, X } from 'lucide-react-native';
 import {
   format,
   startOfDay,
@@ -39,6 +42,7 @@ import { useAuthStore } from '@/src/store/authStore';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
 import { toast } from '@/src/utils/toast';
+import { exportReport, ExportFormat, ExportEmployeeData } from '@/src/utils/exportUtils';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
 
@@ -59,6 +63,12 @@ const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
   { key: 'year', label: 'Jahr' },
 ];
 
+const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
+  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
+  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
+  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
+];
+
 export default function EmployeeReportsScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -69,6 +79,8 @@ export default function EmployeeReportsScreen() {
   const [dayEntries, setDayEntries] = useState<DayEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Calculate date range based on period type
   const getDateRange = useCallback((date: Date, type: PeriodType): { start: Date; end: Date } => {
@@ -219,6 +231,44 @@ export default function EmployeeReportsScreen() {
     loadData();
   }, [loadData]);
 
+  // Export handler
+  const handleExport = async (formatType: ExportFormat) => {
+    setIsExporting(true);
+    setShowExportModal(false);
+
+    try {
+      const totalGross = dayEntries.reduce((sum, d) => sum + d.totalMinutes, 0);
+      const totalBreak = dayEntries.reduce((sum, d) => sum + d.breakMinutes, 0);
+      const totalNet = dayEntries.reduce((sum, d) => sum + d.netMinutes, 0);
+      const totalEntriesCount = dayEntries.reduce((sum, d) => sum + d.entries.length, 0);
+
+      const employeeName = user ? `${user.firstName} ${user.lastName}` : 'Mitarbeiter';
+
+      const exportData: ExportEmployeeData[] = [{
+        name: employeeName,
+        totalHours: Math.floor(totalGross / 60),
+        totalMinutes: totalGross % 60,
+        breakMinutes: totalBreak,
+        netHours: Math.floor(totalNet / 60),
+        netMinutes: totalNet % 60,
+        entriesCount: totalEntriesCount,
+      }];
+
+      await exportReport(formatType, {
+        title: `Arbeitsstunden — ${employeeName}`,
+        periodLabel: getPeriodLabel(),
+        employees: exportData,
+        generatedAt: new Date(),
+        companyName: 'Kifel Service',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert(t('common.error'), t('adminReports.exportError'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Calculate totals
   const totals = dayEntries.reduce(
     (acc, day) => ({
@@ -263,11 +313,26 @@ export default function EmployeeReportsScreen() {
         }
       >
         {/* Header */}
-        <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>AUSWERTUNG</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
+              <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>AUSWERTUNG</Text>
+            </View>
+            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('empReports.subtitle')}</Text>
+            <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empReports.title')}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: theme.primary }]}
+            onPress={() => setShowExportModal(true)}
+            disabled={isExporting || dayEntries.length === 0}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color={theme.textInverse} />
+            ) : (
+              <Download size={20} color={theme.textInverse} />
+            )}
+          </TouchableOpacity>
         </View>
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('empReports.subtitle')}</Text>
-        <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empReports.title')}</Text>
 
         {/* Period Type Selector */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.periodSelector}>
@@ -420,6 +485,45 @@ export default function EmployeeReportsScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
+              <TouchableOpacity onPress={() => setShowExportModal(false)}>
+                <X size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: theme.textMuted }]}>
+              {getPeriodLabel()}
+            </Text>
+
+            {EXPORT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[styles.exportOption, { borderColor: theme.border }]}
+                onPress={() => handleExport(option.key)}
+              >
+                <View style={[styles.exportIconContainer, { backgroundColor: theme.pillInfo }]}>
+                  <option.icon size={24} color={theme.primary} />
+                </View>
+                <View style={styles.exportOptionInfo}>
+                  <Text style={[styles.exportOptionLabel, { color: theme.text }]}>{option.label}</Text>
+                  <Text style={[styles.exportOptionDesc, { color: theme.textMuted }]}>{option.description}</Text>
+                </View>
+                <ChevronRight size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -438,8 +542,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'],
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  exportButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
   badge: {
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -457,7 +574,6 @@ const styles = StyleSheet.create({
   headerLarge: {
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: spacing.lg,
   },
   periodSelector: {
     marginBottom: spacing.md,
@@ -613,5 +729,58 @@ const styles = StyleSheet.create({
   daySummaryValue: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.lg,
+    paddingBottom: spacing['3xl'],
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: spacing.lg,
+  },
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderWidth: 1,
+    borderRadius: borderRadius.card,
+    marginBottom: spacing.sm,
+  },
+  exportIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportOptionInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  exportOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  exportOptionDesc: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });

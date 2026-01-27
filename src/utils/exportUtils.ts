@@ -705,3 +705,365 @@ export const exportSchedule = async (
       return exportScheduleToExcel(options);
   }
 };
+
+// ============================================================================
+// LOCATION EXPORT
+// ============================================================================
+
+export interface ExportLocationData {
+  employeeName: string;
+  type: 'Außen' | 'Innen' | 'Beides';
+  fieldEntries: number;
+  officeEntries: number;
+  totalEntries: number;
+  totalDistance: string;
+  gpsPointsCount: number;
+  routePoints?: { lat: number; lng: number }[];
+}
+
+export interface LocationExportOptions {
+  title: string;
+  periodLabel: string;
+  employees: ExportLocationData[];
+  generatedAt: Date;
+  companyName?: string;
+}
+
+// CSV Export for Location
+export const exportLocationToCSV = async (options: LocationExportOptions): Promise<void> => {
+  const { title, periodLabel, employees, generatedAt, companyName } = options;
+
+  const headers = ['Mitarbeiter', 'Typ', 'Außen', 'Innen', 'Gesamt', 'Distanz', 'GPS-Punkte'];
+  const rows = employees.map(emp => [
+    emp.employeeName,
+    emp.type,
+    emp.fieldEntries.toString(),
+    emp.officeEntries.toString(),
+    emp.totalEntries.toString(),
+    emp.totalDistance,
+    emp.gpsPointsCount.toString(),
+  ]);
+
+  const totalField = employees.reduce((sum, e) => sum + e.fieldEntries, 0);
+  const totalOffice = employees.reduce((sum, e) => sum + e.officeEntries, 0);
+  const totalAll = employees.reduce((sum, e) => sum + e.totalEntries, 0);
+  const totalGps = employees.reduce((sum, e) => sum + e.gpsPointsCount, 0);
+
+  rows.push([
+    'GESAMT',
+    '',
+    totalField.toString(),
+    totalOffice.toString(),
+    totalAll.toString(),
+    '',
+    totalGps.toString(),
+  ]);
+
+  const BOM = '\uFEFF';
+  const csvContent = BOM + [
+    `${companyName || 'Kifel Service'} - ${title}`,
+    `Zeitraum: ${periodLabel}`,
+    `Erstellt: ${format(generatedAt, 'dd.MM.yyyy HH:mm', { locale: de })}`,
+    '',
+    headers.join(';'),
+    ...rows.map(row => row.join(';')),
+  ].join('\n');
+
+  const fileName = `Standort_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+  const filePath = `${cacheDirectory}${fileName}`;
+
+  await writeAsStringAsync(filePath, csvContent, {
+    encoding: EncodingType.UTF8,
+  });
+
+  if (Sharing && await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(filePath, {
+      mimeType: 'text/csv',
+      dialogTitle: 'Standort-Auswertung exportieren',
+      UTI: 'public.comma-separated-values-text',
+    });
+  }
+};
+
+// Excel Export for Location
+export const exportLocationToExcel = async (options: LocationExportOptions): Promise<void> => {
+  const { title, periodLabel, employees, generatedAt, companyName } = options;
+
+  const wb = XLSX.utils.book_new();
+
+  const wsData: (string | number)[][] = [
+    [`${companyName || 'Kifel Service'} - ${title}`],
+    [`Zeitraum: ${periodLabel}`],
+    [`Erstellt: ${format(generatedAt, 'dd.MM.yyyy HH:mm', { locale: de })}`],
+    [],
+    ['Mitarbeiter', 'Typ', 'Außen', 'Innen', 'Gesamt', 'Distanz', 'GPS-Punkte'],
+  ];
+
+  employees.forEach(emp => {
+    wsData.push([
+      emp.employeeName,
+      emp.type,
+      emp.fieldEntries,
+      emp.officeEntries,
+      emp.totalEntries,
+      emp.totalDistance,
+      emp.gpsPointsCount,
+    ]);
+  });
+
+  const totalField = employees.reduce((sum, e) => sum + e.fieldEntries, 0);
+  const totalOffice = employees.reduce((sum, e) => sum + e.officeEntries, 0);
+  const totalAll = employees.reduce((sum, e) => sum + e.totalEntries, 0);
+  const totalGps = employees.reduce((sum, e) => sum + e.gpsPointsCount, 0);
+
+  wsData.push([]);
+  wsData.push(['GESAMT', '', totalField, totalOffice, totalAll, '', totalGps]);
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  ws['!cols'] = [
+    { wch: 25 }, // Mitarbeiter
+    { wch: 10 }, // Typ
+    { wch: 10 }, // Außen
+    { wch: 10 }, // Innen
+    { wch: 10 }, // Gesamt
+    { wch: 12 }, // Distanz
+    { wch: 12 }, // GPS-Punkte
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Standort-Auswertung');
+
+  const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+  const fileName = `Standort_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
+  const filePath = `${cacheDirectory}${fileName}`;
+
+  await writeAsStringAsync(filePath, wbout, {
+    encoding: EncodingType.Base64,
+  });
+
+  if (Sharing && await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(filePath, {
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      dialogTitle: 'Standort-Auswertung exportieren',
+      UTI: 'org.openxmlformats.spreadsheetml.sheet',
+    });
+  }
+};
+
+// PDF Export for Location (with optional Google Maps static images)
+export const exportLocationToPDF = async (options: LocationExportOptions): Promise<void> => {
+  const { title, periodLabel, employees, generatedAt, companyName } = options;
+
+  const totalField = employees.reduce((sum, e) => sum + e.fieldEntries, 0);
+  const totalOffice = employees.reduce((sum, e) => sum + e.officeEntries, 0);
+  const totalAll = employees.reduce((sum, e) => sum + e.totalEntries, 0);
+  const totalGps = employees.reduce((sum, e) => sum + e.gpsPointsCount, 0);
+  const fieldEmployees = employees.filter(e => e.type === 'Außen' || e.type === 'Beides');
+
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '';
+
+  // Build map images HTML for field employees
+  let mapsHtml = '';
+  if (apiKey) {
+    fieldEmployees.forEach(emp => {
+      if (emp.routePoints && emp.routePoints.length >= 2) {
+        const pathPoints = emp.routePoints.map(p => `${p.lat},${p.lng}`).join('|');
+        const start = emp.routePoints[0];
+        const end = emp.routePoints[emp.routePoints.length - 1];
+        const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&path=color:0x2563eb|weight:3|${pathPoints}&markers=color:green|${start.lat},${start.lng}&markers=color:red|${end.lat},${end.lng}&key=${apiKey}`;
+        mapsHtml += `
+          <div class="map-section">
+            <h3 class="map-title">${emp.employeeName} — ${emp.totalDistance}</h3>
+            <img src="${mapUrl}" alt="Route ${emp.employeeName}" class="map-image" />
+          </div>
+        `;
+      }
+    });
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${title}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 40px;
+            color: #1a1a1a;
+            font-size: 11px;
+          }
+          .header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+          }
+          .company { font-size: 24px; font-weight: 700; color: #2563eb; margin-bottom: 5px; }
+          .title { font-size: 18px; font-weight: 600; color: #374151; }
+          .meta { margin-top: 10px; color: #6b7280; font-size: 11px; }
+          .summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #eff6ff;
+            border-radius: 8px;
+          }
+          .summary-item { flex: 1; }
+          .summary-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+          .summary-value { font-size: 24px; font-weight: 700; color: #2563eb; }
+          .summary-value.secondary { color: #374151; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th {
+            background: #f3f4f6;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          th:not(:first-child) { text-align: right; }
+          td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; }
+          td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+          tr:nth-child(even) { background: #f9fafb; }
+          tr.total { background: #2563eb !important; color: white; font-weight: 700; }
+          tr.total td { border-bottom: none; }
+          .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+          }
+          .type-aussen { background: #dcfce7; color: #166534; }
+          .type-innen { background: #dbeafe; color: #1e40af; }
+          .type-beides { background: #fef3c7; color: #92400e; }
+          .maps-section { margin-top: 40px; }
+          .maps-section h2 { font-size: 16px; font-weight: 700; color: #374151; margin-bottom: 20px; }
+          .map-section { margin-bottom: 30px; page-break-inside: avoid; }
+          .map-title { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+          .map-image { width: 100%; max-width: 600px; border-radius: 8px; border: 1px solid #e5e7eb; }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 10px;
+            color: #9ca3af;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company">${companyName || 'Kifel Service'}</div>
+          <div class="title">${title}</div>
+          <div class="meta">
+            Zeitraum: ${periodLabel}<br>
+            Erstellt: ${format(generatedAt, 'dd.MM.yyyy HH:mm', { locale: de })}
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="summary-item">
+            <div class="summary-label">Außen-Mitarbeiter</div>
+            <div class="summary-value">${fieldEmployees.length}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Einträge gesamt</div>
+            <div class="summary-value secondary">${totalAll}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">GPS-Punkte</div>
+            <div class="summary-value secondary">${totalGps}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Mitarbeiter</th>
+              <th>Typ</th>
+              <th>Außen</th>
+              <th>Innen</th>
+              <th>Gesamt</th>
+              <th>Distanz</th>
+              <th>GPS-Punkte</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${employees.map(emp => {
+              const badgeClass = emp.type === 'Außen' ? 'type-aussen' : emp.type === 'Innen' ? 'type-innen' : 'type-beides';
+              return `
+              <tr>
+                <td>${emp.employeeName}</td>
+                <td><span class="type-badge ${badgeClass}">${emp.type}</span></td>
+                <td>${emp.fieldEntries}</td>
+                <td>${emp.officeEntries}</td>
+                <td>${emp.totalEntries}</td>
+                <td>${emp.totalDistance}</td>
+                <td>${emp.gpsPointsCount}</td>
+              </tr>
+            `;}).join('')}
+            <tr class="total">
+              <td>GESAMT</td>
+              <td>${employees.length} MA</td>
+              <td>${totalField}</td>
+              <td>${totalOffice}</td>
+              <td>${totalAll}</td>
+              <td></td>
+              <td>${totalGps}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${mapsHtml ? `
+          <div class="maps-section">
+            <h2>GPS-Routen</h2>
+            ${mapsHtml}
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          Erstellt mit Kifel Service App
+        </div>
+      </body>
+    </html>
+  `;
+
+  if (!Print) throw new Error('expo-print not available');
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+  const fileName = `Standort_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+  const newPath = `${cacheDirectory}${fileName}`;
+
+  await moveAsync({ from: uri, to: newPath });
+
+  if (Sharing && await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(newPath, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Standort-Auswertung exportieren',
+      UTI: 'com.adobe.pdf',
+    });
+  }
+};
+
+// Unified Location Export
+export const exportLocationReport = async (
+  format: ExportFormat,
+  options: LocationExportOptions
+): Promise<void> => {
+  switch (format) {
+    case 'pdf':
+      return exportLocationToPDF(options);
+    case 'csv':
+      return exportLocationToCSV(options);
+    case 'excel':
+      return exportLocationToExcel(options);
+  }
+};

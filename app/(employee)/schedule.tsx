@@ -1,9 +1,9 @@
 // app/(employee)/schedule.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, MapPin, Download, FileText, FileSpreadsheet, X } from 'lucide-react-native';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -12,6 +12,13 @@ import { useTranslation } from '@/src/hooks/useTranslation';
 import { useAuthStore } from '@/src/store/authStore';
 import { shiftsCollection } from '@/src/lib/firestore';
 import { Shift } from '@/src/types';
+import { exportSchedule, ExportFormat, ExportShiftData } from '@/src/utils/exportUtils';
+
+const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
+  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
+  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
+  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
+];
 
 export default function ScheduleScreen() {
   const { theme } = useTheme();
@@ -31,6 +38,8 @@ export default function ScheduleScreen() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -66,6 +75,48 @@ export default function ScheduleScreen() {
     setIsRefreshing(true);
     loadShifts();
   }, [loadShifts]);
+
+  // Export handler
+  const handleExport = async (formatType: ExportFormat) => {
+    setIsExporting(true);
+    setShowExportModal(false);
+
+    try {
+      const employeeName = user ? `${user.firstName} ${user.lastName}` : 'Mitarbeiter';
+      const periodLabel = format(currentMonth, 'MMMM yyyy', { locale: de });
+
+      const shiftData: ExportShiftData[] = shifts
+        .filter(s => s.status !== 'cancelled')
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(shift => {
+          const [startH, startM] = shift.startTime.split(':').map(Number);
+          const [endH, endM] = shift.endTime.split(':').map(Number);
+          const hours = (endH * 60 + endM - startH * 60 - startM) / 60;
+
+          return {
+            date: format(new Date(shift.date), 'dd.MM.yyyy'),
+            employeeName,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            location: shift.location || '',
+            hours: Math.max(0, hours),
+          };
+        });
+
+      await exportSchedule(formatType, {
+        title: `Dienstplan — ${employeeName}`,
+        periodLabel,
+        shifts: shiftData,
+        generatedAt: new Date(),
+        companyName: 'Kifel Service',
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert(t('common.error'), t('adminReports.exportError'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const hasShift = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -111,9 +162,22 @@ export default function ScheduleScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
         }
       >
-        {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empSchedule.title')}</Text>
+        {/* Header with Export Button */}
+        <View style={styles.headerRow}>
+          <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
+            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empSchedule.title')}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: theme.primary }]}
+            onPress={() => setShowExportModal(true)}
+            disabled={isExporting || shifts.length === 0}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color={theme.textInverse} />
+            ) : (
+              <Download size={20} color={theme.textInverse} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Month Header */}
@@ -233,6 +297,45 @@ export default function ScheduleScreen() {
           })
         )}
       </ScrollView>
+
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
+              <TouchableOpacity onPress={() => setShowExportModal(false)}>
+                <X size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: theme.textMuted }]}>
+              {format(currentMonth, 'MMMM yyyy', { locale: de })}
+            </Text>
+
+            {EXPORT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[styles.exportOption, { borderColor: theme.border }]}
+                onPress={() => handleExport(option.key)}
+              >
+                <View style={[styles.exportIconContainer, { backgroundColor: theme.pillInfo }]}>
+                  <option.icon size={24} color={theme.primary} />
+                </View>
+                <View style={styles.exportOptionInfo}>
+                  <Text style={[styles.exportOptionLabel, { color: theme.text }]}>{option.label}</Text>
+                  <Text style={[styles.exportOptionDesc, { color: theme.textMuted }]}>{option.description}</Text>
+                </View>
+                <ChevronRight size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -250,12 +353,23 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     paddingTop: spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  exportButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badge: {
-    alignSelf: 'flex-end',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    marginBottom: spacing.md,
   },
   badgeText: {
     fontSize: 9,
@@ -374,5 +488,58 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.lg,
+    paddingBottom: spacing['3xl'],
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: spacing.lg,
+  },
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderWidth: 1,
+    borderRadius: borderRadius.card,
+    marginBottom: spacing.sm,
+  },
+  exportIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportOptionInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  exportOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  exportOptionDesc: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });

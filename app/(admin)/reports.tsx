@@ -58,7 +58,7 @@ import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/firestore';
 import { User } from '@/src/types';
-import { exportReport, ExportFormat, ExportEmployeeData } from '@/src/utils/exportUtils';
+import { exportReport, exportLocationReport, ExportFormat, ExportEmployeeData, ExportLocationData } from '@/src/utils/exportUtils';
 import { isFieldEntry, calculateTotalDistance, formatDistance } from '@/src/utils/locationUtils';
 import RouteMap from '@/src/components/organisms/RouteMap';
 
@@ -300,23 +300,58 @@ export default function AdminReportsScreen() {
     setShowExportModal(false);
 
     try {
-      const exportData: ExportEmployeeData[] = employeeStats.map(stats => ({
-        name: stats.userName,
-        totalHours: stats.totalHours,
-        totalMinutes: stats.totalMinutes,
-        breakMinutes: stats.breakMinutes,
-        netHours: stats.netHours,
-        netMinutes: stats.netMinutes,
-        entriesCount: stats.entriesCount,
-      }));
+      if (activeTab === 'standort') {
+        const locationData: ExportLocationData[] = employeeLocationStats.map(stats => {
+          const hasField = stats.fieldEntries.length > 0;
+          const hasOffice = stats.officeEntries.length > 0;
+          const type: ExportLocationData['type'] = hasField && hasOffice ? 'Beides' : hasField ? 'Außen' : 'Innen';
 
-      await exportReport(formatType, {
-        title: 'Arbeitsstunden-Auswertung',
-        periodLabel: getPeriodLabel(),
-        employees: exportData,
-        generatedAt: new Date(),
-        companyName: 'Kifel Service',
-      });
+          // Collect all route points from field entries
+          const routePoints: { lat: number; lng: number }[] = [];
+          stats.fieldEntries.forEach(entry => {
+            (entry.locationHistory || []).forEach(point => {
+              routePoints.push({ lat: point.latitude, lng: point.longitude });
+            });
+          });
+
+          return {
+            employeeName: stats.userName,
+            type,
+            fieldEntries: stats.fieldEntries.length,
+            officeEntries: stats.officeEntries.length,
+            totalEntries: stats.totalEntries,
+            totalDistance: formatDistance(stats.totalDistance),
+            gpsPointsCount: stats.gpsPointsCount,
+            routePoints: routePoints.length > 0 ? routePoints : undefined,
+          };
+        });
+
+        await exportLocationReport(formatType, {
+          title: 'Standort-Auswertung',
+          periodLabel: getPeriodLabel(),
+          employees: locationData,
+          generatedAt: new Date(),
+          companyName: 'Kifel Service',
+        });
+      } else {
+        const exportData: ExportEmployeeData[] = employeeStats.map(stats => ({
+          name: stats.userName,
+          totalHours: stats.totalHours,
+          totalMinutes: stats.totalMinutes,
+          breakMinutes: stats.breakMinutes,
+          netHours: stats.netHours,
+          netMinutes: stats.netMinutes,
+          entriesCount: stats.entriesCount,
+        }));
+
+        await exportReport(formatType, {
+          title: 'Arbeitsstunden-Auswertung',
+          periodLabel: getPeriodLabel(),
+          employees: exportData,
+          generatedAt: new Date(),
+          companyName: 'Kifel Service',
+        });
+      }
     } catch (error) {
       console.error('Export error:', error);
       Alert.alert(t('common.error'), t('adminReports.exportError'));
@@ -495,19 +530,17 @@ export default function AdminReportsScreen() {
               {activeTab === 'stunden' ? t('adminReports.hoursOverview') : t('adminReports.locationAnalysis')}
             </Text>
           </View>
-          {activeTab === 'stunden' && (
-            <TouchableOpacity
-              style={[styles.exportButton, { backgroundColor: theme.primary }]}
-              onPress={() => setShowExportModal(true)}
-              disabled={isExporting || employeeStats.length === 0}
-            >
-              {isExporting ? (
-                <ActivityIndicator size="small" color={theme.textInverse} />
-              ) : (
-                <Download size={20} color={theme.textInverse} />
-              )}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: theme.primary }]}
+            onPress={() => setShowExportModal(true)}
+            disabled={isExporting || (activeTab === 'stunden' ? employeeStats.length === 0 : employeeLocationStats.length === 0)}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color={theme.textInverse} />
+            ) : (
+              <Download size={20} color={theme.textInverse} />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Tab Toggle */}

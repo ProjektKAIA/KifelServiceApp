@@ -139,5 +139,47 @@ service cloud.firestore {
       // Only admins can manage locations
       allow create, update, delete: if isAdmin();
     }
+
+    // ============================================
+    // INVITES COLLECTION
+    // ============================================
+
+    match /invites/{inviteId} {
+      // Admins can read all invites
+      allow read: if isAdmin();
+
+      // Allow reading invite by token (unauthenticated, for invite acceptance)
+      allow get: if true;
+
+      // Only admins can create/update/delete invites
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // ADMIN NOTIFICATIONS COLLECTION
+    // ============================================
+
+    match /adminNotifications/{notificationId} {
+      // Admins can read their own notifications
+      allow read: if isAdmin();
+
+      // Authenticated users can create notifications (e.g. profile change triggers)
+      allow create: if isAuthenticated();
+
+      // Admins can update (mark as read) and delete their notifications
+      allow update, delete: if isAdmin();
+    }
+
+    // ============================================
+    // COMPANY COLLECTION
+    // ============================================
+
+    match /company/{companyId} {
+      // All authenticated users can read company info
+      allow read: if isAuthenticated();
+
+      // Only admins can manage company data
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

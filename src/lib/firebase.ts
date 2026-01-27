@@ -10,8 +10,9 @@ import {
   sendPasswordResetEmail,
   User as FirebaseUser,
   Auth,
-  getReactNativePersistence
 } from 'firebase/auth';
+// @ts-ignore - getReactNativePersistence is available in React Native bundle
+import { getReactNativePersistence } from '@firebase/auth/dist/rn/index.js';
 import {
   getFirestore,
   Firestore

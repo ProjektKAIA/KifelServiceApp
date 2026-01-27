@@ -1,7 +1,7 @@
 // src/utils/importUtils.ts - Dienstplan Excel Import Parser
 
 import * as XLSX from 'xlsx';
-import * as FileSystem from 'expo-file-system';
+import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { format } from 'date-fns';
 
 export interface ImportedShift {
@@ -283,8 +283,8 @@ export function parseScheduleExcel(workbook: XLSX.WorkBook): ImportResult {
 export async function importScheduleFromUri(uri: string): Promise<ImportResult> {
   try {
     // Read file as base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+    const base64 = await readAsStringAsync(uri, {
+      encoding: EncodingType.Base64,
     });
 
     // Parse Excel

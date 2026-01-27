@@ -198,15 +198,15 @@ export default function SettingsScreen() {
                     styles.menuItem,
                     itemIndex < section.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.borderLight },
                   ]}
-                  onPress={item.onPress}
-                  disabled={item.toggle}
+                  onPress={'onPress' in item ? item.onPress : undefined}
+                  disabled={'toggle' in item && item.toggle}
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuItemLeft}>
                     <item.icon size={20} color={theme.textSecondary} />
                     <Text style={[styles.menuItemLabel, { color: theme.text }]}>{item.label}</Text>
                   </View>
-                  {item.toggle ? (
+                  {'toggle' in item && item.toggle ? (
                     <Switch
                       value={item.value}
                       onValueChange={item.onToggle}

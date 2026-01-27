@@ -4,19 +4,22 @@ import React from 'react';
 import {
   View,
   TextInput,
+  Text,
   StyleSheet,
   ViewStyle,
+  TextStyle,
   TextInputProps,
 } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { borderRadius, spacing } from '@/src/constants/spacing';
 
-interface InputProps extends Omit<TextInputProps, 'style'> {
+export interface InputProps extends Omit<TextInputProps, 'style'> {
   icon?: LucideIcon;
   error?: boolean;
   containerStyle?: ViewStyle;
-  inputStyle?: ViewStyle;
+  inputStyle?: TextStyle;
+  label?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -24,39 +27,49 @@ export const Input: React.FC<InputProps> = ({
   error = false,
   containerStyle,
   inputStyle,
+  label,
   ...textInputProps
 }) => {
   const { theme } = useTheme();
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.inputBackground,
-          borderColor: error ? '#ef4444' : theme.inputBorder,
-        },
-        containerStyle,
-      ]}
-    >
-      {Icon && (
-        <Icon size={18} color={theme.textMuted} style={styles.icon} />
+    <View style={containerStyle}>
+      {label && (
+        <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
       )}
-      <TextInput
+      <View
         style={[
-          styles.input,
-          { color: theme.text },
-          Icon && styles.inputWithIcon,
-          inputStyle,
+          styles.container,
+          {
+            backgroundColor: theme.inputBackground,
+            borderColor: error ? '#ef4444' : theme.inputBorder,
+          },
         ]}
-        placeholderTextColor={theme.textMuted}
-        {...textInputProps}
-      />
+      >
+        {Icon && (
+          <Icon size={18} color={theme.textMuted} style={styles.icon} />
+        )}
+        <TextInput
+          style={[
+            styles.input,
+            { color: theme.text },
+            Icon && styles.inputWithIcon,
+            inputStyle,
+          ]}
+          placeholderTextColor={theme.textMuted}
+          {...textInputProps}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',

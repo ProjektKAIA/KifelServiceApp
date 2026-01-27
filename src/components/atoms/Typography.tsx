@@ -1,7 +1,7 @@
 // src/components/atoms/Typography.tsx
 
 import React from 'react';
-import { Text, StyleSheet, TextStyle } from 'react-native';
+import { Text, StyleSheet, TextStyle, StyleProp } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 
 type TypographyVariant =
@@ -20,7 +20,7 @@ interface TypographyProps {
   children: React.ReactNode;
   variant?: TypographyVariant;
   color?: TypographyColor;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }
 

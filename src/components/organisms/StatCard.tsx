@@ -1,7 +1,7 @@
 // src/components/organisms/StatCard.tsx
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { Card } from '@/src/components/molecules/Card';
 import { Typography } from '@/src/components/atoms/Typography';
@@ -13,7 +13,7 @@ interface StatCardProps {
   label: string;
   icon?: LucideIcon;
   accentColor?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({

@@ -3,8 +3,14 @@
 // Tracking nur aktiv waehrend der Arbeitszeit (eingestempelt)
 
 import * as Location from 'expo-location';
-import * as TaskManager from 'expo-task-manager';
 import { features } from '@/src/config/features';
+
+let TaskManager: typeof import('expo-task-manager') | null = null;
+try {
+  TaskManager = require('expo-task-manager');
+} catch {
+  console.warn('[BackgroundLocation] expo-task-manager not available (Expo Go?)');
+}
 
 const BACKGROUND_LOCATION_TASK = 'kifel-background-location-task';
 
@@ -30,6 +36,7 @@ export function setLocationUpdateCallback(callback: LocationUpdateCallback | nul
  * Task-Definition fuer Background-Location
  * WICHTIG: Muss ausserhalb von Komponenten definiert werden
  */
+if (TaskManager) {
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.error('[BackgroundLocation] Task error:', error);
@@ -63,6 +70,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     }
   }
 });
+}
 
 /**
  * Fordert Background-Location-Berechtigung an
@@ -128,6 +136,11 @@ export async function startBackgroundLocationTask(): Promise<boolean> {
     }
   }
 
+  if (!TaskManager) {
+    console.warn('[BackgroundLocation] TaskManager not available');
+    return false;
+  }
+
   // Pruefen ob Task bereits laeuft
   const isRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
   if (isRunning) {
@@ -168,6 +181,7 @@ export async function startBackgroundLocationTask(): Promise<boolean> {
  * DSGVO: Sollte bei Arbeitsende (clockOut) aufgerufen werden
  */
 export async function stopBackgroundLocationTask(): Promise<void> {
+  if (!TaskManager) return;
   try {
     const isRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
     if (isRunning) {
@@ -185,6 +199,7 @@ export async function stopBackgroundLocationTask(): Promise<void> {
  * Prueft ob das Background-Location-Tracking aktiv ist
  */
 export async function isBackgroundLocationRunning(): Promise<boolean> {
+  if (!TaskManager) return false;
   try {
     return await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
   } catch (error) {

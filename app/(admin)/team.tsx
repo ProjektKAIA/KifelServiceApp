@@ -17,8 +17,14 @@ import { isFirebaseConfigured } from '@/src/lib/firebase';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useAuthStore } from '@/src/store/authStore';
-import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
+
+let Clipboard: typeof import('expo-clipboard') | null = null;
+try {
+  Clipboard = require('expo-clipboard');
+} catch {
+  console.warn('[Team] expo-clipboard not available (Expo Go?)');
+}
 
 type EmployeeStatus = 'active' | 'inactive';
 
@@ -299,8 +305,12 @@ export default function TeamManagementScreen() {
   const handleCopyInviteLink = async () => {
     if (!createdInvite) return;
     const link = getInviteLink(createdInvite.token);
-    await Clipboard.setStringAsync(link);
-    Alert.alert('Kopiert', 'Einladungslink wurde in die Zwischenablage kopiert.');
+    if (Clipboard) {
+      await Clipboard.setStringAsync(link);
+      Alert.alert('Kopiert', 'Einladungslink wurde in die Zwischenablage kopiert.');
+    } else {
+      Alert.alert('Fehler', 'Zwischenablage nicht verfügbar.');
+    }
   };
 
   const handleShareInvite = async () => {
@@ -315,8 +325,10 @@ export default function TeamManagementScreen() {
       await Linking.openURL(mailUrl);
     } else {
       // Fallback: just copy
-      await Clipboard.setStringAsync(link);
-      Alert.alert('Link kopiert', 'E-Mail konnte nicht geöffnet werden. Der Link wurde in die Zwischenablage kopiert.');
+      if (Clipboard) {
+        await Clipboard.setStringAsync(link);
+        Alert.alert('Link kopiert', 'E-Mail konnte nicht geöffnet werden. Der Link wurde in die Zwischenablage kopiert.');
+      }
     }
   };
 

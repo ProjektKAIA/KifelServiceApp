@@ -1,7 +1,7 @@
 // src/components/organisms/WelcomeCard.tsx
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
 import { Card } from '@/src/components/molecules/Card';
 import { IconBox } from '@/src/components/atoms/IconBox';
@@ -13,7 +13,7 @@ interface WelcomeCardProps {
   icon: LucideIcon;
   title: string;
   description: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const WelcomeCard: React.FC<WelcomeCardProps> = ({

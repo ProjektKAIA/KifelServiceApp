@@ -1,7 +1,7 @@
 // src/components/molecules/Card.tsx
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ViewStyle, TouchableOpacity, StyleProp } from 'react-native';
 import { useTheme } from '@/src/hooks/useTheme';
 import { borderRadius, spacing } from '@/src/constants/spacing';
 
@@ -10,7 +10,7 @@ interface CardProps {
   variant?: 'default' | 'elevated' | 'accent';
   accentColor?: string;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 

@@ -13,7 +13,7 @@ interface UseThemeReturn {
 }
 
 export const useTheme = (): UseThemeReturn => {
-  const systemColorScheme = useColorScheme() ?? 'dark';
+  const systemColorScheme = useColorScheme() ?? 'light';
   const { themePreference, setThemePreference } = useThemeStore();
 
   // Bestimme das aktive Color Scheme basierend auf Präferenz

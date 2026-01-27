@@ -1,8 +1,19 @@
 // src/utils/exportUtils.ts
 
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import * as Print from 'expo-print';
+import {
+  cacheDirectory,
+  writeAsStringAsync,
+  moveAsync,
+  EncodingType,
+} from 'expo-file-system/legacy';
+let Sharing: typeof import('expo-sharing') | null = null;
+let Print: typeof import('expo-print') | null = null;
+try {
+  Sharing = require('expo-sharing');
+  Print = require('expo-print');
+} catch {
+  console.warn('[ExportUtils] expo-sharing or expo-print not available (Expo Go?)');
+}
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -79,13 +90,13 @@ export const exportToCSV = async (options: ExportOptions): Promise<void> => {
 
   // Save and share
   const fileName = `Arbeitsstunden_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
-  const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+  const filePath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.writeAsStringAsync(filePath, csvContent, {
-    encoding: FileSystem.EncodingType.UTF8,
+  await writeAsStringAsync(filePath, csvContent, {
+    encoding: EncodingType.UTF8,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(filePath, {
       mimeType: 'text/csv',
       dialogTitle: 'Arbeitsstunden exportieren',
@@ -105,7 +116,7 @@ export const exportToExcel = async (options: ExportOptions): Promise<void> => {
   const wb = XLSX.utils.book_new();
 
   // Prepare data for worksheet
-  const wsData = [
+  const wsData: (string | number)[][] = [
     [`${companyName || 'Kifel Service'} - ${title}`],
     [`Zeitraum: ${periodLabel}`],
     [`Erstellt: ${format(generatedAt, 'dd.MM.yyyy HH:mm', { locale: de })}`],
@@ -159,13 +170,13 @@ export const exportToExcel = async (options: ExportOptions): Promise<void> => {
 
   // Save and share
   const fileName = `Arbeitsstunden_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
-  const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+  const filePath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.writeAsStringAsync(filePath, wbout, {
-    encoding: FileSystem.EncodingType.Base64,
+  await writeAsStringAsync(filePath, wbout, {
+    encoding: EncodingType.Base64,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(filePath, {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       dialogTitle: 'Arbeitsstunden exportieren',
@@ -364,6 +375,7 @@ export const exportToPDF = async (options: ExportOptions): Promise<void> => {
   `;
 
   // Generate PDF
+  if (!Print) throw new Error('expo-print not available');
   const { uri } = await Print.printToFileAsync({
     html,
     base64: false,
@@ -371,14 +383,14 @@ export const exportToPDF = async (options: ExportOptions): Promise<void> => {
 
   // Rename and share
   const fileName = `Arbeitsstunden_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-  const newPath = `${FileSystem.cacheDirectory}${fileName}`;
+  const newPath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.moveAsync({
+  await moveAsync({
     from: uri,
     to: newPath,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(newPath, {
       mimeType: 'application/pdf',
       dialogTitle: 'Arbeitsstunden exportieren',
@@ -456,13 +468,13 @@ export const exportScheduleToCSV = async (options: ScheduleExportOptions): Promi
   ].join('\n');
 
   const fileName = `Dienstplan_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
-  const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+  const filePath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.writeAsStringAsync(filePath, csvContent, {
-    encoding: FileSystem.EncodingType.UTF8,
+  await writeAsStringAsync(filePath, csvContent, {
+    encoding: EncodingType.UTF8,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(filePath, {
       mimeType: 'text/csv',
       dialogTitle: 'Dienstplan exportieren',
@@ -477,7 +489,7 @@ export const exportScheduleToExcel = async (options: ScheduleExportOptions): Pro
 
   const wb = XLSX.utils.book_new();
 
-  const wsData = [
+  const wsData: (string | number)[][] = [
     [`${companyName || 'Kifel Service'} - ${title}`],
     [`Zeitraum: ${periodLabel}`],
     [`Erstellt: ${format(generatedAt, 'dd.MM.yyyy HH:mm', { locale: de })}`],
@@ -516,13 +528,13 @@ export const exportScheduleToExcel = async (options: ScheduleExportOptions): Pro
   const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
 
   const fileName = `Dienstplan_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
-  const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+  const filePath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.writeAsStringAsync(filePath, wbout, {
-    encoding: FileSystem.EncodingType.Base64,
+  await writeAsStringAsync(filePath, wbout, {
+    encoding: EncodingType.Base64,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(filePath, {
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       dialogTitle: 'Dienstplan exportieren',
@@ -666,11 +678,11 @@ export const exportScheduleToPDF = async (options: ScheduleExportOptions): Promi
   const { uri } = await Print.printToFileAsync({ html, base64: false });
 
   const fileName = `Dienstplan_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-  const newPath = `${FileSystem.cacheDirectory}${fileName}`;
+  const newPath = `${cacheDirectory}${fileName}`;
 
-  await FileSystem.moveAsync({ from: uri, to: newPath });
+  await moveAsync({ from: uri, to: newPath });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (Sharing && await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(newPath, {
       mimeType: 'application/pdf',
       dialogTitle: 'Dienstplan exportieren',

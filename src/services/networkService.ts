@@ -1,8 +1,17 @@
 // src/services/networkService.ts
 // Netzwerk-Status-Ueberwachung fuer Offline-Mode
 
-import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
 import { create } from 'zustand';
+
+type NetInfoState = { isConnected: boolean | null; isInternetReachable: boolean | null; type: string };
+type NetInfoSubscription = (() => void);
+
+let NetInfo: any = null;
+try {
+  NetInfo = require('@react-native-community/netinfo').default;
+} catch {
+  console.warn('[NetworkService] @react-native-community/netinfo not available (Expo Go?)');
+}
 
 interface NetworkState {
   isConnected: boolean;
@@ -33,6 +42,10 @@ export function setSyncCallback(callback: () => void): void {
  * Sollte beim App-Start aufgerufen werden
  */
 export function initNetworkListener(): void {
+  if (!NetInfo) {
+    console.warn('[NetworkService] NetInfo not available, skipping init');
+    return;
+  }
   if (unsubscribe) {
     console.log('[NetworkService] Already initialized');
     return;
@@ -98,6 +111,7 @@ export function isOnline(): boolean {
  * Prueft den aktuellen Netzwerk-Status (async, fresh)
  */
 export async function checkNetworkStatus(): Promise<boolean> {
+  if (!NetInfo) return true;
   try {
     const state = await NetInfo.fetch();
     return (state.isConnected ?? false) && (state.isInternetReachable ?? true);

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ViewStyle,
+  StyleProp,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Typography } from '@/src/components/atoms/Typography';
@@ -19,7 +20,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const Modal: React.FC<ModalProps> = ({

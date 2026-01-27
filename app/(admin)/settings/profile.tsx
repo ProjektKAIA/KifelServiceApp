@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowLeft,
   Camera,
@@ -34,6 +33,13 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { usersCollection, companyCollection } from '@/src/lib/firestore';
 import { Company } from '@/src/types';
+
+let ImagePicker: typeof import('expo-image-picker') | null = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch {
+  console.warn('[Profile] expo-image-picker not available (Expo Go?)');
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -94,6 +100,10 @@ export default function ProfileScreen() {
   };
 
   const pickImage = async (type: 'avatar' | 'logo') => {
+    if (!ImagePicker) {
+      Alert.alert('Nicht verfügbar', 'Bildauswahl ist in dieser Umgebung nicht verfügbar.');
+      return;
+    }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');

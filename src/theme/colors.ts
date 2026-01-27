@@ -97,8 +97,8 @@ export const colors = {
     navBorder: 'rgba(255,255,255,0.05)',
     navInactive: 'rgba(255,255,255,0.3)',
 
-    cardBackground: 'rgba(255,255,255,0.03)',
-    cardBorder: 'rgba(255,255,255,0.06)',
+    cardBackground: 'rgba(255,255,255,0.08)',
+    cardBorder: 'rgba(255,255,255,0.12)',
 
     inputBackground: 'rgba(255,255,255,0.05)',
     inputBorder: 'rgba(255,255,255,0.1)',

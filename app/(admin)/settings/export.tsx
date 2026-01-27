@@ -13,7 +13,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as FileSystem from 'expo-file-system';
+import {
+  documentDirectory,
+  writeAsStringAsync,
+  moveAsync,
+  EncodingType,
+} from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import * as XLSX from 'xlsx';
@@ -342,8 +347,8 @@ export default function ExportScreen() {
         const html = generatePDFHtml(`${companyName} - ${title}`, tables);
         const { uri } = await Print.printToFileAsync({ html, base64: false });
 
-        const pdfPath = `${FileSystem.documentDirectory}${fileName}.pdf`;
-        await FileSystem.moveAsync({ from: uri, to: pdfPath });
+        const pdfPath = `${documentDirectory}${fileName}.pdf`;
+        await moveAsync({ from: uri, to: pdfPath });
 
         await Sharing.shareAsync(pdfPath, {
           mimeType: 'application/pdf',
@@ -365,10 +370,10 @@ export default function ExportScreen() {
         });
 
         const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-        const excelPath = `${FileSystem.documentDirectory}${fileName}.xlsx`;
+        const excelPath = `${documentDirectory}${fileName}.xlsx`;
 
-        await FileSystem.writeAsStringAsync(excelPath, wbout, {
-          encoding: FileSystem.EncodingType.Base64,
+        await writeAsStringAsync(excelPath, wbout, {
+          encoding: EncodingType.Base64,
         });
 
         await Sharing.shareAsync(excelPath, {
@@ -382,10 +387,10 @@ export default function ExportScreen() {
         const allHeaders = [...new Set(tables.flatMap(t => t.headers))];
 
         const csvContent = generateCSV(allData, allHeaders);
-        const csvPath = `${FileSystem.documentDirectory}${fileName}.csv`;
+        const csvPath = `${documentDirectory}${fileName}.csv`;
 
-        await FileSystem.writeAsStringAsync(csvPath, csvContent, {
-          encoding: FileSystem.EncodingType.UTF8,
+        await writeAsStringAsync(csvPath, csvContent, {
+          encoding: EncodingType.UTF8,
         });
 
         await Sharing.shareAsync(csvPath, {

@@ -1,6 +1,6 @@
 // app/(admin)/reports.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,9 @@ import {
   MapPin,
   Calendar,
   Coffee,
+  Navigation,
+  Home,
+  Route,
 } from 'lucide-react-native';
 import {
   format,
@@ -55,8 +58,12 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/firestore';
 import { User } from '@/src/types';
 import { exportReport, ExportFormat, ExportEmployeeData } from '@/src/utils/exportUtils';
+import { isFieldEntry, calculateTotalDistance, formatDistance } from '@/src/utils/locationUtils';
+import RouteMap from '@/src/components/organisms/RouteMap';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
+type ReportTab = 'stunden' | 'standort';
+type LocationFilter = 'alle' | 'aussen' | 'innen';
 
 interface EmployeeStats {
   userId: string;
@@ -67,7 +74,18 @@ interface EmployeeStats {
   netHours: number;
   netMinutes: number;
   entriesCount: number;
-  entries: TimeEntry[]; // Store individual entries for detail view
+  entries: TimeEntry[];
+}
+
+interface EmployeeLocationStats {
+  userId: string;
+  userName: string;
+  isField: boolean; // mind. 1 Außen-Eintrag im Zeitraum
+  fieldEntries: TimeEntry[];
+  officeEntries: TimeEntry[];
+  totalEntries: number;
+  totalDistance: number; // Gesamtdistanz aller Feld-Einträge in Metern
+  gpsPointsCount: number;
 }
 
 const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
@@ -88,17 +106,28 @@ const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description
 export default function AdminReportsScreen() {
   const { theme } = useTheme();
 
+  const [activeTab, setActiveTab] = useState<ReportTab>('stunden');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<User[]>([]);
   const [employeeStats, setEmployeeStats] = useState<EmployeeStats[]>([]);
+  const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailEmployee, setDetailEmployee] = useState<{ user: User; stats: EmployeeStats } | null>(null);
+
+  // Standort-Tab state
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>('alle');
+  const [showLocationDetailModal, setShowLocationDetailModal] = useState(false);
+  const [locationDetailEmployee, setLocationDetailEmployee] = useState<{
+    user: User;
+    stats: EmployeeLocationStats;
+  } | null>(null);
+  const [selectedEntryIndex, setSelectedEntryIndex] = useState(0);
 
   // Calculate date range based on period type
   const getDateRange = useCallback((date: Date, type: PeriodType): { start: Date; end: Date } => {
@@ -197,6 +226,7 @@ export default function AdminReportsScreen() {
       ]);
 
       setEmployees(employeesData);
+      setAllEntries(entriesData);
 
       // Group entries by employee and calculate stats
       const statsMap = new Map<string, EmployeeStats>();
@@ -263,7 +293,7 @@ export default function AdminReportsScreen() {
   }, [loadData]);
 
   // Export handler
-  const handleExport = async (format: ExportFormat) => {
+  const handleExport = async (formatType: ExportFormat) => {
     setIsExporting(true);
     setShowExportModal(false);
 
@@ -278,7 +308,7 @@ export default function AdminReportsScreen() {
         entriesCount: stats.entriesCount,
       }));
 
-      await exportReport(format, {
+      await exportReport(formatType, {
         title: 'Arbeitsstunden-Auswertung',
         periodLabel: getPeriodLabel(),
         employees: exportData,
@@ -307,7 +337,7 @@ export default function AdminReportsScreen() {
     return `${hours}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  // Open employee detail modal
+  // Open employee detail modal (Stunden tab)
   const handleOpenDetail = (stats: EmployeeStats) => {
     const user = employees.find(e => e.id === stats.userId);
     if (user) {
@@ -339,6 +369,99 @@ export default function AdminReportsScreen() {
     };
   };
 
+  // ============================================================================
+  // STANDORT TAB: Computed data
+  // ============================================================================
+
+  const employeeLocationStats: EmployeeLocationStats[] = useMemo(() => {
+    const statsMap = new Map<string, EmployeeLocationStats>();
+
+    employees.forEach(emp => {
+      statsMap.set(emp.id, {
+        userId: emp.id,
+        userName: `${emp.firstName} ${emp.lastName}`,
+        isField: false,
+        fieldEntries: [],
+        officeEntries: [],
+        totalEntries: 0,
+        totalDistance: 0,
+        gpsPointsCount: 0,
+      });
+    });
+
+    allEntries.forEach(entry => {
+      const stats = statsMap.get(entry.userId);
+      if (!stats) return;
+
+      stats.totalEntries += 1;
+
+      if (isFieldEntry(entry)) {
+        stats.isField = true;
+        stats.fieldEntries.push(entry);
+        const points = entry.locationHistory || [];
+        stats.totalDistance += calculateTotalDistance(points);
+        stats.gpsPointsCount += points.length;
+      } else {
+        stats.officeEntries.push(entry);
+      }
+    });
+
+    let result = Array.from(statsMap.values()).filter(s => s.totalEntries > 0);
+
+    if (locationFilter === 'aussen') {
+      result = result.filter(s => s.isField);
+    } else if (locationFilter === 'innen') {
+      result = result.filter(s => !s.isField);
+    }
+
+    return result.sort((a, b) => b.totalDistance - a.totalDistance);
+  }, [employees, allEntries, locationFilter]);
+
+  const locationSummary = useMemo(() => {
+    const allStats = Array.from(
+      employees.reduce((map, emp) => {
+        if (!map.has(emp.id)) {
+          map.set(emp.id, { isField: false, gpsPoints: 0 });
+        }
+        return map;
+      }, new Map<string, { isField: boolean; gpsPoints: number }>())
+    );
+
+    let fieldCount = 0;
+    let totalGpsPoints = 0;
+
+    allEntries.forEach(entry => {
+      if (isFieldEntry(entry)) {
+        const empData = allStats.find(([id]) => id === entry.userId);
+        if (empData) {
+          empData[1].isField = true;
+          empData[1].gpsPoints += (entry.locationHistory || []).length;
+        }
+      }
+    });
+
+    allStats.forEach(([, data]) => {
+      if (data.isField) fieldCount++;
+      totalGpsPoints += data.gpsPoints;
+    });
+
+    return { fieldCount, totalGpsPoints };
+  }, [employees, allEntries]);
+
+  // Open location detail modal
+  const handleOpenLocationDetail = (stats: EmployeeLocationStats) => {
+    const user = employees.find(e => e.id === stats.userId);
+    if (user) {
+      setLocationDetailEmployee({ user, stats });
+      setSelectedEntryIndex(0);
+      setShowLocationDetailModal(true);
+    }
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -363,19 +486,63 @@ export default function AdminReportsScreen() {
             <View style={[styles.badge, { backgroundColor: theme.pillSecondary }]}>
               <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>AUSWERTUNG</Text>
             </View>
-            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Arbeitsstunden</Text>
-            <Text style={[styles.headerLarge, { color: theme.text }]}>Stundenübersicht</Text>
+            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>
+              {activeTab === 'stunden' ? 'Arbeitsstunden' : 'GPS-Tracking'}
+            </Text>
+            <Text style={[styles.headerLarge, { color: theme.text }]}>
+              {activeTab === 'stunden' ? 'Stundenübersicht' : 'Standort-Auswertung'}
+            </Text>
           </View>
+          {activeTab === 'stunden' && (
+            <TouchableOpacity
+              style={[styles.exportButton, { backgroundColor: theme.primary }]}
+              onPress={() => setShowExportModal(true)}
+              disabled={isExporting || employeeStats.length === 0}
+            >
+              {isExporting ? (
+                <ActivityIndicator size="small" color={theme.textInverse} />
+              ) : (
+                <Download size={20} color={theme.textInverse} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Tab Toggle */}
+        <View style={[styles.tabToggleContainer, { backgroundColor: theme.surface }]}>
           <TouchableOpacity
-            style={[styles.exportButton, { backgroundColor: theme.primary }]}
-            onPress={() => setShowExportModal(true)}
-            disabled={isExporting || employeeStats.length === 0}
+            style={[
+              styles.tabToggleButton,
+              activeTab === 'stunden' && { backgroundColor: theme.primary },
+            ]}
+            onPress={() => setActiveTab('stunden')}
           >
-            {isExporting ? (
-              <ActivityIndicator size="small" color={theme.textInverse} />
-            ) : (
-              <Download size={20} color={theme.textInverse} />
-            )}
+            <Clock size={16} color={activeTab === 'stunden' ? theme.textInverse : theme.textSecondary} />
+            <Text
+              style={[
+                styles.tabToggleText,
+                { color: activeTab === 'stunden' ? theme.textInverse : theme.textSecondary },
+              ]}
+            >
+              Stunden
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabToggleButton,
+              activeTab === 'standort' && { backgroundColor: theme.primary },
+            ]}
+            onPress={() => setActiveTab('standort')}
+          >
+            <MapPin size={16} color={activeTab === 'standort' ? theme.textInverse : theme.textSecondary} />
+            <Text
+              style={[
+                styles.tabToggleText,
+                { color: activeTab === 'standort' ? theme.textInverse : theme.textSecondary },
+              ]}
+            >
+              Standort
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -422,140 +589,295 @@ export default function AdminReportsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Employee Filter */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FILTER</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.employeeFilter}>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              {
-                backgroundColor: !selectedEmployeeId ? theme.primary : theme.surface,
-                borderColor: !selectedEmployeeId ? theme.primary : theme.border,
-              },
-            ]}
-            onPress={() => setSelectedEmployeeId(null)}
-          >
-            <Users size={14} color={!selectedEmployeeId ? theme.textInverse : theme.textSecondary} />
-            <Text
-              style={[
-                styles.filterButtonText,
-                { color: !selectedEmployeeId ? theme.textInverse : theme.textSecondary },
-              ]}
-            >
-              Alle
-            </Text>
-          </TouchableOpacity>
-          {employees.map((emp) => (
-            <TouchableOpacity
-              key={emp.id}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor: selectedEmployeeId === emp.id ? theme.primary : theme.surface,
-                  borderColor: selectedEmployeeId === emp.id ? theme.primary : theme.border,
-                },
-              ]}
-              onPress={() => setSelectedEmployeeId(emp.id)}
-            >
-              <Text
+        {/* ============================================================ */}
+        {/* STUNDEN TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'stunden' && (
+          <>
+            {/* Employee Filter */}
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FILTER</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.employeeFilter}>
+              <TouchableOpacity
                 style={[
-                  styles.filterButtonText,
-                  { color: selectedEmployeeId === emp.id ? theme.textInverse : theme.textSecondary },
+                  styles.filterButton,
+                  {
+                    backgroundColor: !selectedEmployeeId ? theme.primary : theme.surface,
+                    borderColor: !selectedEmployeeId ? theme.primary : theme.border,
+                  },
                 ]}
+                onPress={() => setSelectedEmployeeId(null)}
               >
-                {emp.firstName} {emp.lastName.charAt(0)}.
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Users size={14} color={!selectedEmployeeId ? theme.textInverse : theme.textSecondary} />
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    { color: !selectedEmployeeId ? theme.textInverse : theme.textSecondary },
+                  ]}
+                >
+                  Alle
+                </Text>
+              </TouchableOpacity>
+              {employees.map((emp) => (
+                <TouchableOpacity
+                  key={emp.id}
+                  style={[
+                    styles.filterButton,
+                    {
+                      backgroundColor: selectedEmployeeId === emp.id ? theme.primary : theme.surface,
+                      borderColor: selectedEmployeeId === emp.id ? theme.primary : theme.border,
+                    },
+                  ]}
+                  onPress={() => setSelectedEmployeeId(emp.id)}
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      { color: selectedEmployeeId === emp.id ? theme.textInverse : theme.textSecondary },
+                    ]}
+                  >
+                    {emp.firstName} {emp.lastName.charAt(0)}.
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-        {/* Summary Card */}
-        <View style={[styles.summaryCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <View style={styles.summaryIconRow}>
-                <Clock size={16} color={theme.primary} />
-                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Netto-Stunden</Text>
+            {/* Summary Card */}
+            <View style={[styles.summaryCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconRow}>
+                    <Clock size={16} color={theme.primary} />
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Netto-Stunden</Text>
+                  </View>
+                  <Text style={[styles.summaryValue, { color: theme.primary }]}>
+                    {formatHoursMinutes(Math.floor(totals.totalMinutes / 60), totals.totalMinutes % 60)} h
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconRow}>
+                    <TrendingUp size={16} color={theme.textSecondary} />
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Einträge</Text>
+                  </View>
+                  <Text style={[styles.summaryValue, { color: theme.text }]}>{totals.entriesCount}</Text>
+                </View>
               </View>
-              <Text style={[styles.summaryValue, { color: theme.primary }]}>
-                {formatHoursMinutes(Math.floor(totals.totalMinutes / 60), totals.totalMinutes % 60)} h
-              </Text>
+              <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
+                  Pause gesamt: {Math.floor(totals.breakMinutes / 60)}:{(totals.breakMinutes % 60).toString().padStart(2, '0')} h
+                </Text>
+              </View>
             </View>
-            <View style={styles.summaryItem}>
-              <View style={styles.summaryIconRow}>
-                <TrendingUp size={16} color={theme.textSecondary} />
-                <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Einträge</Text>
+
+            {/* Employee Stats */}
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MITARBEITER</Text>
+
+            {employeeStats.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Einträge im gewählten Zeitraum</Text>
               </View>
-              <Text style={[styles.summaryValue, { color: theme.text }]}>{totals.entriesCount}</Text>
+            ) : (
+              employeeStats.map((stats) => (
+                <TouchableOpacity
+                  key={stats.userId}
+                  style={[styles.statsCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                  onPress={() => handleOpenDetail(stats)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.statsHeader}>
+                    <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+                      <Text style={[styles.avatarText, { color: theme.textInverse }]}>
+                        {stats.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.statsInfo}>
+                      <Text style={[styles.statsName, { color: theme.text }]}>{stats.userName}</Text>
+                      <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
+                        {stats.entriesCount} {stats.entriesCount === 1 ? 'Eintrag' : 'Einträge'}
+                      </Text>
+                    </View>
+                    <View style={styles.statsHours}>
+                      <Text style={[styles.statsHoursValue, { color: theme.primary }]}>
+                        {formatHoursMinutes(stats.netHours, stats.netMinutes)}
+                      </Text>
+                      <Text style={[styles.statsHoursLabel, { color: theme.textMuted }]}>Stunden</Text>
+                    </View>
+                    <ChevronRight size={20} color={theme.textMuted} style={{ marginLeft: 8 }} />
+                  </View>
+                  <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
+                    <View style={styles.statsDetailItem}>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Brutto</Text>
+                      <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
+                        {formatHoursMinutes(stats.totalHours, stats.totalMinutes)} h
+                      </Text>
+                    </View>
+                    <View style={styles.statsDetailItem}>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Pause</Text>
+                      <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
+                        {Math.floor(stats.breakMinutes / 60)}:{(stats.breakMinutes % 60).toString().padStart(2, '0')} h
+                      </Text>
+                    </View>
+                    <View style={styles.statsDetailItem}>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Netto</Text>
+                      <Text style={[styles.statsDetailValue, { color: theme.primary, fontWeight: '700' }]}>
+                        {formatHoursMinutes(stats.netHours, stats.netMinutes)} h
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        )}
+
+        {/* ============================================================ */}
+        {/* STANDORT TAB */}
+        {/* ============================================================ */}
+        {activeTab === 'standort' && (
+          <>
+            {/* Location Filter */}
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FILTER</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.employeeFilter}>
+              {([
+                { key: 'alle' as const, label: 'Alle', icon: Users },
+                { key: 'aussen' as const, label: 'Außen', icon: Navigation },
+                { key: 'innen' as const, label: 'Innen', icon: Home },
+              ]).map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.filterButton,
+                    {
+                      backgroundColor: locationFilter === opt.key ? theme.primary : theme.surface,
+                      borderColor: locationFilter === opt.key ? theme.primary : theme.border,
+                    },
+                  ]}
+                  onPress={() => setLocationFilter(opt.key)}
+                >
+                  <opt.icon size={14} color={locationFilter === opt.key ? theme.textInverse : theme.textSecondary} />
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      { color: locationFilter === opt.key ? theme.textInverse : theme.textSecondary },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Location Summary Card */}
+            <View style={[styles.summaryCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconRow}>
+                    <Navigation size={16} color={theme.primary} />
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Außen-MA</Text>
+                  </View>
+                  <Text style={[styles.summaryValue, { color: theme.primary }]}>
+                    {locationSummary.fieldCount}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconRow}>
+                    <Route size={16} color={theme.textSecondary} />
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>GPS-Punkte</Text>
+                  </View>
+                  <Text style={[styles.summaryValue, { color: theme.text }]}>
+                    {locationSummary.totalGpsPoints}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-          <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.summaryRow}>
-            <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
-              Pause gesamt: {Math.floor(totals.breakMinutes / 60)}:{(totals.breakMinutes % 60).toString().padStart(2, '0')} h
-            </Text>
-          </View>
-        </View>
 
-        {/* Employee Stats */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MITARBEITER</Text>
+            {/* Employee Location List */}
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MITARBEITER</Text>
 
-        {employeeStats.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Einträge im gewählten Zeitraum</Text>
-          </View>
-        ) : (
-          employeeStats.map((stats) => (
-            <TouchableOpacity
-              key={stats.userId}
-              style={[styles.statsCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
-              onPress={() => handleOpenDetail(stats)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.statsHeader}>
-                <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-                  <Text style={[styles.avatarText, { color: theme.textInverse }]}>
-                    {stats.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.statsInfo}>
-                  <Text style={[styles.statsName, { color: theme.text }]}>{stats.userName}</Text>
-                  <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
-                    {stats.entriesCount} {stats.entriesCount === 1 ? 'Eintrag' : 'Einträge'}
-                  </Text>
-                </View>
-                <View style={styles.statsHours}>
-                  <Text style={[styles.statsHoursValue, { color: theme.primary }]}>
-                    {formatHoursMinutes(stats.netHours, stats.netMinutes)}
-                  </Text>
-                  <Text style={[styles.statsHoursLabel, { color: theme.textMuted }]}>Stunden</Text>
-                </View>
-                <ChevronRight size={20} color={theme.textMuted} style={{ marginLeft: 8 }} />
+            {employeeLocationStats.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                  Keine Mitarbeiter mit{' '}
+                  {locationFilter === 'aussen' ? 'Außen-' : locationFilter === 'innen' ? 'Innen-' : ''}
+                  Einträgen im gewählten Zeitraum
+                </Text>
               </View>
-              <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
-                <View style={styles.statsDetailItem}>
-                  <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Brutto</Text>
-                  <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
-                    {formatHoursMinutes(stats.totalHours, stats.totalMinutes)} h
-                  </Text>
-                </View>
-                <View style={styles.statsDetailItem}>
-                  <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Pause</Text>
-                  <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
-                    {Math.floor(stats.breakMinutes / 60)}:{(stats.breakMinutes % 60).toString().padStart(2, '0')} h
-                  </Text>
-                </View>
-                <View style={styles.statsDetailItem}>
-                  <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Netto</Text>
-                  <Text style={[styles.statsDetailValue, { color: theme.primary, fontWeight: '700' }]}>
-                    {formatHoursMinutes(stats.netHours, stats.netMinutes)} h
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+            ) : (
+              employeeLocationStats.map((stats) => (
+                <TouchableOpacity
+                  key={stats.userId}
+                  style={[styles.statsCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                  onPress={() => stats.isField ? handleOpenLocationDetail(stats) : undefined}
+                  activeOpacity={stats.isField ? 0.7 : 1}
+                >
+                  <View style={styles.statsHeader}>
+                    <View style={[styles.avatar, { backgroundColor: stats.isField ? theme.success : theme.primary }]}>
+                      <Text style={[styles.avatarText, { color: theme.textInverse }]}>
+                        {stats.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.statsInfo}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={[styles.statsName, { color: theme.text }]}>{stats.userName}</Text>
+                        <View
+                          style={[
+                            styles.locationBadge,
+                            {
+                              backgroundColor: stats.isField ? theme.pillSuccess : theme.pillInfo,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.locationBadgeText,
+                              { color: stats.isField ? theme.pillSuccessText : theme.pillInfoText },
+                            ]}
+                          >
+                            {stats.isField ? 'Außen' : 'Innen'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
+                        {stats.totalEntries} {stats.totalEntries === 1 ? 'Eintrag' : 'Einträge'}
+                        {stats.isField ? ` · ${formatDistance(stats.totalDistance)}` : ''}
+                      </Text>
+                    </View>
+                    {stats.isField && (
+                      <ChevronRight size={20} color={theme.textMuted} style={{ marginLeft: 8 }} />
+                    )}
+                  </View>
+                  {stats.isField && (
+                    <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
+                      <View style={styles.statsDetailItem}>
+                        <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Außen</Text>
+                        <Text style={[styles.statsDetailValue, { color: theme.success }]}>
+                          {stats.fieldEntries.length}
+                        </Text>
+                      </View>
+                      <View style={styles.statsDetailItem}>
+                        <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Innen</Text>
+                        <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
+                          {stats.officeEntries.length}
+                        </Text>
+                      </View>
+                      <View style={styles.statsDetailItem}>
+                        <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>GPS-Punkte</Text>
+                        <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
+                          {stats.gpsPointsCount}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </>
         )}
       </ScrollView>
+
+      {/* ============================================================ */}
+      {/* MODALS */}
+      {/* ============================================================ */}
 
       {/* Export Modal */}
       <Modal
@@ -596,7 +918,7 @@ export default function AdminReportsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Employee Detail Modal */}
+      {/* Employee Detail Modal (Stunden) */}
       <Modal
         visible={showDetailModal}
         transparent
@@ -749,6 +1071,136 @@ export default function AdminReportsScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Location Detail Modal (Standort) */}
+      <Modal
+        visible={showLocationDetailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationDetailModal(false)}
+      >
+        <View style={[styles.detailModalContainer, { backgroundColor: theme.background }]}>
+          {/* Header */}
+          <View style={[styles.detailHeader, { borderBottomColor: theme.border }]}>
+            <TouchableOpacity onPress={() => setShowLocationDetailModal(false)} style={styles.detailCloseButton}>
+              <X size={24} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.detailHeaderTitle, { color: theme.text }]}>Standort-Details</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {locationDetailEmployee && (
+            <ScrollView contentContainerStyle={styles.detailContent}>
+              {/* Employee Info */}
+              <View style={[styles.detailInfoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+                <View style={styles.detailInfoHeader}>
+                  <View style={[styles.detailAvatar, { backgroundColor: theme.success }]}>
+                    <Text style={[styles.detailAvatarText, { color: theme.textInverse }]}>
+                      {locationDetailEmployee.user.firstName[0]}{locationDetailEmployee.user.lastName[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.detailInfoMain}>
+                    <Text style={[styles.detailName, { color: theme.text }]}>
+                      {locationDetailEmployee.user.firstName} {locationDetailEmployee.user.lastName}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <View style={[styles.detailRoleBadge, { backgroundColor: theme.pillSuccess }]}>
+                        <Text style={[styles.detailRoleText, { color: theme.pillSuccessText }]}>Außen</Text>
+                      </View>
+                      <View style={[styles.detailRoleBadge, { backgroundColor: locationDetailEmployee.user.role === 'admin' ? theme.pillInfo : theme.pillSecondary }]}>
+                        <Text style={[styles.detailRoleText, { color: locationDetailEmployee.user.role === 'admin' ? theme.primary : theme.pillSecondaryText }]}>
+                          {locationDetailEmployee.user.role === 'admin' ? 'Admin' : 'Mitarbeiter'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Route Map */}
+              {locationDetailEmployee.stats.fieldEntries.length > 0 && (
+                <>
+                  <Text style={[styles.detailSectionTitle, { color: theme.textMuted }]}>ROUTE</Text>
+                  <RouteMap
+                    locationPoints={
+                      locationDetailEmployee.stats.fieldEntries[selectedEntryIndex]?.locationHistory || []
+                    }
+                    height={250}
+                  />
+                  <View style={{ height: spacing.md }} />
+                </>
+              )}
+
+              {/* Entry Selector */}
+              <Text style={[styles.detailSectionTitle, { color: theme.textMuted }]}>
+                AUßEN-EINTRÄGE ({locationDetailEmployee.stats.fieldEntries.length})
+              </Text>
+
+              {locationDetailEmployee.stats.fieldEntries
+                .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
+                .map((entry, index) => {
+                  const clockIn = new Date(entry.clockIn);
+                  const clockOut = entry.clockOut ? new Date(entry.clockOut) : null;
+                  const points = entry.locationHistory || [];
+                  const distance = calculateTotalDistance(points);
+                  const isSelected = index === selectedEntryIndex;
+
+                  return (
+                    <TouchableOpacity
+                      key={entry.id || index}
+                      style={[
+                        styles.detailEntryCard,
+                        {
+                          backgroundColor: isSelected ? theme.pillInfo : theme.cardBackground,
+                          borderColor: isSelected ? theme.primary : theme.cardBorder,
+                        },
+                      ]}
+                      onPress={() => setSelectedEntryIndex(index)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.detailEntryHeader}>
+                        <Text style={[styles.detailEntryDate, { color: theme.text }]}>
+                          {format(clockIn, 'EEE, d. MMM', { locale: de })}
+                        </Text>
+                        <View style={[styles.locationBadge, { backgroundColor: theme.pillSuccess }]}>
+                          <Text style={[styles.locationBadgeText, { color: theme.pillSuccessText }]}>
+                            {formatDistance(distance)}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailEntryTimes}>
+                        <View style={styles.detailEntryTimeItem}>
+                          <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Kommen</Text>
+                          <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>
+                            {format(clockIn, 'HH:mm')}
+                          </Text>
+                        </View>
+                        <View style={styles.detailEntryTimeItem}>
+                          <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Gehen</Text>
+                          <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>
+                            {clockOut ? format(clockOut, 'HH:mm') : '--:--'}
+                          </Text>
+                        </View>
+                        <View style={styles.detailEntryTimeItem}>
+                          <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Distanz</Text>
+                          <Text style={[styles.detailEntryTimeValue, { color: theme.primary }]}>
+                            {formatDistance(distance)}
+                          </Text>
+                        </View>
+                        <View style={styles.detailEntryTimeItem}>
+                          <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>GPS</Text>
+                          <Text style={[styles.detailEntryTimeValue, { color: theme.textSecondary }]}>
+                            {points.length} Pkt.
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -799,6 +1251,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.md,
+  },
+  // Tab Toggle
+  tabToggleContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: spacing.md,
+  },
+  tabToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  tabToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   periodSelector: {
     marginBottom: spacing.md,
@@ -895,6 +1367,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    textAlign: 'center',
   },
   statsCard: {
     borderRadius: borderRadius.card,
@@ -957,6 +1430,16 @@ const styles = StyleSheet.create({
   statsDetailValue: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Location Badge
+  locationBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  locationBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   // Modal styles
   modalOverlay: {

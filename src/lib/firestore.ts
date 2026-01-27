@@ -378,6 +378,7 @@ export const timeEntriesCollection = {
             breakMinutes: data.breakMinutes || 0,
             clockInLocation: data.clockInLocation,
             clockOutLocation: data.clockOutLocation,
+            locationHistory: data.locationHistory,
             notes: data.notes,
           } as TimeEntry;
         });
@@ -485,6 +486,7 @@ export const timeEntriesCollection = {
               breakMinutes: data.breakMinutes || 0,
               clockInLocation: data.clockInLocation,
               clockOutLocation: data.clockOutLocation,
+              locationHistory: data.locationHistory,
               notes: data.notes,
             } as TimeEntry;
           })
@@ -519,6 +521,7 @@ export const timeEntriesCollection = {
               breakMinutes: data.breakMinutes || 0,
               clockInLocation: data.clockInLocation,
               clockOutLocation: data.clockOutLocation,
+              locationHistory: data.locationHistory,
               notes: data.notes,
             } as TimeEntry;
           })

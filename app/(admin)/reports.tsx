@@ -13,7 +13,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   ChevronRight,
@@ -106,6 +106,7 @@ const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description
 
 export default function AdminReportsScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<ReportTab>('stunden');
@@ -501,16 +502,16 @@ export default function AdminReportsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -1236,7 +1237,7 @@ export default function AdminReportsScreen() {
           )}
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1251,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingTop: 0,
     paddingBottom: spacing['3xl'],
   },
   headerRow: {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Info, Mail, Users, Lock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -13,10 +13,11 @@ import { SocialMediaButtons } from '@/src/components/molecules';
 export default function WelcomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <View style={styles.content}>
         {/* Logo */}
         <View style={styles.logoContainer}>
@@ -75,7 +76,7 @@ export default function WelcomeScreen() {
           <Text style={[styles.loginHint, { color: theme.textMuted }]}>{t('public.employeesOnly')}</Text>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: 0,
   },
   logoContainer: {
     alignItems: 'center',

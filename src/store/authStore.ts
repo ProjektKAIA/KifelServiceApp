@@ -7,6 +7,7 @@ import { User } from '../types';
 import { firebaseAuth, isFirebaseConfigured } from '../lib/firebase';
 import { usersCollection, pushTokensCollection } from '../lib/firestore';
 import { isFeatureEnabled } from '../config/features';
+import { useNotificationStore } from './notificationStore';
 
 // Dev Test-Accounts (ohne Firebase)
 const DEV_ACCOUNTS: Record<string, { password: string; user: User }> = {
@@ -182,6 +183,10 @@ export const useAuthStore = create<AuthState>()(
               console.error('[Auth] Error deactivating push tokens:', tokenError);
             }
           }
+
+          // Reset notification store state
+          useNotificationStore.getState().reset();
+          console.log('[Auth] Notification store reset');
 
           if (isFirebaseConfigured()) {
             await firebaseAuth.signOut();

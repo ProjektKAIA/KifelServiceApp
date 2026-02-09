@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -32,6 +32,7 @@ const LAST_UPDATED = '14. Januar 2026';
 export default function WorkingHoursScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const legalSources = [
@@ -176,7 +177,7 @@ Die Erfassung kann durch den Arbeitnehmer selbst erfolgen.`,
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -259,7 +260,7 @@ Die Erfassung kann durch den Arbeitnehmer selbst erfolgen.`,
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: 0,
     paddingBottom: spacing['3xl'],
   },
   header: {

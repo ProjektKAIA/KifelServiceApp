@@ -1,8 +1,8 @@
 // app/(admin)/index.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Calendar, Users, Check, X, Bell, ChevronRight, User } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -22,6 +22,7 @@ interface OpenRequest extends VacationRequest {
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -102,6 +103,11 @@ export default function AdminDashboardScreen() {
       });
 
       setOpenRequests(requestsWithNames);
+
+      // Cleanup: alte Notifications entfernen (>30 Tage)
+      if (user?.id) {
+        adminNotificationsCollection.deleteOld(30).catch(() => {});
+      }
     } catch (error) {
       toast.loadError('Dashboard-Daten');
     } finally {
@@ -217,29 +223,38 @@ export default function AdminDashboardScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
         }
       >
-        {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.pillSecondary }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>ADMIN</Text>
+        {/* Logo Banner */}
+        <View style={styles.logoBanner}>
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Header */}
-        <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+          <View style={[styles.badge, { backgroundColor: theme.pillSecondary }]}>
+            <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>ADMIN</Text>
+          </View>
+        </View>
         <Text style={[styles.userName, { color: theme.textMuted }]}>{userName}</Text>
 
         {/* Live Status Card */}
@@ -398,7 +413,7 @@ export default function AdminDashboardScreen() {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -413,15 +428,25 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
     paddingBottom: spacing['3xl'],
   },
+  logoBanner: {
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  logo: {
+    width: 140,
+    height: 45,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   badge: {
-    alignSelf: 'flex-end',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    marginBottom: spacing.md,
   },
   badgeText: {
     fontSize: 9,

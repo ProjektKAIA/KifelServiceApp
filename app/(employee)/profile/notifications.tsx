@@ -11,7 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ChevronLeft,
@@ -33,6 +33,7 @@ import Toast from 'react-native-toast-message';
 export default function NotificationSettingsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const {
     isEnabled,
@@ -137,7 +138,7 @@ export default function NotificationSettingsScreen() {
   // Show feature not available message
   if (!isFeatureAvailable) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={24} color={theme.text} />
@@ -156,14 +157,14 @@ export default function NotificationSettingsScreen() {
             {t('notifications.featureDisabledDesc')}
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Show enable button if not enabled
   if (!isEnabled && permissionStatus !== 'granted') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={24} color={theme.text} />
@@ -194,12 +195,12 @@ export default function NotificationSettingsScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -406,7 +407,7 @@ export default function NotificationSettingsScreen() {
           {t('notifications.deviceNote')}
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

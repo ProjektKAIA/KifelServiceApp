@@ -60,20 +60,12 @@ interface TimeState {
   clearError: () => void;
   setLoading: (loading: boolean) => void;
   updateElapsedTime: () => void;
-  addBreakTime: (minutes: number) => void;
-  addNote: (note: string) => void;
-  getEntriesForDate: (date: string) => TimeEntry[];
-  getEntriesForMonth: (year: number, month: number) => TimeEntry[];
-  getTotalHoursForMonth: (year: number, month: number) => number;
-  resetCurrentEntry: () => void;
   calculateTodayHours: () => void;
   // Location Validation
   setLocationValidation: (validation: LocationValidation) => void;
 
   // Offline-Sync Hilfsmethoden
   setFirestoreEntryId: (localId: string, firestoreId: string) => void;
-  markEntryAsSynced: (localId: string) => void;
-  getPendingSyncEntries: () => TimeEntry[];
   getCurrentEntryLocalId: () => string | null;
 }
 
@@ -245,54 +237,6 @@ export const useTimeStore = create<TimeState>()(
         set({ elapsedSeconds: Math.max(0, elapsed) });
       },
 
-      addBreakTime: (minutes) => {
-        const { currentEntry } = get();
-        if (!currentEntry) return;
-
-        set({
-          currentEntry: {
-            ...currentEntry,
-            breakMinutes: currentEntry.breakMinutes + minutes,
-          },
-        });
-      },
-
-      addNote: (note) => {
-        const { currentEntry } = get();
-        if (!currentEntry) return;
-
-        set({
-          currentEntry: {
-            ...currentEntry,
-            notes: note,
-          },
-        });
-      },
-
-      getEntriesForDate: (date) => {
-        return get().entries.filter((entry) => entry.date === date);
-      },
-
-      getEntriesForMonth: (year, month) => {
-        const monthStr = month.toString().padStart(2, '0');
-        const prefix = `${year}-${monthStr}`;
-        return get().entries.filter((entry) => entry.date.startsWith(prefix));
-      },
-
-      getTotalHoursForMonth: (year, month) => {
-        const monthEntries = get().getEntriesForMonth(year, month);
-        let totalMinutes = 0;
-
-        for (const entry of monthEntries) {
-          if (entry.clockIn && entry.clockOut) {
-            const durationMinutes = (entry.clockOut - entry.clockIn) / 1000 / 60;
-            totalMinutes += durationMinutes - entry.breakMinutes;
-          }
-        }
-
-        return Math.round((totalMinutes / 60) * 10) / 10;
-      },
-
       calculateTodayHours: () => {
         const today = getTodayDateString();
         const todayEntries = get().entries.filter((e) => e.date === today);
@@ -306,16 +250,6 @@ export const useTimeStore = create<TimeState>()(
         }
 
         set({ todayHours: Math.round((totalMinutes / 60) * 10) / 10 });
-      },
-
-      resetCurrentEntry: () => {
-        set({
-          currentEntry: null,
-          isTracking: false,
-          isWorking: false,
-          isOnBreak: false,
-          elapsedSeconds: 0,
-        });
       },
 
       // ============================================================================
@@ -366,45 +300,6 @@ export const useTimeStore = create<TimeState>()(
         if (updatedEntries !== entries) {
           set({ entries: updatedEntries });
         }
-      },
-
-      /**
-       * Markiert einen Eintrag als synchronisiert
-       */
-      markEntryAsSynced: (localId) => {
-        const { currentEntry, entries } = get();
-
-        if (currentEntry && currentEntry.id === localId) {
-          set({
-            currentEntry: { ...currentEntry, pendingSync: false },
-          });
-        }
-
-        const updatedEntries = entries.map((entry) =>
-          entry.id === localId ? { ...entry, pendingSync: false } : entry
-        );
-
-        set({ entries: updatedEntries });
-      },
-
-      /**
-       * Gibt alle Eintraege zurueck die noch synchronisiert werden muessen
-       */
-      getPendingSyncEntries: () => {
-        const { currentEntry, entries } = get();
-        const pending: TimeEntry[] = [];
-
-        if (currentEntry && currentEntry.pendingSync) {
-          pending.push(currentEntry);
-        }
-
-        for (const entry of entries) {
-          if (entry.pendingSync) {
-            pending.push(entry);
-          }
-        }
-
-        return pending;
       },
 
       /**

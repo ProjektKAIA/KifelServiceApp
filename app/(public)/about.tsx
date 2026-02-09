@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Shield, Sparkles, Users, Leaf, Globe, Building, Lock, Truck } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -17,6 +17,7 @@ const COMPANY = {
 export default function AboutScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const features = [
@@ -43,7 +44,7 @@ export default function AboutScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -129,7 +130,7 @@ export default function AboutScreen() {
           <Text style={[styles.websiteButtonText, { color: theme.textInverse }]}>{t('about.website')}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

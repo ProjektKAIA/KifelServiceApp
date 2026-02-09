@@ -42,7 +42,7 @@ export const de = {
   'auth.visitUs': 'BESUCHEN SIE UNS',
 
   // Public / Welcome
-  'public.slogan': 'Aus reinem Herzen',
+  'public.slogan': 'Mit reinem Herzen',
   'public.about': 'Über uns',
   'public.contact': 'Kontakt',
   'public.career': 'Karriere',

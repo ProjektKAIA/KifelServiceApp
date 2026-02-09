@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ScrollView, View, StyleSheet, Alert, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Play, Square, Coffee, MapPin, Clock, AlertCircle, Pause, Timer, CheckCircle, AlertTriangle } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -25,6 +25,7 @@ import { LocationValidation } from '@/src/types';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const {
@@ -371,7 +372,7 @@ export default function TimeTrackingScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader overline={t('timetracking.title')} title={t('timetracking.title')} />
 
@@ -579,7 +580,7 @@ export default function TimeTrackingScreen() {
         onDeny={handlePermissionDeny}
         onClose={() => setShowPermissionModal(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -589,7 +590,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   timeCard: {
     alignItems: 'center',

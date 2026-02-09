@@ -1,8 +1,8 @@
 // app/(admin)/requests.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView, StyleSheet, Alert, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView, StyleSheet, Alert, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Typography } from '@/src/components/atoms';
 import { FilterTabs } from '@/src/components/molecules';
@@ -32,6 +32,7 @@ interface EnrichedRequest extends VacationRequest {
 
 export default function RequestsScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -124,7 +125,7 @@ export default function RequestsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -192,7 +193,7 @@ export default function RequestsScreen() {
           </Typography>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sun, AlertCircle, Calendar } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -18,6 +18,7 @@ import { toast } from '@/src/utils/toast';
 
 export default function VacationScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -158,16 +159,16 @@ export default function VacationScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -306,7 +307,7 @@ export default function VacationScreen() {
           </Typography>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   badge: {
     alignSelf: 'flex-end',

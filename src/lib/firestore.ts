@@ -203,17 +203,6 @@ export const usersCollection = {
     );
   },
 
-  // Delete user
-  delete: async (userId: string): Promise<void> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.USERS, userId);
-        await deleteDoc(docRef);
-      },
-      undefined,
-      'users.delete'
-    );
-  },
 };
 
 // ============================================================================
@@ -390,37 +379,6 @@ export const timeEntriesCollection = {
       },
       [],
       'timeEntries.getForUser'
-    );
-  },
-
-  // Get current active entry (not clocked out)
-  getCurrent: async (userId: string): Promise<TimeEntry | null> => {
-    return safeFirestoreOp(
-      async () => {
-        const q = query(
-          collection(getDb(), COLLECTIONS.TIME_ENTRIES),
-          where('userId', '==', userId),
-          where('clockOut', '==', null),
-          limit(1)
-        );
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) return null;
-
-        const docData = snapshot.docs[0];
-        const data = docData.data();
-        return {
-          id: docData.id,
-          userId: data.userId,
-          clockIn: toISOString(data.clockIn),
-          clockOut: null,
-          breakMinutes: data.breakMinutes || 0,
-          clockInLocation: data.clockInLocation,
-          notes: data.notes,
-        };
-      },
-      null,
-      'timeEntries.getCurrent'
     );
   },
 
@@ -633,24 +591,6 @@ export const locationsCollection = {
     );
   },
 
-  get: async (locationId: string): Promise<AppLocation | null> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.LOCATIONS, locationId);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) return null;
-
-        return {
-          id: docSnap.id,
-          ...docSnap.data(),
-        } as AppLocation;
-      },
-      null,
-      'locations.get'
-    );
-  },
-
   create: async (locationData: Omit<AppLocation, 'id'>): Promise<string> => {
     return safeFirestoreOp(
       async () => {
@@ -796,17 +736,6 @@ export const vacationRequestsCollection = {
     );
   },
 
-  // Delete request
-  delete: async (requestId: string): Promise<void> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.VACATION_REQUESTS, requestId);
-        await deleteDoc(docRef);
-      },
-      undefined,
-      'vacationRequests.delete'
-    );
-  },
 };
 
 // ============================================================================
@@ -854,37 +783,6 @@ export const chatCollection = {
       },
       null,
       'chat.getTeamRoom'
-    );
-  },
-
-  // Get messages for room
-  getMessages: async (roomId: string, limitCount = 50): Promise<ChatMessage[]> => {
-    return safeFirestoreOp(
-      async () => {
-        const q = query(
-          collection(getDb(), COLLECTIONS.CHAT_MESSAGES),
-          where('chatId', '==', roomId),
-          orderBy('timestamp', 'desc'),
-          limit(limitCount)
-        );
-        const snapshot = await getDocs(q);
-
-        return snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            chatId: data.chatId,
-            userId: data.userId,
-            userName: data.userName,
-            content: data.content,
-            timestamp: data.timestamp?.toMillis() || Date.now(),
-            readBy: data.readBy || [],
-            isDeleted: data.isDeleted || false,
-          } as ChatMessage;
-        }).reverse(); // Reverse to get oldest first
-      },
-      [],
-      'chat.getMessages'
     );
   },
 
@@ -1132,20 +1030,6 @@ export const companyCollection = {
     );
   },
 
-  // Update company
-  update: async (companyId: string, updates: Partial<Company>): Promise<void> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.COMPANY, companyId);
-        await updateDoc(docRef, {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        });
-      },
-      undefined,
-      'company.update'
-    );
-  },
 };
 
 // ============================================================================
@@ -1456,38 +1340,6 @@ export const adminNotificationsCollection = {
     );
   },
 
-  // Get all notifications (for admin dashboard)
-  getAll: async (adminId: string, maxResults = 20): Promise<AdminNotification[]> => {
-    return safeFirestoreOp(
-      async () => {
-        const q = query(
-          collection(getDb(), COLLECTIONS.ADMIN_NOTIFICATIONS),
-          orderBy('createdAt', 'desc'),
-          limit(maxResults)
-        );
-        const snapshot = await getDocs(q);
-
-        return snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            type: data.type,
-            userId: data.userId,
-            userName: data.userName,
-            title: data.title,
-            message: data.message,
-            changes: data.changes,
-            createdAt: toISOString(data.createdAt),
-            readBy: data.readBy || [],
-            isRead: (data.readBy || []).includes(adminId),
-          } as AdminNotification;
-        });
-      },
-      [],
-      'adminNotifications.getAll'
-    );
-  },
-
   // Mark notification as read
   markAsRead: async (notificationId: string, adminId: string): Promise<void> => {
     return safeFirestoreOp(
@@ -1654,17 +1506,6 @@ export const pushTokensCollection = {
     );
   },
 
-  // Delete a token completely
-  delete: async (tokenId: string): Promise<void> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.PUSH_TOKENS, tokenId);
-        await deleteDoc(docRef);
-      },
-      undefined,
-      'pushTokens.delete'
-    );
-  },
 };
 
 // ============================================================================
@@ -1724,36 +1565,5 @@ export const notificationPreferencesCollection = {
     );
   },
 
-  // Update specific preferences
-  update: async (userId: string, updates: Partial<NotificationPreferences>): Promise<void> => {
-    return safeFirestoreOp(
-      async () => {
-        const docRef = doc(getDb(), COLLECTIONS.NOTIFICATION_PREFERENCES, userId);
-        await updateDoc(docRef, {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        });
-      },
-      undefined,
-      'notificationPreferences.update'
-    );
-  },
 };
 
-// Export all collections
-export const firestoreDb = {
-  users: usersCollection,
-  shifts: shiftsCollection,
-  timeEntries: timeEntriesCollection,
-  locations: locationsCollection,
-  vacationRequests: vacationRequestsCollection,
-  chat: chatCollection,
-  stats: statsCollection,
-  company: companyCollection,
-  invites: invitesCollection,
-  adminNotifications: adminNotificationsCollection,
-  pushTokens: pushTokensCollection,
-  notificationPreferences: notificationPreferencesCollection,
-};
-
-export default firestoreDb;

@@ -8,7 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Shield, MapPin, Clock, Database, Lock, Eye, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -23,6 +23,7 @@ const DATA_PROTECTION_OFFICER = 'info@kaiashapes.de';
 export default function PrivacyScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const sections = [
@@ -118,7 +119,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -172,7 +173,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: 0,
     paddingBottom: spacing['3xl'],
   },
   header: {

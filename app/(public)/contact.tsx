@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -23,6 +23,7 @@ const CONTACT = {
 export default function ContactScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const [name, setName] = useState('');
@@ -41,7 +42,7 @@ export default function ContactScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -130,7 +131,7 @@ export default function ContactScreen() {
           <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>{t('contact.sendButton')}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

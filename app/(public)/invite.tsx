@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
@@ -39,6 +39,7 @@ type InviteStatus = 'loading' | 'valid' | 'expired' | 'used' | 'not_found' | 'er
 export default function InviteScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { token } = useLocalSearchParams<{ token: string }>();
 
@@ -141,12 +142,12 @@ export default function InviteScreen() {
   // Loading state
   if (status === 'loading') {
     return (
-      <SafeAreaView style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.textMuted }]}>
           {t('invite.loading')}
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -182,7 +183,7 @@ export default function InviteScreen() {
     const Icon = errorContent.icon;
 
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.errorContainer}>
           <View style={[styles.errorIcon, { backgroundColor: errorContent.color + '20' }]}>
             <Icon size={48} color={errorContent.color} />
@@ -210,13 +211,13 @@ export default function InviteScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Valid invite - show registration form
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -351,7 +352,7 @@ export default function InviteScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: 0,
     paddingBottom: spacing['3xl'],
   },
   loadingText: {

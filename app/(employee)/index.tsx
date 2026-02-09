@@ -1,8 +1,8 @@
 // app/(employee)/index.tsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MapPin, Clock, Calendar, Sun, MessageCircle } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -22,6 +22,7 @@ interface DashboardStats {
 export default function DashboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { isTracking } = useTimeStore();
@@ -105,7 +106,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -116,13 +117,22 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>DASHBOARD</Text>
+        {/* Logo Banner */}
+        <View style={styles.logoBanner}>
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Header */}
-        <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+          <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
+            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>MITARBEITER</Text>
+          </View>
+        </View>
         <Text style={[styles.userName, { color: theme.textMuted }]}>{userName}</Text>
 
         {/* Shift Card */}
@@ -222,7 +232,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -232,14 +242,26 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
+    paddingBottom: 120,
+  },
+  logoBanner: {
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  logo: {
+    width: 140,
+    height: 45,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   badge: {
-    alignSelf: 'flex-end',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    marginBottom: spacing.md,
   },
   badgeText: {
     fontSize: 9,

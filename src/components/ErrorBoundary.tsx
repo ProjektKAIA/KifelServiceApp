@@ -104,22 +104,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-/**
- * HOC für Error Boundary
- */
-export function withErrorBoundary<P extends object>(
-  WrappedComponent: React.ComponentType<P>,
-  fallback?: ReactNode
-): React.FC<P> {
-  return function WithErrorBoundaryWrapper(props: P) {
-    return (
-      <ErrorBoundary fallback={fallback}>
-        <WrappedComponent {...props} />
-      </ErrorBoundary>
-    );
-  };
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Square, CheckCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -13,6 +13,7 @@ import { useTranslation } from '@/src/hooks/useTranslation';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { user } = useAuthStore();
@@ -134,7 +135,7 @@ export default function TimeTrackingScreen() {
   const hasLocation = currentLocation && !locationError;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <View style={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
@@ -211,7 +212,7 @@ export default function TimeTrackingScreen() {
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   badge: {
     alignSelf: 'flex-end',

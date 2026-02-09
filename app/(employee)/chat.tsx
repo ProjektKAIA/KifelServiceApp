@@ -15,7 +15,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, X, AtSign } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
@@ -45,6 +45,7 @@ const getAvatarColor = (userId: string, theme: any): string => {
 
 export default function ChatScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const flatListRef = useRef<FlatList>(null);
@@ -223,16 +224,16 @@ export default function ChatScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
@@ -336,7 +337,7 @@ export default function ChatScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   badge: {
     alignSelf: 'flex-end',

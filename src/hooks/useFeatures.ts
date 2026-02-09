@@ -14,19 +14,11 @@ interface UseFeatureReturn {
   vacationEnabled: boolean;
   sickLeaveEnabled: boolean;
   chatEnabled: boolean;
-  darkModeEnabled: boolean;
   pushNotificationsEnabled: boolean;
   offlineModeEnabled: boolean;
 
-  // Public features
-  publicAboutEnabled: boolean;
-  publicContactEnabled: boolean;
-  publicCareerEnabled: boolean;
-
   // Admin features
   adminDashboardEnabled: boolean;
-  adminReportsEnabled: boolean;
-  adminChatModerationEnabled: boolean;
 }
 
 export const useFeatures = (): UseFeatureReturn => {
@@ -41,18 +33,10 @@ export const useFeatures = (): UseFeatureReturn => {
     vacationEnabled: isFeatureEnabled('vacation'),
     sickLeaveEnabled: isFeatureEnabled('sickLeave'),
     chatEnabled: isFeatureEnabled('chat'),
-    darkModeEnabled: isFeatureEnabled('darkMode'),
     pushNotificationsEnabled: isFeatureEnabled('pushNotifications'),
     offlineModeEnabled: isFeatureEnabled('offlineMode'),
 
-    // Public features
-    publicAboutEnabled: isFeatureEnabled('publicAbout'),
-    publicContactEnabled: isFeatureEnabled('publicContact'),
-    publicCareerEnabled: isFeatureEnabled('publicCareer'),
-
     // Admin features
     adminDashboardEnabled: isFeatureEnabled('adminDashboard'),
-    adminReportsEnabled: isFeatureEnabled('adminReports'),
-    adminChatModerationEnabled: isFeatureEnabled('adminChatModeration'),
   }), []);
 };

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, Eye, EyeOff, Check, Phone } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -22,6 +22,7 @@ const DEV_ACCOUNTS = [
 export default function LoginScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { login, isLoading } = useAuthStore();
   const { t } = useTranslation();
 
@@ -69,7 +70,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <View style={styles.content}>
         {/* Header with Close Button */}
         <View style={styles.header}>
@@ -155,6 +156,29 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* Dev Login Buttons - nur in Development */}
+          {__DEV__ && (
+            <View style={styles.devSection}>
+              <Text style={[styles.devLabel, { color: theme.textMuted }]}>
+                🔧 Dev Quick Login
+              </Text>
+              <View style={styles.devButtonsRow}>
+                {DEV_ACCOUNTS.map((account) => (
+                  <TouchableOpacity
+                    key={account.email}
+                    style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
+                    onPress={() => fillDevCredentials(account.email, account.password)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.devButtonText, { color: theme.primary }]}>
+                      {account.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.loginButton, { backgroundColor: theme.primary }, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
@@ -184,32 +208,9 @@ export default function LoginScreen() {
           <View style={styles.socialSection}>
             <SocialMediaButtons size="small" labelText={t('auth.visitUs')} />
           </View>
-
-          {/* Dev Login Buttons - nur in Development */}
-          {__DEV__ && (
-            <View style={styles.devSection}>
-              <Text style={[styles.devLabel, { color: theme.textMuted }]}>
-                🔧 Dev Quick Login
-              </Text>
-              <View style={styles.devButtonsRow}>
-                {DEV_ACCOUNTS.map((account) => (
-                  <TouchableOpacity
-                    key={account.email}
-                    style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
-                    onPress={() => fillDevCredentials(account.email, account.password)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.devButtonText, { color: theme.primary }]}>
-                      {account.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.base,
-    paddingTop: spacing.md,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',

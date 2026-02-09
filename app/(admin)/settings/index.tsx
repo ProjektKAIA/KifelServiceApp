@@ -13,7 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {
@@ -37,6 +37,7 @@ import { useTranslation } from '@/src/hooks/useTranslation';
 export default function SettingsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
   const { t } = useTranslation();
 
@@ -155,7 +156,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settings.admin')}</Text>
@@ -248,13 +249,13 @@ export default function SettingsScreen() {
         onDeny={handleLocationDeny}
         onClose={() => setShowLocationModal(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing['3xl'] },
+  content: { paddingHorizontal: spacing.lg, paddingTop: 0, paddingBottom: spacing['3xl'] },
   header: { marginBottom: spacing.xl },
   headerSmall: { fontSize: 12, fontWeight: '500', marginBottom: 4 },
   headerLarge: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },

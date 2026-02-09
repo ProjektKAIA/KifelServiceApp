@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera, Bell } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -14,6 +14,7 @@ import { ThemePreference } from '@/src/store/themeStore';
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme, themePreference, setThemePreference, colorScheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
   const { t } = useTranslation();
 
@@ -43,7 +44,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
@@ -215,7 +216,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   badge: {
     alignSelf: 'flex-end',

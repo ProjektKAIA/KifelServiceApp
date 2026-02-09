@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, Plus, Mail, Phone, Trash2, Edit, Shield, ShieldCheck, UserX, UserCheck, MapPin, Link, Copy, Send, Clock, RefreshCw, Calendar, Coffee, ChevronRight } from 'lucide-react-native';
 
 import { Typography, Input, Button, Avatar } from '@/src/components/atoms';
@@ -49,6 +49,7 @@ const initialFormData: EmployeeFormData = {
 
 export default function TeamManagementScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user: currentUser } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -523,17 +524,17 @@ export default function TeamManagementScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Typography variant="body" color="muted" style={{ marginTop: spacing.md }}>
           Lade Mitarbeiter...
         </Typography>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -1110,7 +1111,7 @@ export default function TeamManagementScreen() {
           </>
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

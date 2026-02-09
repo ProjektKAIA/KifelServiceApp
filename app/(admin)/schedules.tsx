@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin, Upload, Download, FileSpreadsheet, FileText, CheckCircle, AlertCircle, X } from 'lucide-react-native';
 import {
   format,
@@ -62,6 +62,7 @@ const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description
 
 export default function ScheduleManagementScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   // Store date as ISO string to prevent reference comparison issues
@@ -446,16 +447,16 @@ export default function ScheduleManagementScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
@@ -931,7 +932,7 @@ export default function ScheduleManagementScreen() {
           </View>
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -942,7 +943,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing['3xl'] },
+  content: { paddingHorizontal: spacing.lg, paddingTop: 0, paddingBottom: spacing['3xl'] },
   // Filter
   filterRow: {
     flexDirection: 'row',

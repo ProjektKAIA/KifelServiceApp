@@ -213,6 +213,9 @@ export const en: Record<TranslationKey, string> = {
   'timetracking.notStarted': 'Not started',
   'timetracking.history': 'HISTORY',
   'timetracking.noEntries': 'No entries',
+  'timetracking.correctLocation': 'Correct work location',
+  'timetracking.wrongLocation': 'Wrong location',
+  'timetracking.fromExpected': 'from expected location',
 
   // Employee Profile
   'empProfile.title': 'My Profile',
@@ -324,6 +327,8 @@ export const en: Record<TranslationKey, string> = {
   'adminSchedules.deleteShiftConfirm': 'Do you really want to delete this shift?',
   'adminSchedules.delete': 'Delete',
   'adminSchedules.shiftDeleteError': 'Shift could not be deleted.',
+  'adminSchedules.selectLocation': 'LOCATION',
+  'adminSchedules.locationFreetext': 'Or enter custom text...',
 
   // Admin Chat
   'adminChat.title': 'Chat',
@@ -386,6 +391,7 @@ export const en: Record<TranslationKey, string> = {
   'settings.locationDenied': 'Location permission was previously denied. Please enable it in device settings.',
   'settings.openSettings': 'Open settings',
   'settings.permissionDenied': 'Permission denied',
+  'settings.locations': 'Work locations',
   'settings.noGpsWithoutPermission': 'GPS tracking cannot be enabled without location permission.',
 
   // Admin Settings - Profile
@@ -443,6 +449,31 @@ export const en: Record<TranslationKey, string> = {
   'settingsSupport.faq': 'Frequently asked questions',
   'settingsSupport.fillRequired': 'Please fill in subject and message.',
   'settingsSupport.emailFailed': 'Email could not be opened.',
+
+  // Admin Settings - Locations
+  'settingsLocations.subtitle': 'Manage work locations for GPS validation when clocking in.',
+  'settingsLocations.add': 'Add location',
+  'settingsLocations.edit': 'Edit location',
+  'settingsLocations.name': 'NAME',
+  'settingsLocations.namePlaceholder': 'e.g. Office Kaarst',
+  'settingsLocations.address': 'ADDRESS',
+  'settingsLocations.addressPlaceholder': 'e.g. 123 Main Street',
+  'settingsLocations.latitude': 'LATITUDE',
+  'settingsLocations.longitude': 'LONGITUDE',
+  'settingsLocations.radius': 'RADIUS (METERS)',
+  'settingsLocations.radiusHint': 'Maximum distance for valid clock-in in meters',
+  'settingsLocations.useCurrentGps': 'Use current GPS position',
+  'settingsLocations.noLocations': 'No locations',
+  'settingsLocations.noLocationsHint': 'Add work locations to enable GPS validation when clocking in.',
+  'settingsLocations.created': 'Location has been created.',
+  'settingsLocations.updated': 'Location has been updated.',
+  'settingsLocations.deleteTitle': 'Delete location',
+  'settingsLocations.deleteConfirm': 'Do you really want to delete this location?',
+  'settingsLocations.deleteError': 'Location could not be deleted.',
+  'settingsLocations.saveError': 'Location could not be saved.',
+  'settingsLocations.nameRequired': 'Please enter a name.',
+  'settingsLocations.coordsRequired': 'Please enter valid coordinates.',
+  'settingsLocations.gpsError': 'Could not determine GPS position.',
 
   // Admin Settings - Working Hours
   'settingsHours.title': 'Working hours rules',

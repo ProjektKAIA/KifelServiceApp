@@ -213,6 +213,9 @@ export const ru: Record<TranslationKey, string> = {
   'timetracking.notStarted': 'Не начато',
   'timetracking.history': 'ИСТОРИЯ',
   'timetracking.noEntries': 'Нет записей',
+  'timetracking.correctLocation': 'Верное место работы',
+  'timetracking.wrongLocation': 'Неверное местоположение',
+  'timetracking.fromExpected': 'от ожидаемого местоположения',
 
   // Employee Profile
   'empProfile.title': 'Мой профиль',
@@ -324,6 +327,8 @@ export const ru: Record<TranslationKey, string> = {
   'adminSchedules.deleteShiftConfirm': 'Вы действительно хотите удалить эту смену?',
   'adminSchedules.delete': 'Удалить',
   'adminSchedules.shiftDeleteError': 'Не удалось удалить смену.',
+  'adminSchedules.selectLocation': 'ЛОКАЦИЯ',
+  'adminSchedules.locationFreetext': 'Или введите текст...',
 
   // Admin Chat
   'adminChat.title': 'Чат',
@@ -386,6 +391,7 @@ export const ru: Record<TranslationKey, string> = {
   'settings.locationDenied': 'Разрешение на местоположение было ранее отклонено. Пожалуйста, включите его в настройках устройства.',
   'settings.openSettings': 'Открыть настройки',
   'settings.permissionDenied': 'Разрешение отклонено',
+  'settings.locations': 'Рабочие точки',
   'settings.noGpsWithoutPermission': 'GPS-отслеживание невозможно без разрешения на местоположение.',
 
   // Admin Settings - Profile
@@ -443,6 +449,31 @@ export const ru: Record<TranslationKey, string> = {
   'settingsSupport.faq': 'Часто задаваемые вопросы',
   'settingsSupport.fillRequired': 'Пожалуйста, заполните тему и сообщение.',
   'settingsSupport.emailFailed': 'Не удалось открыть почту.',
+
+  // Admin Settings - Locations
+  'settingsLocations.subtitle': 'Управляйте рабочими точками для GPS-валидации при отметке прихода.',
+  'settingsLocations.add': 'Добавить точку',
+  'settingsLocations.edit': 'Редактировать точку',
+  'settingsLocations.name': 'НАЗВАНИЕ',
+  'settingsLocations.namePlaceholder': 'напр. Офис Каарст',
+  'settingsLocations.address': 'АДРЕС',
+  'settingsLocations.addressPlaceholder': 'напр. Примерная ул. 1, 41564 Каарст',
+  'settingsLocations.latitude': 'ШИРОТА',
+  'settingsLocations.longitude': 'ДОЛГОТА',
+  'settingsLocations.radius': 'РАДИУС (МЕТРЫ)',
+  'settingsLocations.radiusHint': 'Максимальное расстояние для действительной отметки в метрах',
+  'settingsLocations.useCurrentGps': 'Использовать текущую GPS-позицию',
+  'settingsLocations.noLocations': 'Нет точек',
+  'settingsLocations.noLocationsHint': 'Добавьте рабочие точки для активации GPS-валидации при отметке прихода.',
+  'settingsLocations.created': 'Точка создана.',
+  'settingsLocations.updated': 'Точка обновлена.',
+  'settingsLocations.deleteTitle': 'Удалить точку',
+  'settingsLocations.deleteConfirm': 'Вы действительно хотите удалить эту точку?',
+  'settingsLocations.deleteError': 'Не удалось удалить точку.',
+  'settingsLocations.saveError': 'Не удалось сохранить точку.',
+  'settingsLocations.nameRequired': 'Пожалуйста, введите название.',
+  'settingsLocations.coordsRequired': 'Пожалуйста, введите корректные координаты.',
+  'settingsLocations.gpsError': 'Не удалось определить GPS-позицию.',
 
   // Admin Settings - Working Hours
   'settingsHours.title': 'Правила рабочего времени',

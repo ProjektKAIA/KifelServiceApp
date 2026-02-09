@@ -20,7 +20,7 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification } from '../types';
+import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification, Location as AppLocation, LocationValidation } from '../types';
 import type { PushToken, NotificationPreferences } from '../types/notifications';
 import { logError } from '../utils/errorHandler';
 
@@ -355,6 +355,7 @@ export interface TimeEntry {
     timestamp: number;
     address?: string | null;
   }>;
+  locationValidation?: LocationValidation;
   notes?: string;
 }
 
@@ -382,6 +383,7 @@ export const timeEntriesCollection = {
             clockInLocation: data.clockInLocation,
             clockOutLocation: data.clockOutLocation,
             locationHistory: data.locationHistory,
+            locationValidation: data.locationValidation,
             notes: data.notes,
           } as TimeEntry;
         });
@@ -423,16 +425,26 @@ export const timeEntriesCollection = {
   },
 
   // Clock in
-  clockIn: async (userId: string, location?: { latitude: number; longitude: number; address?: string }): Promise<string> => {
+  clockIn: async (
+    userId: string,
+    location?: { latitude: number; longitude: number; address?: string },
+    locationValidation?: LocationValidation
+  ): Promise<string> => {
     return safeFirestoreOp(
       async () => {
-        const docRef = await addDoc(collection(getDb(), COLLECTIONS.TIME_ENTRIES), {
+        const entryData: Record<string, unknown> = {
           userId,
           clockIn: Timestamp.now(),
           clockOut: null,
           breakMinutes: 0,
           clockInLocation: location || null,
-        });
+        };
+
+        if (locationValidation) {
+          entryData.locationValidation = locationValidation;
+        }
+
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.TIME_ENTRIES), entryData);
         return docRef.id;
       },
       '',
@@ -490,6 +502,7 @@ export const timeEntriesCollection = {
               clockInLocation: data.clockInLocation,
               clockOutLocation: data.clockOutLocation,
               locationHistory: data.locationHistory,
+              locationValidation: data.locationValidation,
               notes: data.notes,
             } as TimeEntry;
           })
@@ -525,6 +538,7 @@ export const timeEntriesCollection = {
               clockInLocation: data.clockInLocation,
               clockOutLocation: data.clockOutLocation,
               locationHistory: data.locationHistory,
+              locationValidation: data.locationValidation,
               notes: data.notes,
             } as TimeEntry;
           })
@@ -594,6 +608,86 @@ export const timeEntriesCollection = {
       },
       undefined,
       'timeEntries.batchUpdateLocationHistory'
+    );
+  },
+};
+
+// ============================================================================
+// LOCATIONS (Einsatzorte)
+// ============================================================================
+
+export const locationsCollection = {
+  getAll: async (): Promise<AppLocation[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(collection(getDb(), COLLECTIONS.LOCATIONS), orderBy('name'));
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        } as AppLocation));
+      },
+      [],
+      'locations.getAll'
+    );
+  },
+
+  get: async (locationId: string): Promise<AppLocation | null> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.LOCATIONS, locationId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) return null;
+
+        return {
+          id: docSnap.id,
+          ...docSnap.data(),
+        } as AppLocation;
+      },
+      null,
+      'locations.get'
+    );
+  },
+
+  create: async (locationData: Omit<AppLocation, 'id'>): Promise<string> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.LOCATIONS), {
+          ...locationData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        return docRef.id;
+      },
+      '',
+      'locations.create'
+    );
+  },
+
+  update: async (locationId: string, updates: Partial<AppLocation>): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.LOCATIONS, locationId);
+        await updateDoc(docRef, {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        });
+      },
+      undefined,
+      'locations.update'
+    );
+  },
+
+  delete: async (locationId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.LOCATIONS, locationId);
+        await deleteDoc(docRef);
+      },
+      undefined,
+      'locations.delete'
     );
   },
 };
@@ -1651,6 +1745,7 @@ export const firestoreDb = {
   users: usersCollection,
   shifts: shiftsCollection,
   timeEntries: timeEntriesCollection,
+  locations: locationsCollection,
   vacationRequests: vacationRequestsCollection,
   chat: chatCollection,
   stats: statsCollection,

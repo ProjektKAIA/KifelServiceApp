@@ -22,6 +22,10 @@ export interface FeatureFlags {
   adminReports: boolean;
   adminChatModeration: boolean;
 
+  // Standort-Validierung
+  locationValidation: boolean;
+  locationValidationRadius: number; // Default-Radius in Metern
+
   // Allgemein
   darkMode: boolean;
   pushNotifications: boolean;
@@ -49,6 +53,10 @@ export const features: FeatureFlags = {
   adminDashboard: true,
   adminReports: true,
   adminChatModeration: true,
+
+  // Standort-Validierung
+  locationValidation: true,
+  locationValidationRadius: 200, // 200m default
 
   // Allgemein
   darkMode: true,

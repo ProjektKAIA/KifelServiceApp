@@ -211,6 +211,9 @@ export const de = {
   'timetracking.notStarted': 'Nicht gestartet',
   'timetracking.history': 'VERLAUF',
   'timetracking.noEntries': 'Keine Einträge',
+  'timetracking.correctLocation': 'Korrekter Einsatzort',
+  'timetracking.wrongLocation': 'Falscher Standort',
+  'timetracking.fromExpected': 'vom Einsatzort entfernt',
 
   // Employee Profile
   'empProfile.title': 'Mein Profil',
@@ -322,6 +325,8 @@ export const de = {
   'adminSchedules.deleteShiftConfirm': 'Möchten Sie diese Schicht wirklich löschen?',
   'adminSchedules.delete': 'Löschen',
   'adminSchedules.shiftDeleteError': 'Schicht konnte nicht gelöscht werden.',
+  'adminSchedules.selectLocation': 'STANDORT',
+  'adminSchedules.locationFreetext': 'Oder Freitext eingeben...',
 
   // Admin Chat
   'adminChat.title': 'Chat',
@@ -384,6 +389,7 @@ export const de = {
   'settings.locationDenied': 'Die Standortberechtigung wurde zuvor verweigert. Bitte aktivieren Sie sie in den Geräte-Einstellungen.',
   'settings.openSettings': 'Einstellungen öffnen',
   'settings.permissionDenied': 'Berechtigung verweigert',
+  'settings.locations': 'Einsatzorte',
   'settings.noGpsWithoutPermission': 'Ohne Standortberechtigung kann GPS-Tracking nicht aktiviert werden.',
 
   // Admin Settings - Profile
@@ -441,6 +447,31 @@ export const de = {
   'settingsSupport.faq': 'Häufige Fragen',
   'settingsSupport.fillRequired': 'Bitte Betreff und Nachricht ausfüllen.',
   'settingsSupport.emailFailed': 'Email konnte nicht geöffnet werden.',
+
+  // Admin Settings - Locations
+  'settingsLocations.subtitle': 'Verwalten Sie die Einsatzorte für die GPS-Validierung beim Einstempeln.',
+  'settingsLocations.add': 'Einsatzort hinzufügen',
+  'settingsLocations.edit': 'Einsatzort bearbeiten',
+  'settingsLocations.name': 'NAME',
+  'settingsLocations.namePlaceholder': 'z.B. Büro Kaarst',
+  'settingsLocations.address': 'ADRESSE',
+  'settingsLocations.addressPlaceholder': 'z.B. Musterstraße 1, 41564 Kaarst',
+  'settingsLocations.latitude': 'BREITENGRAD',
+  'settingsLocations.longitude': 'LÄNGENGRAD',
+  'settingsLocations.radius': 'RADIUS (METER)',
+  'settingsLocations.radiusHint': 'Maximaler Abstand für gültiges Einstempeln in Metern',
+  'settingsLocations.useCurrentGps': 'Aktuelle GPS-Position verwenden',
+  'settingsLocations.noLocations': 'Keine Einsatzorte',
+  'settingsLocations.noLocationsHint': 'Fügen Sie Einsatzorte hinzu, um die GPS-Validierung beim Einstempeln zu aktivieren.',
+  'settingsLocations.created': 'Einsatzort wurde erstellt.',
+  'settingsLocations.updated': 'Einsatzort wurde aktualisiert.',
+  'settingsLocations.deleteTitle': 'Einsatzort löschen',
+  'settingsLocations.deleteConfirm': 'Möchten Sie diesen Einsatzort wirklich löschen?',
+  'settingsLocations.deleteError': 'Einsatzort konnte nicht gelöscht werden.',
+  'settingsLocations.saveError': 'Einsatzort konnte nicht gespeichert werden.',
+  'settingsLocations.nameRequired': 'Bitte geben Sie einen Namen ein.',
+  'settingsLocations.coordsRequired': 'Bitte geben Sie gültige Koordinaten ein.',
+  'settingsLocations.gpsError': 'GPS-Position konnte nicht ermittelt werden.',
 
   // Admin Settings - Working Hours
   'settingsHours.title': 'Arbeitszeit-Regeln',

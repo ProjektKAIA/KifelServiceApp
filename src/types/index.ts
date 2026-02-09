@@ -55,6 +55,7 @@ export interface Shift {
   startTime: string; // HH:mm
   endTime: string; // HH:mm
   location: string;
+  locationId?: string; // Referenz auf Location-Dokument
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
   notes?: string;
 }
@@ -101,6 +102,14 @@ export interface Location {
   address: string;
   latitude: number;
   longitude: number;
+  radius?: number; // Validierungs-Radius in Metern
+}
+
+export interface LocationValidation {
+  isValid: boolean;
+  distanceMeters: number;
+  expectedLocationName: string;
+  thresholdMeters: number;
 }
 
 export interface NotificationPayload {

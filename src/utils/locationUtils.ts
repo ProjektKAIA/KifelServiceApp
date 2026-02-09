@@ -2,6 +2,28 @@
 
 import { TimeEntry } from '@/src/lib/firestore';
 
+export interface LocationValidationResult {
+  isValid: boolean;
+  distanceMeters: number;
+}
+
+/**
+ * Validiert ob ein Mitarbeiter-Standort innerhalb des erwarteten Einsatzortes liegt.
+ */
+export function validateClockInLocation(
+  employeeLat: number,
+  employeeLon: number,
+  targetLat: number,
+  targetLon: number,
+  thresholdMeters: number
+): LocationValidationResult {
+  const distance = haversineDistance(employeeLat, employeeLon, targetLat, targetLon);
+  return {
+    isValid: distance <= thresholdMeters,
+    distanceMeters: Math.round(distance),
+  };
+}
+
 export interface LocationPoint {
   latitude: number;
   longitude: number;
@@ -20,7 +42,7 @@ export function isFieldEntry(entry: TimeEntry): boolean {
 /**
  * Haversine-Formel: Berechnet die Distanz zwischen zwei GPS-Koordinaten in Metern.
  */
-function haversineDistance(
+export function haversineDistance(
   lat1: number,
   lon1: number,
   lat2: number,

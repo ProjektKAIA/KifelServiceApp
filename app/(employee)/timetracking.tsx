@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ScrollView, View, StyleSheet, Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Play, Square, Coffee, MapPin, Clock, AlertCircle, Pause, Timer } from 'lucide-react-native';
+import { Play, Square, Coffee, MapPin, Clock, AlertCircle, Pause, Timer, CheckCircle, AlertTriangle } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -15,10 +15,13 @@ import { useTheme, useLocation } from '@/src/hooks';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { useTimeStore } from '@/src/store/timeStore';
 import { useAuthStore } from '@/src/store/authStore';
+import { useLocationStore } from '@/src/store/locationStore';
 import { spacing } from '@/src/constants/spacing';
-import { isFeatureEnabled } from '@/src/config/features';
+import { isFeatureEnabled, features } from '@/src/config/features';
 import { useOfflineSync } from '@/src/hooks/useOfflineSync';
-import { timeEntriesCollection } from '@/src/lib/firestore';
+import { timeEntriesCollection, shiftsCollection } from '@/src/lib/firestore';
+import { validateClockInLocation } from '@/src/utils/locationUtils';
+import { LocationValidation } from '@/src/types';
 
 export default function TimeTrackingScreen() {
   const { theme } = useTheme();
@@ -53,9 +56,21 @@ export default function TimeTrackingScreen() {
   } = useLocation();
 
   const { isOnline, addToQueue } = useOfflineSync();
+  const { locations: savedLocations, fetchLocations, getLocationById } = useLocationStore();
 
   const gpsEnabled = isFeatureEnabled('gpsTracking');
   const offlineModeEnabled = isFeatureEnabled('offlineMode');
+  const locationValidationEnabled = isFeatureEnabled('locationValidation');
+
+  // Location validation state
+  const [locationValidation, setLocationValidationState] = useState<LocationValidation | null>(null);
+
+  // Fetch locations on mount for validation
+  useEffect(() => {
+    if (locationValidationEnabled) {
+      fetchLocations();
+    }
+  }, [locationValidationEnabled, fetchLocations]);
 
   // Permission modal state
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -116,6 +131,15 @@ export default function TimeTrackingScreen() {
   useEffect(() => {
     setDisplayTime(formatElapsedTime(elapsedSeconds));
   }, [elapsedSeconds]);
+
+  // Sync validation state from currentEntry (for reload/persist scenarios)
+  useEffect(() => {
+    if (currentEntry?.locationValidation) {
+      setLocationValidationState(currentEntry.locationValidation);
+    } else if (!isWorking) {
+      setLocationValidationState(null);
+    }
+  }, [currentEntry?.locationValidation, isWorking]);
 
   const stats = [
     { value: todayHours.toFixed(1), label: t('timetracking.hoursToday'), icon: Clock },
@@ -185,8 +209,48 @@ export default function TimeTrackingScreen() {
   };
 
   const performClockIn = async (loc: typeof location) => {
+    // Standort-Validierung: Heutige Schicht laden und Distanz prüfen
+    let validation: LocationValidation | undefined;
+
+    if (locationValidationEnabled && loc) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const userShifts = await shiftsCollection.getForUser(user?.id || '', today, today);
+        const todayShift = userShifts.find(s => s.locationId);
+
+        if (todayShift?.locationId) {
+          const targetLocation = getLocationById(todayShift.locationId);
+          if (targetLocation) {
+            const threshold = targetLocation.radius ?? features.locationValidationRadius;
+            const result = validateClockInLocation(
+              loc.latitude,
+              loc.longitude,
+              targetLocation.latitude,
+              targetLocation.longitude,
+              threshold
+            );
+            validation = {
+              isValid: result.isValid,
+              distanceMeters: result.distanceMeters,
+              expectedLocationName: targetLocation.name,
+              thresholdMeters: threshold,
+            };
+          }
+        }
+      } catch (error) {
+        console.error('[TimeTracking] Location validation fehlgeschlagen:', error);
+        // Validation failure should not block clock-in
+      }
+    }
+
     // Lokalen Eintrag erstellen
     clockIn(user?.id, loc || undefined);
+
+    // Validation-Ergebnis im Store speichern
+    if (validation) {
+      useTimeStore.getState().setLocationValidation(validation);
+      setLocationValidationState(validation);
+    }
 
     // Background-GPS-Tracking starten (DSGVO: nur waehrend Arbeitszeit)
     if (gpsEnabled) {
@@ -208,7 +272,7 @@ export default function TimeTrackingScreen() {
       if (isOnline) {
         // Online: Direkt zu Firestore
         try {
-          const firestoreId = await timeEntriesCollection.clockIn(user?.id || 'default-user', locationData);
+          const firestoreId = await timeEntriesCollection.clockIn(user?.id || 'default-user', locationData, validation);
           // Firestore-ID speichern fuer spaetere Updates
           if (localEntryId && firestoreId) {
             useTimeStore.getState().setFirestoreEntryId(localEntryId, firestoreId);
@@ -400,6 +464,40 @@ export default function TimeTrackingScreen() {
           </Card>
         )}
 
+        {/* Location Validation Status */}
+        {isWorking && locationValidation && (
+          <Card style={[
+            styles.validationCard,
+            {
+              borderLeftWidth: 3,
+              borderLeftColor: locationValidation.isValid ? theme.success : theme.warning,
+            },
+          ]}>
+            <View style={styles.locationRow}>
+              {locationValidation.isValid ? (
+                <CheckCircle size={16} color={theme.success} />
+              ) : (
+                <AlertTriangle size={16} color={theme.warning} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Typography variant="caption" style={{
+                  color: locationValidation.isValid ? theme.success : theme.warning,
+                  fontWeight: '600',
+                }}>
+                  {locationValidation.isValid
+                    ? t('timetracking.correctLocation')
+                    : t('timetracking.wrongLocation')}
+                </Typography>
+                {!locationValidation.isValid && (
+                  <Typography variant="caption" color="muted">
+                    {locationValidation.expectedLocationName} · {locationValidation.distanceMeters}m {t('timetracking.fromExpected')}
+                  </Typography>
+                )}
+              </View>
+            </View>
+          </Card>
+        )}
+
         {/* Action Buttons - State-based flow */}
         <Typography variant="overline" color="muted" style={styles.sectionTitle}>
           AKTIONEN
@@ -537,6 +635,9 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   locationCard: {
+    marginBottom: spacing.base,
+  },
+  validationCard: {
     marginBottom: spacing.base,
   },
   errorCard: {

@@ -213,6 +213,9 @@ export const tr: Record<TranslationKey, string> = {
   'timetracking.notStarted': 'Başlamadı',
   'timetracking.history': 'GEÇMİŞ',
   'timetracking.noEntries': 'Kayıt yok',
+  'timetracking.correctLocation': 'Doğru çalışma konumu',
+  'timetracking.wrongLocation': 'Yanlış konum',
+  'timetracking.fromExpected': 'beklenen konumdan uzaklık',
 
   // Employee Profile
   'empProfile.title': 'Profilim',
@@ -324,6 +327,8 @@ export const tr: Record<TranslationKey, string> = {
   'adminSchedules.deleteShiftConfirm': 'Bu vardiyayı gerçekten silmek istiyor musunuz?',
   'adminSchedules.delete': 'Sil',
   'adminSchedules.shiftDeleteError': 'Vardiya silinemedi.',
+  'adminSchedules.selectLocation': 'KONUM',
+  'adminSchedules.locationFreetext': 'Veya serbest metin girin...',
 
   // Admin Chat
   'adminChat.title': 'Sohbet',
@@ -386,6 +391,7 @@ export const tr: Record<TranslationKey, string> = {
   'settings.locationDenied': 'Konum izni daha önce reddedildi. Lütfen cihaz ayarlarından etkinleştirin.',
   'settings.openSettings': 'Ayarları aç',
   'settings.permissionDenied': 'İzin reddedildi',
+  'settings.locations': 'Çalışma konumları',
   'settings.noGpsWithoutPermission': 'Konum izni olmadan GPS takibi etkinleştirilemez.',
 
   // Admin Settings - Profile
@@ -443,6 +449,31 @@ export const tr: Record<TranslationKey, string> = {
   'settingsSupport.faq': 'Sık sorulan sorular',
   'settingsSupport.fillRequired': 'Lütfen konu ve mesajı doldurun.',
   'settingsSupport.emailFailed': 'E-posta açılamadı.',
+
+  // Admin Settings - Locations
+  'settingsLocations.subtitle': 'Giriş yaparken GPS doğrulaması için çalışma konumlarını yönetin.',
+  'settingsLocations.add': 'Konum ekle',
+  'settingsLocations.edit': 'Konumu düzenle',
+  'settingsLocations.name': 'AD',
+  'settingsLocations.namePlaceholder': 'ör. Ofis Kaarst',
+  'settingsLocations.address': 'ADRES',
+  'settingsLocations.addressPlaceholder': 'ör. Örnek Sokak 1, 41564 Kaarst',
+  'settingsLocations.latitude': 'ENLEM',
+  'settingsLocations.longitude': 'BOYLAM',
+  'settingsLocations.radius': 'YARIÇAP (METRE)',
+  'settingsLocations.radiusHint': 'Geçerli giriş için maksimum mesafe (metre)',
+  'settingsLocations.useCurrentGps': 'Mevcut GPS konumunu kullan',
+  'settingsLocations.noLocations': 'Konum yok',
+  'settingsLocations.noLocationsHint': 'Giriş yaparken GPS doğrulamasını etkinleştirmek için çalışma konumları ekleyin.',
+  'settingsLocations.created': 'Konum oluşturuldu.',
+  'settingsLocations.updated': 'Konum güncellendi.',
+  'settingsLocations.deleteTitle': 'Konumu sil',
+  'settingsLocations.deleteConfirm': 'Bu konumu gerçekten silmek istiyor musunuz?',
+  'settingsLocations.deleteError': 'Konum silinemedi.',
+  'settingsLocations.saveError': 'Konum kaydedilemedi.',
+  'settingsLocations.nameRequired': 'Lütfen bir ad girin.',
+  'settingsLocations.coordsRequired': 'Lütfen geçerli koordinatlar girin.',
+  'settingsLocations.gpsError': 'GPS konumu belirlenemedi.',
 
   // Admin Settings - Working Hours
   'settingsHours.title': 'Çalışma saati kuralları',

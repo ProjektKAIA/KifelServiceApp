@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LocationValidation } from '@/src/types';
 
 export interface LocationData {
   latitude: number;
@@ -26,6 +27,7 @@ export interface TimeEntry {
   notes?: string;
   status: 'active' | 'completed' | 'pending_review';
   shiftId?: string;
+  locationValidation?: LocationValidation;
   /** Firestore-ID nach erfolgreicher Synchronisation */
   firestoreEntryId?: string;
   /** Markiert ob noch synchronisiert werden muss */
@@ -65,6 +67,9 @@ interface TimeState {
   getTotalHoursForMonth: (year: number, month: number) => number;
   resetCurrentEntry: () => void;
   calculateTodayHours: () => void;
+  // Location Validation
+  setLocationValidation: (validation: LocationValidation) => void;
+
   // Offline-Sync Hilfsmethoden
   setFirestoreEntryId: (localId: string, firestoreId: string) => void;
   markEntryAsSynced: (localId: string) => void;
@@ -310,6 +315,22 @@ export const useTimeStore = create<TimeState>()(
           isWorking: false,
           isOnBreak: false,
           elapsedSeconds: 0,
+        });
+      },
+
+      // ============================================================================
+      // Location Validation
+      // ============================================================================
+
+      setLocationValidation: (validation) => {
+        const { currentEntry } = get();
+        if (!currentEntry) return;
+
+        set({
+          currentEntry: {
+            ...currentEntry,
+            locationValidation: validation,
+          },
         });
       },
 

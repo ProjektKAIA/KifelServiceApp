@@ -36,9 +36,10 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
 import { shiftsCollection, usersCollection } from '@/src/lib/firestore';
-import { Shift, User } from '@/src/types';
+import { Shift, User, Location as AppLocation } from '@/src/types';
 import { importScheduleFromUri, ImportedSchedule, ImportedShift } from '@/src/utils/importUtils';
 import { exportSchedule, ExportFormat, ExportShiftData } from '@/src/utils/exportUtils';
+import { useLocationStore } from '@/src/store/locationStore';
 
 interface DisplayShift extends Shift {
   employeeName: string;
@@ -83,11 +84,15 @@ export default function ScheduleManagementScreen() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Locations
+  const { locations: savedLocations, fetchLocations } = useLocationStore();
+
   // New shift form state
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('16:00');
   const [location, setLocation] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
   // Parse current date from string
   const currentDate = React.useMemo(() => parseISO(currentDateStr), [currentDateStr]);
@@ -141,6 +146,7 @@ export default function ScheduleManagementScreen() {
       const [shiftsData, employeesData] = await Promise.all([
         shiftsCollection.getAll(dateRange.startStr, dateRange.endStr),
         usersCollection.getAll(),
+        fetchLocations(),
       ]);
 
       // Map shifts with employee names
@@ -239,6 +245,7 @@ export default function ScheduleManagementScreen() {
     setStartTime('08:00');
     setEndTime('16:00');
     setLocation('');
+    setSelectedLocationId(null);
   };
 
   const handleAddShift = async () => {
@@ -251,13 +258,18 @@ export default function ScheduleManagementScreen() {
     if (!employee) return;
 
     try {
+      // Determine location name: from selected location or freetext
+      const selectedLoc = savedLocations.find(l => l.id === selectedLocationId);
+      const locationName = selectedLoc ? selectedLoc.name : (location || 'Büro');
+
       const newShift: Omit<Shift, 'id'> = {
         userId: selectedEmployeeId,
         employeeName: `${employee.firstName} ${employee.lastName}`,
         date: format(selectedDate, 'yyyy-MM-dd'),
         startTime,
         endTime,
-        location: location || 'Büro',
+        location: locationName,
+        locationId: selectedLocationId || undefined,
         status: 'scheduled',
       };
 
@@ -713,13 +725,55 @@ export default function ScheduleManagementScreen() {
           </View>
         </View>
 
-        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>STANDORT</Typography>
+        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>
+          {t('adminSchedules.selectLocation')}
+        </Typography>
+        {savedLocations.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.locationPickerRow}>
+            {savedLocations.map((loc) => (
+              <TouchableOpacity
+                key={loc.id}
+                style={[
+                  styles.locationPill,
+                  {
+                    backgroundColor: selectedLocationId === loc.id ? theme.primary + '20' : theme.surface,
+                    borderColor: selectedLocationId === loc.id ? theme.primary : theme.border,
+                  },
+                ]}
+                onPress={() => {
+                  if (selectedLocationId === loc.id) {
+                    setSelectedLocationId(null);
+                  } else {
+                    setSelectedLocationId(loc.id);
+                    setLocation('');
+                  }
+                }}
+              >
+                <MapPin size={12} color={selectedLocationId === loc.id ? theme.primary : theme.textMuted} />
+                <Typography
+                  variant="caption"
+                  style={{
+                    color: selectedLocationId === loc.id ? theme.primary : theme.textSecondary,
+                    fontWeight: selectedLocationId === loc.id ? '600' : '400',
+                    marginLeft: 4,
+                  }}
+                >
+                  {loc.name}
+                </Typography>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
         <TextInput
-          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text, marginTop: spacing.sm }]}
           value={location}
-          onChangeText={setLocation}
-          placeholder="z.B. Büro, Baustelle Nord"
+          onChangeText={(text) => {
+            setLocation(text);
+            if (text) setSelectedLocationId(null);
+          }}
+          placeholder={savedLocations.length > 0 ? t('adminSchedules.locationFreetext') : 'z.B. Büro, Baustelle Nord'}
           placeholderTextColor={theme.textMuted}
+          editable={!selectedLocationId}
         />
 
         <TouchableOpacity
@@ -1050,5 +1104,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: spacing.xs,
+  },
+  locationPickerRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.xs,
+  },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: spacing.sm,
   },
 });

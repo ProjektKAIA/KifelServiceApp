@@ -140,6 +140,7 @@ export default function SettingsScreen() {
     {
       title: t('settings.system'),
       items: [
+        { icon: MapPin, label: t('settings.locations'), onPress: () => router.push('/(admin)/settings/locations') },
         { icon: Clock, label: t('settings.workingHours'), onPress: () => router.push('/(admin)/settings/workinghours') },
         { icon: Database, label: t('settings.exportData'), onPress: () => router.push('/(admin)/settings/export') },
         { icon: Shield, label: t('settings.privacySecurity'), onPress: () => router.push('/(admin)/settings/privacy') },

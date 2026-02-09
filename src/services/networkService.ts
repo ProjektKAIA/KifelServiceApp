@@ -73,7 +73,7 @@ export function initNetworkListener(): void {
   });
 
   // Initialer Check
-  NetInfo.fetch().then((state) => {
+  NetInfo.fetch().then((state: NetInfoState) => {
     useNetworkStore.getState().setNetworkState({
       isConnected: state.isConnected ?? false,
       isInternetReachable: state.isInternetReachable,

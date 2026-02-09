@@ -307,7 +307,7 @@ export default function TimeTrackingScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader overline={t('timetracking.title')} title={t('timetracking.title')} />
 
@@ -491,6 +491,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
+    paddingTop: spacing.sm,
   },
   timeCard: {
     alignItems: 'center',

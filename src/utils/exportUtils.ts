@@ -675,6 +675,7 @@ export const exportScheduleToPDF = async (options: ScheduleExportOptions): Promi
     </html>
   `;
 
+  if (!Print) throw new Error('expo-print not available');
   const { uri } = await Print.printToFileAsync({ html, base64: false });
 
   const fileName = `Dienstplan_${periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;

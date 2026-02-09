@@ -887,20 +887,20 @@ export default function TeamManagementScreen() {
         </Typography>
         <Input
           label="Vorname *"
-          placeholder="Max"
+          placeholder="Vorname"
           value={formData.firstName}
           onChangeText={(text) => setFormData({ ...formData, firstName: text })}
         />
         <Input
           label="Nachname *"
-          placeholder="Mustermann"
+          placeholder="Nachname"
           value={formData.lastName}
           onChangeText={(text) => setFormData({ ...formData, lastName: text })}
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
           label="E-Mail *"
-          placeholder="max@kifel.de"
+          placeholder="name@firma.de"
           value={formData.email}
           onChangeText={(text) => setFormData({ ...formData, email: text })}
           keyboardType="email-address"

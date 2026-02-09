@@ -134,7 +134,7 @@ export default function TimeTrackingScreen() {
   const hasLocation = currentLocation && !locationError;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <View style={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   badge: {
     alignSelf: 'flex-end',

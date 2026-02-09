@@ -16,6 +16,8 @@ import { OfflineIndicator } from '@/src/components/atoms/OfflineIndicator';
 import { initNetworkListener, cleanupNetworkListener, setSyncCallback } from '@/src/services/networkService';
 import { loadQueue, processSyncQueue } from '@/src/services/offlineQueueService';
 import { isFeatureEnabled } from '@/src/config/features';
+import { useNotificationStore } from '@/src/store/notificationStore';
+import { pushNotificationService } from '@/src/services/pushNotificationService';
 
 export default function RootLayout() {
   const { isDark } = useTheme();
@@ -47,6 +49,24 @@ export default function RootLayout() {
       };
     }
   }, []);
+
+  // Push-Notification-Service initialisieren
+  useEffect(() => {
+    if (isFeatureEnabled('pushNotifications') && isAuthenticated && user?.id) {
+      console.log('[App] Initializing push notification service');
+
+      const initializeNotifications = async () => {
+        await useNotificationStore.getState().initialize(user.id);
+      };
+
+      initializeNotifications();
+
+      return () => {
+        console.log('[App] Cleaning up push notification service');
+        pushNotificationService.cleanup();
+      };
+    }
+  }, [isAuthenticated, user?.id]);
 
   // Navigation basierend auf Auth-Status
   useEffect(() => {

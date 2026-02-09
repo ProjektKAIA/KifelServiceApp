@@ -15,7 +15,7 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Kifel Service benoetigt Ihren Standort fuer die Zeiterfassung.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Kifel Service erfasst Ihren Standort waehrend der Arbeitszeit auch im Hintergrund.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
       }
     },
     "android": {
@@ -58,6 +58,14 @@
           "locationAlwaysAndWhenInUsePermission": "Kifel Service erfasst Ihren Standort waehrend der Arbeitszeit auch im Hintergrund.",
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#1a73e8",
+          "defaultChannel": "default"
         }
       ]
     ],

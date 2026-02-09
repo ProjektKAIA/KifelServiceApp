@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MusterFirma Service App - Konzept</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #e0e7ef 0%, #f4f7fa 50%, #e0e7ef 100%); min-height: 100vh; padding: 20px; }
+    
+    /* Disclaimer Banner */
+    .disclaimer { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 16px 24px; margin-bottom: 30px; text-align: center; max-width: 1400px; margin-left: auto; margin-right: auto; }
+    .disclaimer-text { color: #92400e; font-size: 14px; font-weight: 600; }
+    
+    .container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+    
+    /* Phone Frame */
+    .phone { width: 300px; height: 620px; background: #ffffff; border-radius: 45px; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); position: relative; }
+    .phone::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 28px; background: #1a1a2e; border-radius: 0 0 20px 20px; z-index: 100; }
+    .phone::after { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 60px; height: 6px; background: #0a0a0f; border-radius: 3px; z-index: 101; }
+    
+    .screen-label { position: absolute; top: 35px; right: 12px; font-size: 9px; font-weight: 600; padding: 4px 8px; border-radius: 6px; z-index: 102; letter-spacing: 0.5px; backdrop-filter: blur(10px); }
+    .screen-label.public { background: rgba(34, 197, 94, 0.15); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .screen-label.auth { background: rgba(99, 102, 241, 0.15); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.3); }
+    .screen-label.user { background: rgba(59, 130, 246, 0.15); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .screen-label.admin { background: rgba(168, 85, 247, 0.15); color: #7c3aed; border: 1px solid rgba(168, 85, 247, 0.3); }
+    
+    /* Header */
+    .header { padding: 50px 20px 20px; background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, transparent 100%); }
+    .header-sm { font-size: 11px; color: rgba(0,0,0,0.5); font-weight: 500; margin-bottom: 4px; }
+    .header-lg { font-size: 22px; font-weight: 700; color: #1e293b; letter-spacing: -0.5px; }
+    
+    /* Content */
+    .content { padding: 0 16px 90px; height: calc(100% - 90px); overflow-y: auto; }
+    .content::-webkit-scrollbar { display: none; }
+    
+    /* Cards */
+    .card { background: rgba(0,0,0,0.02); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 16px; margin-bottom: 12px; transition: all 0.3s ease; }
+    .card:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .card-glass { background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%); backdrop-filter: blur(20px); }
+    .card-accent { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); border-color: rgba(99, 102, 241, 0.2); }
+    .card-success { background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); border-color: rgba(34, 197, 94, 0.2); }
+    
+    /* Typography */
+    .text-xs { font-size: 11px; }
+    .text-sm { font-size: 13px; }
+    .text-md { font-size: 15px; }
+    .text-lg { font-size: 18px; }
+    .text-xl { font-size: 24px; }
+    .text-2xl { font-size: 32px; }
+    .text-muted { color: rgba(0,0,0,0.4); }
+    .text-light { color: rgba(0,0,0,0.6); }
+    .text-dark { color: #1e293b; }
+    .font-medium { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-bold { font-weight: 700; }
+    
+    /* Buttons */
+    .btn { width: 100%; padding: 14px 20px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); color: #fff; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+    .btn-success { background: linear-gradient(135deg, #22c55e 0%, #10b981 100%); color: #fff; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3); }
+    .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+    .btn-ghost { background: rgba(0,0,0,0.03); color: rgba(0,0,0,0.7); border: 1px solid rgba(0,0,0,0.1); }
+    .btn-ghost:hover { background: rgba(0,0,0,0.06); }
+    
+    /* Input */
+    .input { width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; color: #1e293b; font-size: 14px; font-family: inherit; margin-bottom: 12px; }
+    .input::placeholder { color: rgba(0,0,0,0.35); }
+    .input:focus { outline: none; border-color: rgba(99, 102, 241, 0.5); background: #fff; }
+    .textarea { min-height: 100px; resize: none; }
+    
+    /* Status Pills */
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .pill-success { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+    .pill-warning { background: rgba(251, 191, 36, 0.15); color: #b45309; }
+    .pill-info { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    
+    /* Navigation */
+    .nav { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-around; padding: 12px 8px 24px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: rgba(0,0,0,0.35); font-size: 10px; font-weight: 500; cursor: pointer; }
+    .nav-item.active { color: #3b82f6; }
+    .nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    .nav-icon svg { width: 20px; height: 20px; stroke-width: 1.5; }
+    
+    /* Avatar */
+    .avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: #fff; }
+    .avatar-blue { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+    .avatar-green { background: linear-gradient(135deg, #22c55e, #10b981); }
+    .avatar-purple { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+    
+    /* Stats */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stat-box { text-align: center; padding: 16px 12px; }
+    .stat-value { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #1e293b 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-label { font-size: 11px; color: rgba(0,0,0,0.4); margin-top: 4px; }
+    
+    /* Section */
+    .section-title { font-size: 12px; font-weight: 600; color: rgba(0,0,0,0.35); text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 12px; }
+    
+    /* Chat */
+    .chat-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .chat-row.sent { flex-direction: row-reverse; }
+    .chat-bubble { padding: 12px 16px; border-radius: 18px; font-size: 13px; line-height: 1.4; max-width: 75%; }
+    .chat-received { background: rgba(0,0,0,0.05); color: #1e293b; border-bottom-left-radius: 4px; }
+    .chat-sent { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; border-bottom-right-radius: 4px; }
+    .chat-meta { font-size: 10px; color: rgba(0,0,0,0.35); margin-bottom: 4px; }
+    
+    /* Calendar */
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .cal-head { font-size: 10px; color: rgba(0,0,0,0.35); padding: 8px 0; font-weight: 500; }
+    .cal-day { font-size: 12px; padding: 10px 4px; border-radius: 8px; color: rgba(0,0,0,0.5); }
+    .cal-day.shift { background: rgba(59, 130, 246, 0.12); color: #2563eb; font-weight: 600; }
+    .cal-day.today { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; font-weight: 600; }
+    
+    /* Time Display */
+    .time-display { font-size: 42px; font-weight: 700; text-align: center; letter-spacing: -2px; background: linear-gradient(135deg, #1e293b 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 20px 0; }
+    
+    /* Logo */
+    .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(135deg, #1e293b 0%, #475569 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* Mock Logo */
+    .mock-logo { width: 80px; height: 80px; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3); }
+    .mock-logo svg { width: 44px; height: 44px; stroke: #fff; stroke-width: 1.5; }
+
+    /* Back Button */
+    .back-btn { position: absolute; top: 50px; left: 16px; width: 36px; height: 36px; background: rgba(0,0,0,0.05); border-radius: 10px; display: flex; align-items: center; justify-content: center; z-index: 50; }
+    .back-btn svg { width: 20px; height: 20px; stroke: #1e293b; stroke-width: 2; }
+
+    /* Feature List */
+    .feature-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .feature-icon { width: 40px; height: 40px; background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.1)); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .feature-icon svg { width: 20px; height: 20px; stroke: #3b82f6; stroke-width: 1.5; }
+  </style>
+</head>
+<body>
+  <!-- Disclaimer Banner -->
+  <div class="disclaimer">
+    <p class="disclaimer-text">⚠️ BEISPIEL – Erweiterungen & Anpassungen möglich auf Nachfrage</p>
+  </div>
+
+  <div class="container">
+    
+    <!-- Screen 1: Public Landing -->
+    <div class="phone">
+      <span class="screen-label public">ÖFFENTLICH</span>
+      <div class="header" style="text-align: center; padding-top: 60px;">
+        <div class="mock-logo">
+          <svg fill="none" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-2 0v-4M5 21H3m2 0v-4m0 0h14m-14 0v-4h14v4"/></svg>
+        </div>
+        <div class="logo" style="font-size: 22px; margin-bottom: 4px;">MUSTERFIRMA</div>
+        <p class="text-xs text-muted">Ihr Partner für Qualität</p>
+      </div>
+      <div class="content" style="padding-top: 20px;">
+        <button class="btn btn-ghost">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+          Über uns
+        </button>
+        <button class="btn btn-ghost">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0-8.25 5.25a2.25 2.25 0 0 1-2.5 0L2.25 6.75"/></svg>
+          Kontakt
+        </button>
+        <button class="btn btn-ghost">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+          Karriere
+        </button>
+        <button class="btn btn-primary" style="margin-top: 16px;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg>
+          Mitarbeiter Login
+        </button>
+      </div>
+    </div>
+
+    <!-- Screen 2: Über uns -->
+    <div class="phone">
+      <span class="screen-label public">ÖFFENTLICH</span>
+      <div class="back-btn">
+        <svg fill="none" viewBox="0 0 24 24"><path d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+      </div>
+      <div class="header" style="padding-top: 55px;">
+        <p class="header-sm">Unternehmen</p>
+        <h1 class="header-lg">Über uns</h1>
+      </div>
+      <div class="content">
+        <div class="card card-glass" style="text-align: center; padding: 20px;">
+          <div class="mock-logo" style="width: 60px; height: 60px; margin-bottom: 12px;">
+            <svg width="32" height="32" fill="none" stroke="#fff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-2 0v-4M5 21H3m2 0v-4m0 0h14m-14 0v-4h14v4"/></svg>
+          </div>
+          <p class="text-sm text-light" style="line-height: 1.6;">MusterFirma ist Ihr verlässlicher Partner für professionelle Dienstleistungen. Seit über 10 Jahren stehen wir für Qualität und Zuverlässigkeit.</p>
+        </div>
+        
+        <div class="section-title">Unsere Stärken</div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-dark">Qualität</p>
+            <p class="text-xs text-muted">Höchste Standards in allem</p>
+          </div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-dark">Zuverlässigkeit</p>
+            <p class="text-xs text-muted">Pünktlich und verlässlich</p>
+          </div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-dark">Erfahrenes Team</p>
+            <p class="text-xs text-muted">Über 50 Mitarbeiter</p>
+          </div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-dark">1.000+ Kunden</p>
+            <p class="text-xs text-muted">Zufriedene Partner</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3: Kontakt -->
+    <div class="phone">
+      <span class="screen-label public">ÖFFENTLICH</span>
+      <div class="back-btn">
+        <svg fill="none" viewBox="0 0 24 24"><path d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+      </div>
+      <div class="header" style="padding-top: 55px;">
+        <p class="header-sm">Schreiben Sie uns</p>
+        <h1 class="header-lg">Kontakt</h1>
+      </div>
+      <div class="content">
+        <div class="card" style="margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div class="feature-icon">
+              <svg fill="none" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0-8.25 5.25a2.25 2.25 0 0 1-2.5 0L2.25 6.75"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-muted">E-Mail</p>
+              <p class="text-sm font-semibold text-dark">info@musterfirma.de</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="feature-icon">
+              <svg fill="none" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-muted">Telefon</p>
+              <p class="text-sm font-semibold text-dark">+49 123 456789</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section-title">Nachricht senden</div>
+        <input type="text" class="input" placeholder="Ihr Name">
+        <input type="email" class="input" placeholder="E-Mail Adresse">
+        <input type="text" class="input" placeholder="Betreff">
+        <textarea class="input textarea" placeholder="Ihre Nachricht..."></textarea>
+        <button class="btn btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>
+          Absenden
+        </button>
+      </div>
+    </div>
+
+    <!-- Screen 4: Karriere -->
+    <div class="phone">
+      <span class="screen-label public">ÖFFENTLICH</span>
+      <div class="back-btn">
+        <svg fill="none" viewBox="0 0 24 24"><path d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+      </div>
+      <div class="header" style="padding-top: 55px;">
+        <p class="header-sm">Werde Teil des Teams</p>
+        <h1 class="header-lg">Karriere</h1>
+      </div>
+      <div class="content">
+        <div class="card card-accent" style="text-align: center; padding: 20px;">
+          <div style="width: 50px; height: 50px; background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.1)); border-radius: 14px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center;">
+            <svg width="24" height="24" fill="none" stroke="#16a34a" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/></svg>
+          </div>
+          <p class="text-sm font-semibold text-dark" style="margin-bottom: 4px;">Wir suchen Verstärkung!</p>
+          <p class="text-xs text-muted">Bewirb dich jetzt bei uns</p>
+        </div>
+        
+        <div class="section-title">Offene Stellen</div>
+        
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p class="text-sm font-semibold text-dark">Servicemitarbeiter (m/w/d)</p>
+              <p class="text-xs text-muted">Vollzeit · Vor Ort</p>
+            </div>
+            <span class="pill pill-success"><span class="pill-dot"></span>Neu</span>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p class="text-sm font-semibold text-dark">Teamleiter (m/w/d)</p>
+              <p class="text-xs text-muted">Vollzeit · Vor Ort</p>
+            </div>
+            <span class="pill pill-info"><span class="pill-dot"></span>Offen</span>
+          </div>
+        </div>
+        
+        <div class="section-title">Initiativbewerbung</div>
+        <input type="text" class="input" placeholder="Vollständiger Name">
+        <input type="email" class="input" placeholder="E-Mail Adresse">
+        <input type="tel" class="input" placeholder="Telefonnummer">
+        <button class="btn btn-ghost" style="margin-bottom: 8px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13"/></svg>
+          Lebenslauf anhängen
+        </button>
+        <button class="btn btn-primary">Bewerbung senden</button>
+      </div>
+    </div>
+
+    <!-- Screen 5: Login -->
+    <div class="phone">
+      <span class="screen-label auth">ANMELDUNG</span>
+      <div class="header" style="text-align: center; padding-top: 60px;">
+        <div class="mock-logo" style="width: 64px; height: 64px; margin-bottom: 16px;">
+          <svg width="34" height="34" fill="none" stroke="#fff" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-2 0v-4M5 21H3m2 0v-4m0 0h14m-14 0v-4h14v4"/></svg>
+        </div>
+        <h2 class="text-lg font-bold text-dark">Willkommen zurück</h2>
+        <p class="text-xs text-muted" style="margin-top: 4px;">Melden Sie sich an</p>
+      </div>
+      <div class="content" style="padding-top: 30px;">
+        <input type="email" class="input" placeholder="E-Mail Adresse">
+        <input type="password" class="input" placeholder="Passwort">
+        <button class="btn btn-primary" style="margin-top: 8px;">Anmelden</button>
+        <p class="text-xs text-muted" style="text-align: center; margin-top: 16px;">
+          Passwort vergessen?
+        </p>
+      </div>
+    </div>
+
+    <!-- Screen 6: Employee Dashboard -->
+    <div class="phone">
+      <span class="screen-label user">MITARBEITER</span>
+      <div class="header">
+        <p class="header-sm">Guten Morgen</p>
+        <h1 class="header-lg">Max Mustermann</h1>
+      </div>
+      <div class="content">
+        <div class="card card-accent">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p class="text-xs text-muted">Nächste Schicht</p>
+              <p class="text-sm font-semibold text-dark">Heute, 08:00 – 16:00</p>
+              <p class="text-xs" style="color: #3b82f6; margin-top: 4px;">📍 Hauptstandort</p>
+            </div>
+            <span class="pill pill-success"><span class="pill-dot"></span>Geplant</span>
+          </div>
+        </div>
+        
+        <div class="stat-grid">
+          <div class="card stat-box">
+            <div class="stat-value">32,5</div>
+            <div class="stat-label">Stunden diese Woche</div>
+          </div>
+          <div class="card stat-box">
+            <div class="stat-value">18</div>
+            <div class="stat-label">Resturlaub Tage</div>
+          </div>
+        </div>
+        
+        <button class="btn btn-success">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+          Arbeit beginnen
+        </button>
+      </div>
+      <div class="nav">
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div>Home</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>Zeit</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg></div>Profil</div>
+      </div>
+    </div>
+
+    <!-- Screen 7: Time Tracking -->
+    <div class="phone">
+      <span class="screen-label user">ZEITERFASSUNG</span>
+      <div class="header">
+        <p class="header-sm">Aktive Schicht</p>
+        <h1 class="header-lg">Zeiterfassung</h1>
+      </div>
+      <div class="content">
+        <div class="card card-success" style="text-align: center; padding: 24px;">
+          <span class="pill pill-success" style="margin-bottom: 16px;"><span class="pill-dot"></span>Aktiv</span>
+          <div class="time-display">04:32:15</div>
+          <p class="text-xs text-muted">Gestartet um 08:00 Uhr</p>
+        </div>
+        
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: rgba(59,130,246,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" fill="none" stroke="#3b82f6" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-dark">GPS aktiv</p>
+              <p class="text-xs text-muted">Standort wird erfasst</p>
+            </div>
+          </div>
+        </div>
+        
+        <button class="btn btn-danger" style="margin-top: 20px;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Arbeit beenden
+        </button>
+      </div>
+      <div class="nav">
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div>Home</div>
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>Zeit</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg></div>Profil</div>
+      </div>
+    </div>
+
+    <!-- Screen 8: Schedule -->
+    <div class="phone">
+      <span class="screen-label user">DIENSTPLAN</span>
+      <div class="header">
+        <p class="header-sm">Januar 2025</p>
+        <h1 class="header-lg">Dienstplan</h1>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="calendar">
+            <div class="cal-head">Mo</div>
+            <div class="cal-head">Di</div>
+            <div class="cal-head">Mi</div>
+            <div class="cal-head">Do</div>
+            <div class="cal-head">Fr</div>
+            <div class="cal-head">Sa</div>
+            <div class="cal-head">So</div>
+            <div class="cal-day"></div>
+            <div class="cal-day"></div>
+            <div class="cal-day">1</div>
+            <div class="cal-day shift">2</div>
+            <div class="cal-day shift">3</div>
+            <div class="cal-day">4</div>
+            <div class="cal-day">5</div>
+            <div class="cal-day shift">6</div>
+            <div class="cal-day shift">7</div>
+            <div class="cal-day shift">8</div>
+            <div class="cal-day today">9</div>
+            <div class="cal-day shift">10</div>
+            <div class="cal-day">11</div>
+            <div class="cal-day">12</div>
+          </div>
+        </div>
+        
+        <div class="section-title">Kommende Schichten</div>
+        
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p class="text-sm font-semibold text-dark">Heute, 09.01.</p>
+              <p class="text-xs text-muted">08:00 – 16:00 Uhr</p>
+              <p class="text-xs" style="color: #3b82f6; margin-top: 4px;">📍 Hauptstandort</p>
+            </div>
+            <span class="pill pill-success"><span class="pill-dot"></span>Heute</span>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <p class="text-sm font-semibold text-dark">Freitag, 10.01.</p>
+              <p class="text-xs text-muted">07:00 – 15:00 Uhr</p>
+              <p class="text-xs" style="color: #3b82f6; margin-top: 4px;">📍 Filiale Nord</p>
+            </div>
+            <span class="pill pill-info"><span class="pill-dot"></span>Geplant</span>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div>Home</div>
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>Plan</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg></div>Profil</div>
+      </div>
+    </div>
+
+    <!-- Screen 9: Chat -->
+    <div class="phone">
+      <span class="screen-label user">TEAM CHAT</span>
+      <div class="header">
+        <p class="header-sm">Team Kommunikation</p>
+        <h1 class="header-lg">Gruppenchat</h1>
+      </div>
+      <div class="content">
+        <div class="chat-row">
+          <div class="avatar avatar-green">LM</div>
+          <div>
+            <div class="chat-meta">Lisa M. · 09:15</div>
+            <div class="chat-bubble chat-received">Guten Morgen zusammen! Wer ist heute im Frühdienst?</div>
+          </div>
+        </div>
+        
+        <div class="chat-row sent">
+          <div class="avatar avatar-blue">MM</div>
+          <div style="text-align: right;">
+            <div class="chat-meta">Du · 09:16</div>
+            <div class="chat-bubble chat-sent">Ich bin da! Bis 16 Uhr am Hauptstandort.</div>
+          </div>
+        </div>
+        
+        <div class="chat-row">
+          <div class="avatar avatar-purple">TK</div>
+          <div>
+            <div class="chat-meta">Thomas K. · 09:18</div>
+            <div class="chat-bubble chat-received">Bin auch vor Ort. Können wir später kurz wegen Freitag sprechen?</div>
+          </div>
+        </div>
+        
+        <div style="position: absolute; bottom: 80px; left: 16px; right: 16px;">
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="input" placeholder="Nachricht schreiben..." style="margin-bottom: 0; flex: 1;">
+            <button style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #6366f1); border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div>Home</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>Zeit</div>
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg></div>Profil</div>
+      </div>
+    </div>
+
+    <!-- Screen 10: Admin Dashboard -->
+    <div class="phone">
+      <span class="screen-label admin">ADMIN</span>
+      <div class="header">
+        <p class="header-sm">Admin Dashboard</p>
+        <h1 class="header-lg">Übersicht</h1>
+      </div>
+      <div class="content">
+        <div class="card card-glass">
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <span class="text-sm text-light">Aktive Mitarbeiter</span>
+            <span class="text-lg font-bold" style="color: #16a34a;">8</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <span class="text-sm text-light">Krank gemeldet</span>
+            <span class="text-lg font-bold" style="color: #f59e0b;">1</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border: none;">
+            <span class="text-sm text-light">Im Urlaub</span>
+            <span class="text-lg font-bold" style="color: #2563eb;">2</span>
+          </div>
+        </div>
+        
+        <div class="section-title">Verwaltung</div>
+        <button class="btn btn-ghost" style="font-size: 13px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Dienstplan bearbeiten
+        </button>
+        <button class="btn btn-ghost" style="font-size: 13px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
+          Mitarbeiter verwalten
+        </button>
+        
+        <div class="section-title">Offene Anträge</div>
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p class="text-sm font-semibold text-dark">Max M. – Urlaub</p>
+              <p class="text-xs text-muted">15.01. – 17.01.2025</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button style="width: 36px; height: 36px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; color: #16a34a; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m4.5 12.75 6 6 9-13.5"/></svg>
+              </button>
+              <button style="width: 36px; height: 36px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg></div>Dashboard</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg></div>Team</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>Pläne</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></div>Settings</div>
+      </div>
+    </div>
+
+    <!-- Screen 11: Import/Export -->
+    <div class="phone">
+      <span class="screen-label admin">ADMIN</span>
+      <div class="header">
+        <p class="header-sm">Datenmanagement</p>
+        <h1 class="header-lg">Import & Export</h1>
+      </div>
+      <div class="content">
+        <!-- Import Section -->
+        <div class="section-title">Dienstplan Import</div>
+        <div class="card card-accent">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.1)); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" fill="none" stroke="#16a34a" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-dark">Excel Import</p>
+              <p class="text-xs text-muted">Dienstpläne aus Excel übernehmen</p>
+            </div>
+          </div>
+          <button class="btn btn-ghost" style="font-size: 12px; margin-bottom: 0;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+            .xlsx / .xls Datei hochladen
+          </button>
+        </div>
+
+        <!-- Export Section -->
+        <div class="section-title">Daten Export</div>
+        
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.1)); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" fill="none" stroke="#3b82f6" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+            </div>
+            <div style="flex: 1;">
+              <p class="text-sm font-semibold text-dark">DATEV Export</p>
+              <p class="text-xs text-muted">Lohnbuchhaltung-Format</p>
+            </div>
+            <button style="width: 36px; height: 36px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; color: #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.1)); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" fill="none" stroke="#8b5cf6" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+            </div>
+            <div style="flex: 1;">
+              <p class="text-sm font-semibold text-dark">Lexware Export</p>
+              <p class="text-xs text-muted">Lexware-kompatibel</p>
+            </div>
+            <button style="width: 36px; height: 36px; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); border-radius: 10px; color: #8b5cf6; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.1)); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" fill="none" stroke="#16a34a" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125"/></svg>
+            </div>
+            <div style="flex: 1;">
+              <p class="text-sm font-semibold text-dark">Excel Export</p>
+              <p class="text-xs text-muted">Stundenübersicht als .xlsx</p>
+            </div>
+            <button style="width: 36px; height: 36px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); border-radius: 10px; color: #16a34a; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="section-title">Zeitraum</div>
+        <div class="card" style="display: flex; gap: 8px;">
+          <button class="btn btn-ghost" style="flex: 1; font-size: 11px; padding: 10px; margin: 0;">Diese Woche</button>
+          <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 10px; margin: 0;">Dieser Monat</button>
+          <button class="btn btn-ghost" style="flex: 1; font-size: 11px; padding: 10px; margin: 0;">Zeitraum</button>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg></div>Dashboard</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg></div>Team</div>
+        <div class="nav-item active"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M7.5 7.5h-.75A2.25 2.25 0 0 0 4.5 9.75v7.5a2.25 2.25 0 0 0 2.25 2.25h7.5a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-.75m-6 3.75 3 3m0 0 3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-7.5a2.25 2.25 0 0 1-2.25-2.25v-7.5a2.25 2.25 0 0 1 2.25-2.25h.75"/></svg></div>Import</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z"/></svg></div>Chat</div>
+        <div class="nav-item"><div class="nav-icon"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></div>Settings</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

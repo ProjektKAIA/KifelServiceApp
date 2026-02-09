@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera } from 'lucide-react-native';
+import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera, Bell } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
@@ -142,6 +142,18 @@ export default function ProfileScreen() {
           <ChevronRight size={18} color={theme.textMuted} />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+          onPress={() => router.push('/(employee)/profile/notifications' as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.menuButtonLeft}>
+            <Bell size={20} color={theme.textSecondary} />
+            <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('empProfile.notifications')}</Text>
+          </View>
+          <ChevronRight size={18} color={theme.textMuted} />
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity
           style={[styles.logoutButton, { backgroundColor: theme.pillDanger, borderColor: theme.danger }]}
@@ -213,7 +225,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   badge: {
     alignSelf: 'flex-end',

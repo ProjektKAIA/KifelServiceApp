@@ -1,6 +1,6 @@
 // app/(admin)/settings/index.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Linking,
   Image,
 } from 'react-native';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -39,7 +40,6 @@ export default function SettingsScreen() {
   const { user, logout } = useAuthStore();
   const { t } = useTranslation();
 
-  const [notifications, setNotifications] = useState(true);
   const [gpsTracking, setGpsTracking] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationPermissionStatus, setLocationPermissionStatus] = useState<Location.PermissionStatus | null>(null);
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
     {
       title: t('settings.appSettings'),
       items: [
-        { icon: Bell, label: t('settings.notifications'), toggle: true, value: notifications, onToggle: setNotifications },
+        { icon: Bell, label: t('settings.notifications'), onPress: () => router.push('/(admin)/settings/notifications' as any) },
         { icon: MapPin, label: t('settings.gpsTracking'), toggle: true, value: gpsTracking, onToggle: handleGpsToggle },
       ],
     },

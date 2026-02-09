@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   badge: {
     alignSelf: 'flex-end',

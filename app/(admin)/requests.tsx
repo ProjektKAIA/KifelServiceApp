@@ -1,7 +1,7 @@
 // app/(admin)/requests.tsx
 
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ScrollView, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Typography } from '@/src/components/atoms';
@@ -11,31 +11,34 @@ import { ScreenHeader, RequestCard } from '@/src/components/organisms';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
+import { vacationRequestsCollection, usersCollection } from '@/src/lib/firestore';
+import { useAuthStore } from '@/src/store/authStore';
+import type { VacationRequest, User } from '@/src/types';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 type RequestType = 'vacation' | 'sick';
-type RequestStatus = 'pending' | 'approved' | 'rejected';
+type FilterType = 'all' | RequestType;
 
-interface Request {
-  id: string;
-  type: RequestType;
+// Map VacationRequest type to RequestCard type (other -> sick as fallback)
+const mapRequestType = (type: 'vacation' | 'sick' | 'other'): RequestType => {
+  return type === 'other' ? 'sick' : type;
+};
+
+interface EnrichedRequest extends VacationRequest {
   employeeName: string;
   dateRange: string;
-  reason?: string;
-  status: RequestStatus;
 }
-
-const mockRequests: Request[] = [
-  { id: '1', type: 'vacation', employeeName: 'Thomas Müller', dateRange: '23.12. - 27.12.2024', reason: 'Weihnachtsurlaub', status: 'pending' },
-  { id: '2', type: 'sick', employeeName: 'Sandra Klein', dateRange: '20.12.2024', status: 'pending' },
-  { id: '3', type: 'vacation', employeeName: 'Peter Schmidt', dateRange: '02.01. - 05.01.2025', status: 'approved' },
-  { id: '4', type: 'sick', employeeName: 'Anna Weber', dateRange: '18.12. - 19.12.2024', status: 'rejected' },
-];
 
 export default function RequestsScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<'all' | RequestType>('all');
-  const [requests, setRequests] = useState(mockRequests);
+  const { user } = useAuthStore();
+
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [requests, setRequests] = useState<EnrichedRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filterOptions = [
     { key: 'all', label: t('adminRequests.all') },
@@ -43,29 +46,101 @@ export default function RequestsScreen() {
     { key: 'sick', label: 'Krank' },
   ];
 
+  // Load requests from Firestore
+  const loadRequests = useCallback(async () => {
+    try {
+      const allRequests = await vacationRequestsCollection.getAll();
+      const users = await usersCollection.getAll();
+
+      const userMap = new Map<string, User>();
+      users.forEach(u => userMap.set(u.id, u));
+
+      const enriched: EnrichedRequest[] = allRequests.map(req => {
+        const reqUser = userMap.get(req.userId);
+        const employeeName = reqUser
+          ? `${reqUser.firstName} ${reqUser.lastName}`
+          : 'Unbekannt';
+
+        const startDate = format(new Date(req.startDate), 'dd.MM.', { locale: de });
+        const endDate = format(new Date(req.endDate), 'dd.MM.yyyy', { locale: de });
+        const dateRange = req.startDate === req.endDate
+          ? format(new Date(req.startDate), 'dd.MM.yyyy', { locale: de })
+          : `${startDate} - ${endDate}`;
+
+        return {
+          ...req,
+          employeeName,
+          dateRange,
+        };
+      });
+
+      setRequests(enriched);
+    } catch (error) {
+      console.error('Error loading requests:', error);
+      Alert.alert(t('common.error'), 'Anträge konnten nicht geladen werden.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadRequests();
+  }, [loadRequests]);
+
   const filteredRequests = requests.filter((r) => filter === 'all' || r.type === filter);
   const pendingRequests = filteredRequests.filter((r) => r.status === 'pending');
   const processedRequests = filteredRequests.filter((r) => r.status !== 'pending');
 
-  const handleApprove = (id: string) => {
-    Alert.alert('Genehmigt', 'Der Antrag wurde genehmigt.');
-    setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'approved' } : r)));
+  const handleApprove = async (id: string) => {
+    if (!user?.id) return;
+
+    try {
+      await vacationRequestsCollection.updateStatus(id, 'approved', user.id);
+      setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'approved' } : r)));
+      Alert.alert('Genehmigt', 'Der Antrag wurde genehmigt.');
+    } catch (error) {
+      console.error('Error approving request:', error);
+      Alert.alert(t('common.error'), 'Antrag konnte nicht genehmigt werden.');
+    }
   };
 
-  const handleReject = (id: string) => {
-    Alert.alert('Abgelehnt', 'Der Antrag wurde abgelehnt.');
-    setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'rejected' } : r)));
+  const handleReject = async (id: string) => {
+    if (!user?.id) return;
+
+    try {
+      await vacationRequestsCollection.updateStatus(id, 'rejected', user.id);
+      setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'rejected' } : r)));
+      Alert.alert('Abgelehnt', 'Der Antrag wurde abgelehnt.');
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      Alert.alert(t('common.error'), 'Antrag konnte nicht abgelehnt werden.');
+    }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+          />
+        }
+      >
         <ScreenHeader overline="VERWALTUNG" title={t('adminRequests.title')} />
 
         <FilterTabs
           options={filterOptions}
           selected={filter}
-          onSelect={(key) => setFilter(key as 'all' | RequestType)}
+          onSelect={(key) => setFilter(key as FilterType)}
           style={styles.filterTabs}
         />
 
@@ -78,7 +153,7 @@ export default function RequestsScreen() {
             {pendingRequests.map((r) => (
               <RequestCard
                 key={r.id}
-                type={r.type}
+                type={mapRequestType(r.type)}
                 employeeName={r.employeeName}
                 dateRange={r.dateRange}
                 reason={r.reason}
@@ -100,7 +175,7 @@ export default function RequestsScreen() {
             {processedRequests.map((r) => (
               <RequestCard
                 key={r.id}
-                type={r.type}
+                type={mapRequestType(r.type)}
                 employeeName={r.employeeName}
                 dateRange={r.dateRange}
                 reason={r.reason}
@@ -108,6 +183,13 @@ export default function RequestsScreen() {
               />
             ))}
           </>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && requests.length === 0 && (
+          <Typography variant="body" color="muted" style={styles.emptyText}>
+            Keine Anträge vorhanden.
+          </Typography>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -126,5 +208,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: spacing.md,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
 });

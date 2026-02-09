@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification } from '../types';
+import type { PushToken, NotificationPreferences } from '../types/notifications';
 import { logError } from '../utils/errorHandler';
 
 // Helper to get db instance safely
@@ -41,6 +42,8 @@ const COLLECTIONS = {
   COMPANY: 'company',
   INVITES: 'invites',
   ADMIN_NOTIFICATIONS: 'adminNotifications',
+  PUSH_TOKENS: 'pushTokens',
+  NOTIFICATION_PREFERENCES: 'notificationPreferences',
 } as const;
 
 // Helper: Convert Firestore timestamp to ISO string
@@ -1450,6 +1453,199 @@ export const adminNotificationsCollection = {
   },
 };
 
+// ============================================================================
+// PUSH TOKENS
+// ============================================================================
+
+export const pushTokensCollection = {
+  // Register a new push token
+  register: async (tokenData: {
+    userId: string;
+    token: string;
+    platform: 'ios' | 'android';
+    deviceName: string | null;
+  }): Promise<string> => {
+    return safeFirestoreOp(
+      async () => {
+        // Check if this token already exists
+        const q = query(
+          collection(getDb(), COLLECTIONS.PUSH_TOKENS),
+          where('token', '==', tokenData.token),
+          limit(1)
+        );
+        const existing = await getDocs(q);
+
+        if (!existing.empty) {
+          // Update existing token
+          const docId = existing.docs[0].id;
+          await updateDoc(doc(getDb(), COLLECTIONS.PUSH_TOKENS, docId), {
+            userId: tokenData.userId,
+            isActive: true,
+            updatedAt: serverTimestamp(),
+          });
+          return docId;
+        }
+
+        // Create new token
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.PUSH_TOKENS), {
+          ...tokenData,
+          isActive: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        return docRef.id;
+      },
+      '',
+      'pushTokens.register'
+    );
+  },
+
+  // Get all active tokens for a user
+  getForUser: async (userId: string): Promise<PushToken[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.PUSH_TOKENS),
+          where('userId', '==', userId),
+          where('isActive', '==', true)
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            token: data.token,
+            platform: data.platform,
+            deviceName: data.deviceName,
+            isActive: data.isActive,
+            createdAt: toISOString(data.createdAt),
+            updatedAt: toISOString(data.updatedAt),
+          } as PushToken;
+        });
+      },
+      [],
+      'pushTokens.getForUser'
+    );
+  },
+
+  // Deactivate a token (on logout)
+  deactivate: async (tokenId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.PUSH_TOKENS, tokenId);
+        await updateDoc(docRef, {
+          isActive: false,
+          updatedAt: serverTimestamp(),
+        });
+      },
+      undefined,
+      'pushTokens.deactivate'
+    );
+  },
+
+  // Deactivate all tokens for a user
+  deactivateAllForUser: async (userId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const tokens = await pushTokensCollection.getForUser(userId);
+        await Promise.all(
+          tokens.map(token => pushTokensCollection.deactivate(token.id))
+        );
+      },
+      undefined,
+      'pushTokens.deactivateAllForUser'
+    );
+  },
+
+  // Delete a token completely
+  delete: async (tokenId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.PUSH_TOKENS, tokenId);
+        await deleteDoc(docRef);
+      },
+      undefined,
+      'pushTokens.delete'
+    );
+  },
+};
+
+// ============================================================================
+// NOTIFICATION PREFERENCES
+// ============================================================================
+
+export const notificationPreferencesCollection = {
+  // Get notification preferences for a user
+  get: async (userId: string): Promise<NotificationPreferences | null> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.NOTIFICATION_PREFERENCES, userId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) return null;
+
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          enabled: data.enabled ?? true,
+          vacationRequests: data.vacationRequests ?? true,
+          vacationUpdates: data.vacationUpdates ?? true,
+          chatMessages: data.chatMessages ?? true,
+          chatMentions: data.chatMentions ?? true,
+          shiftChanges: data.shiftChanges ?? true,
+          quietHoursEnabled: data.quietHoursEnabled ?? false,
+          quietHoursStart: data.quietHoursStart ?? '22:00',
+          quietHoursEnd: data.quietHoursEnd ?? '07:00',
+          updatedAt: toISOString(data.updatedAt),
+        } as NotificationPreferences;
+      },
+      null,
+      'notificationPreferences.get'
+    );
+  },
+
+  // Save notification preferences
+  save: async (preferences: NotificationPreferences): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.NOTIFICATION_PREFERENCES, preferences.id);
+        await setDoc(docRef, {
+          enabled: preferences.enabled,
+          vacationRequests: preferences.vacationRequests,
+          vacationUpdates: preferences.vacationUpdates,
+          chatMessages: preferences.chatMessages,
+          chatMentions: preferences.chatMentions,
+          shiftChanges: preferences.shiftChanges,
+          quietHoursEnabled: preferences.quietHoursEnabled,
+          quietHoursStart: preferences.quietHoursStart,
+          quietHoursEnd: preferences.quietHoursEnd,
+          updatedAt: serverTimestamp(),
+        });
+      },
+      undefined,
+      'notificationPreferences.save'
+    );
+  },
+
+  // Update specific preferences
+  update: async (userId: string, updates: Partial<NotificationPreferences>): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.NOTIFICATION_PREFERENCES, userId);
+        await updateDoc(docRef, {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        });
+      },
+      undefined,
+      'notificationPreferences.update'
+    );
+  },
+};
+
 // Export all collections
 export const firestoreDb = {
   users: usersCollection,
@@ -1461,6 +1657,8 @@ export const firestoreDb = {
   company: companyCollection,
   invites: invitesCollection,
   adminNotifications: adminNotificationsCollection,
+  pushTokens: pushTokensCollection,
+  notificationPreferences: notificationPreferencesCollection,
 };
 
 export default firestoreDb;

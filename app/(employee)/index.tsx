@@ -1,7 +1,7 @@
 // app/(employee)/index.tsx
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MapPin, Clock, Calendar, Sun, MessageCircle } from 'lucide-react-native';
@@ -10,6 +10,14 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useTimeStore } from '@/src/store/timeStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
+import { statsCollection, shiftsCollection } from '@/src/lib/firestore';
+import { format } from 'date-fns';
+import type { Shift } from '@/src/types';
+
+interface DashboardStats {
+  hoursThisMonth: number;
+  remainingVacationDays: number;
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -18,51 +26,96 @@ export default function DashboardScreen() {
   const { user } = useAuthStore();
   const { isTracking } = useTimeStore();
 
+  const [stats, setStats] = useState<DashboardStats>({ hoursThisMonth: 0, remainingVacationDays: 0 });
+  const [todayShift, setTodayShift] = useState<Shift | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const greeting = getGreeting();
-  const userName = user?.firstName || 'Max Mustermann';
+  const userName = user?.firstName || '';
 
   function getGreeting(): string {
     const hour = new Date().getHours();
     const random = Math.random();
 
-    // Frühmorgens (5-9)
     if (hour >= 5 && hour < 9) {
       const greetings = ['Moin!', 'Guten Morgen!', 'Moin Moin!', 'Morgen!'];
       return greetings[Math.floor(random * greetings.length)];
     }
 
-    // Vormittag (9-11)
     if (hour >= 9 && hour < 11) {
       const greetings = ['Guten Morgen!', 'Moin!', 'Morgen!', 'Schönen Vormittag!'];
       return greetings[Math.floor(random * greetings.length)];
     }
 
-    // Mittag (11-14)
     if (hour >= 11 && hour < 14) {
       const greetings = ['Mahlzeit!', 'Guten Mittag!', 'Moin!', 'Mahlzeit!', 'Guten Appetit!'];
       return greetings[Math.floor(random * greetings.length)];
     }
 
-    // Nachmittag (14-17)
     if (hour >= 14 && hour < 17) {
       const greetings = ['Moin!', 'Guten Tag!', 'Hallo!', 'Na, wie läuft\'s?'];
       return greetings[Math.floor(random * greetings.length)];
     }
 
-    // Abend (17-21)
     if (hour >= 17 && hour < 21) {
       const greetings = ['Guten Abend!', 'N\'Abend!', 'Nabend!', 'Schönen Feierabend!'];
       return greetings[Math.floor(random * greetings.length)];
     }
 
-    // Spät (21-5)
     const greetings = ['Gute Nacht!', 'N\'Abend!', 'Noch wach?', 'Hallo Nachteule!'];
     return greetings[Math.floor(random * greetings.length)];
   }
 
+  const loadData = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      // Load stats
+      const userStats = await statsCollection.getUserStats(user.id);
+      setStats({
+        hoursThisMonth: userStats.hoursThisMonth,
+        remainingVacationDays: userStats.remainingVacationDays,
+      });
+
+      // Load today's shift
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const shifts = await shiftsCollection.getForUser(user.id, today, today);
+      const todaysShift = shifts.find(s => s.date === today && s.status !== 'cancelled');
+      setTodayShift(todaysShift || null);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadData();
+  }, [loadData]);
+
+  const formatShiftTime = (shift: Shift): string => {
+    return `${shift.startTime} – ${shift.endTime}`;
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+          />
+        }
+      >
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>DASHBOARD</Text>
@@ -73,43 +126,64 @@ export default function DashboardScreen() {
         <Text style={[styles.userName, { color: theme.textMuted }]}>{userName}</Text>
 
         {/* Shift Card */}
-        <View style={[styles.shiftCard, { 
-          backgroundColor: isTracking ? 'rgba(34,197,94,0.1)' : theme.cardBackground, 
-          borderColor: isTracking ? 'rgba(34,197,94,0.2)' : theme.cardBorder 
-        }]}>
-          <View style={styles.shiftHeader}>
-            <View>
-              <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>Aktuelle Schicht</Text>
-              <Text style={[styles.shiftTime, { color: theme.text }]}>08:00 – 16:00</Text>
+        {todayShift ? (
+          <View style={[styles.shiftCard, {
+            backgroundColor: isTracking ? 'rgba(34,197,94,0.1)' : theme.cardBackground,
+            borderColor: isTracking ? 'rgba(34,197,94,0.2)' : theme.cardBorder
+          }]}>
+            <View style={styles.shiftHeader}>
+              <View>
+                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>Heutige Schicht</Text>
+                <Text style={[styles.shiftTime, { color: theme.text }]}>{formatShiftTime(todayShift)}</Text>
+              </View>
+              <View style={[styles.statusPill, { backgroundColor: isTracking ? theme.pillSuccess : theme.pillWarning }]}>
+                <View style={[styles.statusDot, { backgroundColor: isTracking ? theme.pillSuccessText : theme.pillWarningText }]} />
+                <Text style={[styles.statusText, { color: isTracking ? theme.pillSuccessText : theme.pillWarningText }]}>
+                  {isTracking ? 'Aktiv' : 'Geplant'}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.statusPill, { backgroundColor: isTracking ? theme.pillSuccess : theme.pillWarning }]}>
-              <View style={[styles.statusDot, { backgroundColor: isTracking ? theme.pillSuccessText : theme.pillWarningText }]} />
-              <Text style={[styles.statusText, { color: isTracking ? theme.pillSuccessText : theme.pillWarningText }]}>
-                {isTracking ? 'Aktiv' : 'Geplant'}
-              </Text>
+            <View style={styles.locationRow}>
+              <MapPin size={14} color={theme.textMuted} />
+              <Text style={[styles.locationText, { color: theme.textMuted }]}>{todayShift.location || 'Kein Standort'}</Text>
             </View>
           </View>
-          <View style={styles.locationRow}>
-            <MapPin size={14} color={theme.textMuted} />
-            <Text style={[styles.locationText, { color: theme.textMuted }]}>Standort Forst</Text>
+        ) : (
+          <View style={[styles.shiftCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+            <View style={styles.shiftHeader}>
+              <View>
+                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>Heute</Text>
+                <Text style={[styles.shiftTime, { color: theme.text }]}>Keine Schicht</Text>
+              </View>
+              {isTracking && (
+                <View style={[styles.statusPill, { backgroundColor: theme.pillSuccess }]}>
+                  <View style={[styles.statusDot, { backgroundColor: theme.pillSuccessText }]} />
+                  <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>Aktiv</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.statValue, { color: theme.text }]}>142</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {isLoading ? '–' : Math.round(stats.hoursThisMonth)}
+            </Text>
             <Text style={[styles.statLabel, { color: theme.textMuted }]}>Stunden / Monat</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.statValue, { color: theme.text }]}>18</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {isLoading ? '–' : stats.remainingVacationDays}
+            </Text>
             <Text style={[styles.statLabel, { color: theme.textMuted }]}>Resturlaub</Text>
           </View>
         </View>
 
         {/* Quick Access */}
         <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>{t('empDashboard.quickActions')}</Text>
-        
+
         <View style={styles.actionsGrid}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.success }]}
@@ -158,7 +232,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.base,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   badge: {
     alignSelf: 'flex-end',

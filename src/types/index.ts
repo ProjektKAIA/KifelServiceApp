@@ -14,6 +14,7 @@ export interface User {
   status?: UserStatus;
   avatar?: string;
   location?: string;
+  language?: 'de' | 'en' | 'tr' | 'ru'; // Sprache für Push-Notifications
   // Erweiterte Profildaten
   street?: string;
   zipCode?: string;

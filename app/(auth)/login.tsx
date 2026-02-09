@@ -4,16 +4,20 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X, Users, Shield, Eye, EyeOff, Check, Phone } from 'lucide-react-native';
+import { X, Eye, EyeOff, Check, Phone } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
-import { firebaseAuth } from '@/src/lib/firebase';
-import { usersCollection } from '@/src/lib/firestore';
 import { SocialMediaButtons } from '@/src/components/molecules';
 import { validateLoginInput } from '@/src/utils/validation';
 import { checkLoginAllowed, recordFailedLogin, recordSuccessfulLogin } from '@/src/utils/rateLimiter';
+
+// Dev Test-Zugänge (nur in Development, ohne Firebase)
+const DEV_ACCOUNTS = [
+  { label: 'Admin', email: 'admin@dev.local', password: 'admin' },
+  { label: 'Mitarbeiter', email: 'test@dev.local', password: 'test' },
+];
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,6 +29,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
+
+  // Dev-Login: Felder ausfüllen
+  const fillDevCredentials = (devEmail: string, devPassword: string) => {
+    setEmail(devEmail);
+    setPassword(devPassword);
+  };
 
   const handleLogin = async () => {
     // Input Validation
@@ -55,53 +65,6 @@ export default function LoginScreen() {
       } else {
         Alert.alert(t('common.error'), t('auth.invalidCredentials'));
       }
-    }
-  };
-
-  // DEV ONLY: Auto-create user if not exists and login
-  const devQuickLogin = async (
-    devEmail: string,
-    devPassword: string,
-    firstName: string,
-    lastName: string,
-    role: 'employee' | 'admin'
-  ) => {
-    try {
-      // First try normal login
-      let success = await login(devEmail, devPassword);
-
-      if (!success) {
-        // User doesn't exist - create in Firebase Auth
-        console.log('🔧 DEV: Creating user', devEmail);
-        try {
-          const userCredential = await firebaseAuth.signUp(devEmail, devPassword);
-          const uid = userCredential.user.uid;
-
-          // Create user profile in Firestore
-          await usersCollection.create(uid, {
-            email: devEmail,
-            firstName,
-            lastName,
-            role,
-          });
-
-          console.log('🔧 DEV: User created, logging in...');
-          // Now login
-          success = await login(devEmail, devPassword);
-        } catch (signupError: any) {
-          // User might exist but with wrong password
-          console.log('🔧 DEV: Signup failed:', signupError.code);
-          Alert.alert('Dev Login Fehler', signupError.message || 'User konnte nicht angelegt werden');
-          return;
-        }
-      }
-
-      if (success) {
-        router.replace(role === 'admin' ? '/(admin)' : '/(employee)');
-      }
-    } catch (error: any) {
-      console.error('Dev login error:', error);
-      Alert.alert('Fehler', error.message || 'Login fehlgeschlagen');
     }
   };
 
@@ -217,35 +180,33 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Dev Access */}
-          <View style={[styles.devSection, { borderTopColor: theme.borderLight }]}>
-            <Text style={[styles.devLabel, { color: theme.textMuted }]}>{t('auth.devAccess')}</Text>
-            <View style={styles.devButtons}>
-              <TouchableOpacity
-                style={[styles.devButton, { backgroundColor: theme.pillSuccess, borderColor: theme.success }]}
-                onPress={() => devQuickLogin('max@kifel.de', 'max123', 'Max', 'Mustermann', 'employee')}
-                activeOpacity={0.7}
-              >
-                <Users size={20} color={theme.pillSuccessText} />
-                <Text style={[styles.devButtonText, { color: theme.pillSuccessText }]}>{t('auth.devEmployee')}</Text>
-                <Text style={[styles.devButtonHint, { color: theme.pillSuccessText }]}>max@kifel.de</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.devButton, { backgroundColor: theme.pillSecondary, borderColor: theme.secondary }]}
-                onPress={() => devQuickLogin('admin@kifel.de', 'admin123', 'Demo', 'Admin', 'admin')}
-                activeOpacity={0.7}
-              >
-                <Shield size={20} color={theme.pillSecondaryText} />
-                <Text style={[styles.devButtonText, { color: theme.pillSecondaryText }]}>{t('auth.devAdmin')}</Text>
-                <Text style={[styles.devButtonHint, { color: theme.pillSecondaryText }]}>admin@kifel.de</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {/* Social Media Links */}
           <View style={styles.socialSection}>
             <SocialMediaButtons size="small" labelText={t('auth.visitUs')} />
           </View>
+
+          {/* Dev Login Buttons - nur in Development */}
+          {__DEV__ && (
+            <View style={styles.devSection}>
+              <Text style={[styles.devLabel, { color: theme.textMuted }]}>
+                🔧 Dev Quick Login
+              </Text>
+              <View style={styles.devButtonsRow}>
+                {DEV_ACCOUNTS.map((account) => (
+                  <TouchableOpacity
+                    key={account.email}
+                    style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
+                    onPress={() => fillDevCredentials(account.email, account.password)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.devButtonText, { color: theme.primary }]}>
+                      {account.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -382,40 +343,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  socialSection: {
+    marginTop: spacing.lg,
+  },
   devSection: {
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+    alignItems: 'center',
   },
   devLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-    marginBottom: spacing.md,
+    fontSize: 12,
+    marginBottom: spacing.sm,
   },
-  devButtons: {
+  devButtonsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   devButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: borderRadius.card,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 8,
     borderWidth: 1,
-    gap: 6,
   },
   devButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  devButtonHint: {
-    fontSize: 10,
-    opacity: 0.8,
-  },
-  socialSection: {
-    marginTop: spacing.lg,
   },
 });

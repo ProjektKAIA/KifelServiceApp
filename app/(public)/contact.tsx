@@ -1,10 +1,11 @@
 // app/(public)/contact.tsx
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
@@ -22,7 +23,8 @@ const CONTACT = {
 
 export default function ContactScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
@@ -42,15 +44,22 @@ export default function ContactScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <LinearGradient
+      colors={isDark ? [theme.background, theme.background] : ['#f0f4ff', '#e8edf8', '#f5f5fa']}
+      style={[styles.container, { paddingTop: insets.top }]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.text} />
         </TouchableOpacity>
-        <View style={[styles.badge, { backgroundColor: theme.pillSuccess }]}>
-          <Text style={[styles.badgeText, { color: theme.pillSuccessText }]}>{t('public.badge')}</Text>
-        </View>
+      </View>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('@/assets/images/kifel-service-logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -131,7 +140,7 @@ export default function ContactScreen() {
           <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>{t('contact.sendButton')}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -141,9 +150,9 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.base,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.xs,
   },
   backButton: {
     width: 40,
@@ -151,15 +160,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  headerLogo: {
+    height: 55,
+    width: 240,
   },
   content: {
     padding: spacing.base,

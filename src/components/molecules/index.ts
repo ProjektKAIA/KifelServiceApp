@@ -2,7 +2,6 @@
 
 export { Card } from './Card';
 export { StatusPill } from './StatusPill';
-export { MessageBubble } from './MessageBubble';
 export { Modal } from './Modal';
 export { FilterTabs } from './FilterTabs';
 export { ThemeToggle } from './ThemeToggle';

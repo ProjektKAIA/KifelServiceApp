@@ -87,7 +87,7 @@ export default function WelcomeScreen() {
           ? [theme.background, theme.background]
           : ['#f0f4ff', '#e8edf8', '#f5f5fa']
       }
-      style={[styles.container, { paddingTop: insets.top - 20 }]}
+      style={[styles.container, { paddingTop: insets.top }]}
     >
       <View style={styles.content}>
         {/* Logo */}

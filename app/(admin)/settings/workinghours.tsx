@@ -185,7 +185,7 @@ Die Erfassung kann durch den Arbeitnehmer selbst erfolgen.`,
             <ArrowLeft size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Rechtliches</Text>
+            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settingsHours.legal')}</Text>
             <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsHours.title')}</Text>
           </View>
         </View>
@@ -193,7 +193,7 @@ Die Erfassung kann durch den Arbeitnehmer selbst erfolgen.`,
         {/* Last Updated */}
         <View style={[styles.updateBadge, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
           <Text style={[styles.updateText, { color: theme.text }]}>
-            Stand: {LAST_UPDATED}
+            {t('settingsHours.asOf')}: {LAST_UPDATED}
           </Text>
         </View>
 

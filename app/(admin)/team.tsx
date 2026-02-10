@@ -89,7 +89,7 @@ export default function TeamManagementScreen() {
       setPendingInvites(invites);
     } catch (error) {
       console.error('Error loading employees:', error);
-      Alert.alert('Fehler', 'Mitarbeiter konnten nicht geladen werden.');
+      Alert.alert(t('common.error'), t('adminTeam.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -235,10 +235,10 @@ export default function TeamManagementScreen() {
       setSelectedEmployee(updatedEmployee);
       setIsEditingInDetail(false);
       loadEmployees();
-      Alert.alert('Erfolg', 'Mitarbeiter wurde aktualisiert.');
+      Alert.alert(t('common.success'), t('adminTeam.updated'));
     } catch (error) {
       console.error('Error updating employee:', error);
-      Alert.alert('Fehler', 'Änderungen konnten nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('adminTeam.updateError'));
     } finally {
       setFormLoading(false);
     }
@@ -272,19 +272,19 @@ export default function TeamManagementScreen() {
 
   const handleCreateEmployee = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) {
-      Alert.alert('Fehler', 'Bitte fülle alle Pflichtfelder aus.');
+      Alert.alert(t('common.error'), t('adminTeam.fillRequired'));
       return;
     }
 
     if (!currentUser) {
-      Alert.alert('Fehler', 'Nicht angemeldet.');
+      Alert.alert(t('common.error'), t('adminTeam.notLoggedIn'));
       return;
     }
 
     setFormLoading(true);
     try {
       if (!isFirebaseConfigured()) {
-        Alert.alert('Fehler', 'Firebase nicht konfiguriert.');
+        Alert.alert(t('common.error'), t('adminTeam.firebaseError'));
         return;
       }
 
@@ -306,7 +306,7 @@ export default function TeamManagementScreen() {
       loadEmployees();
     } catch (error: any) {
       console.error('Error creating invite:', error);
-      Alert.alert('Fehler', 'Einladung konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('adminTeam.inviteCreateError'));
     } finally {
       setFormLoading(false);
     }
@@ -317,19 +317,19 @@ export default function TeamManagementScreen() {
     const link = getInviteLink(createdInvite.token);
     if (Clipboard) {
       await Clipboard.setStringAsync(link);
-      Alert.alert('Kopiert', 'Einladungslink wurde in die Zwischenablage kopiert.');
+      Alert.alert(t('adminTeam.linkCopied'), t('adminTeam.linkCopiedMessage'));
     } else {
-      Alert.alert('Fehler', 'Zwischenablage nicht verfügbar.');
+      Alert.alert(t('common.error'), t('adminTeam.clipboardError'));
     }
   };
 
   const handleShareInvite = async () => {
     if (!createdInvite) return;
     const link = getInviteLink(createdInvite.token);
-    const message = `Hallo ${createdInvite.firstName},\n\ndu wurdest zur Kifel Service App eingeladen. Klicke auf folgenden Link um dein Konto zu aktivieren:\n\n${link}\n\nDer Link ist 7 Tage gültig.`;
+    const message = t('adminTeam.inviteMessageTemplate').replace('{name}', createdInvite.firstName).replace('{link}', link);
 
     // Try to open mail app or share
-    const mailUrl = `mailto:${createdInvite.email}?subject=Einladung zur Kifel Service App&body=${encodeURIComponent(message)}`;
+    const mailUrl = `mailto:${createdInvite.email}?subject=${encodeURIComponent(t('adminTeam.inviteEmailSubject'))}&body=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(mailUrl);
     if (canOpen) {
       await Linking.openURL(mailUrl);
@@ -337,7 +337,7 @@ export default function TeamManagementScreen() {
       // Fallback: just copy
       if (Clipboard) {
         await Clipboard.setStringAsync(link);
-        Alert.alert('Link kopiert', 'E-Mail konnte nicht geöffnet werden. Der Link wurde in die Zwischenablage kopiert.');
+        Alert.alert(t('adminTeam.linkCopied'), t('adminTeam.linkCopiedFallback'));
       }
     }
   };
@@ -349,25 +349,25 @@ export default function TeamManagementScreen() {
       setShowInviteLinkModal(true);
       loadEmployees();
     } catch (error) {
-      Alert.alert('Fehler', 'Einladung konnte nicht erneut gesendet werden.');
+      Alert.alert(t('common.error'), t('adminTeam.resendError'));
     }
   };
 
   const handleDeleteInvite = (invite: Invite) => {
     Alert.alert(
-      'Einladung löschen',
-      `Einladung für ${invite.firstName} ${invite.lastName} wirklich löschen?`,
+      t('adminTeam.deleteInvite'),
+      t('adminTeam.deleteInviteConfirm').replace('{name}', `${invite.firstName} ${invite.lastName}`),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await invitesCollection.delete(invite.id);
               loadEmployees();
             } catch (error) {
-              Alert.alert('Fehler', 'Einladung konnte nicht gelöscht werden.');
+              Alert.alert(t('common.error'), t('adminTeam.deleteInviteError'));
             }
           },
         },
@@ -388,12 +388,12 @@ export default function TeamManagementScreen() {
         role: formData.role,
       });
 
-      Alert.alert('Erfolg', 'Mitarbeiter wurde aktualisiert.');
+      Alert.alert(t('common.success'), t('adminTeam.updated'));
       setShowEditModal(false);
       loadEmployees();
     } catch (error) {
       console.error('Error updating employee:', error);
-      Alert.alert('Fehler', 'Mitarbeiter konnte nicht aktualisiert werden.');
+      Alert.alert(t('common.error'), t('adminTeam.updateEmployeeError'));
     } finally {
       setFormLoading(false);
     }
@@ -402,7 +402,7 @@ export default function TeamManagementScreen() {
   const handleToggleStatus = async (employee: User) => {
     // Prevent admin from deactivating themselves
     if (employee.id === currentUser?.id) {
-      Alert.alert('Nicht möglich', 'Du kannst dich nicht selbst deaktivieren.');
+      Alert.alert(t('adminTeam.notPossible'), t('adminTeam.cannotDeactivateSelf'));
       return;
     }
 
@@ -410,13 +410,13 @@ export default function TeamManagementScreen() {
     // Treat 'inactive' status -> toggle to active
     const currentStatus = employee.status || 'active';
     const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
-    const action = newStatus === 'inactive' ? 'deaktivieren' : 'aktivieren';
+    const action = newStatus === 'inactive' ? t('adminTeam.toggleDeactivate') : t('adminTeam.toggleActivate');
 
     Alert.alert(
-      `Mitarbeiter ${action}`,
-      `Möchtest du ${employee.firstName} ${employee.lastName} ${action}?`,
+      t('adminTeam.toggleStatusTitle').replace('{action}', action),
+      t('adminTeam.toggleStatusConfirm').replace('{name}', `${employee.firstName} ${employee.lastName}`).replace('{action}', action),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: action.charAt(0).toUpperCase() + action.slice(1),
           style: newStatus === 'inactive' ? 'destructive' : 'default',
@@ -426,7 +426,7 @@ export default function TeamManagementScreen() {
               loadEmployees();
               setShowDetailModal(false);
             } catch (error) {
-              Alert.alert('Fehler', 'Status konnte nicht geändert werden.');
+              Alert.alert(t('common.error'), t('adminTeam.statusError'));
             }
           },
         },
@@ -437,28 +437,28 @@ export default function TeamManagementScreen() {
   const handleToggleRole = async (employee: User) => {
     // Prevent admin from demoting themselves
     if (employee.id === currentUser?.id) {
-      Alert.alert('Nicht möglich', 'Du kannst deine eigene Rolle nicht ändern.');
+      Alert.alert(t('adminTeam.notPossible'), t('adminTeam.cannotChangeOwnRole'));
       return;
     }
 
     const newRole = employee.role === 'admin' ? 'employee' : 'admin';
-    const roleText = newRole === 'admin' ? 'Administrator' : 'Mitarbeiter';
+    const roleText = newRole === 'admin' ? t('adminTeam.administrator') : t('adminTeam.employee');
 
     Alert.alert(
-      'Rolle ändern',
-      `${employee.firstName} ${employee.lastName} zum ${roleText} machen?`,
+      t('adminTeam.changeRole'),
+      t('adminTeam.changeRoleConfirm').replace('{name}', `${employee.firstName} ${employee.lastName}`).replace('{role}', roleText),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Ändern',
+          text: t('adminTeam.changeButton'),
           onPress: async () => {
             try {
               await usersCollection.update(employee.id, { role: newRole });
               loadEmployees();
               setShowDetailModal(false);
-              Alert.alert('Erfolg', `Rolle wurde auf ${roleText} geändert.`);
+              Alert.alert(t('common.success'), t('adminTeam.roleChanged').replace('{role}', roleText));
             } catch (error) {
-              Alert.alert('Fehler', 'Rolle konnte nicht geändert werden.');
+              Alert.alert(t('common.error'), t('adminTeam.roleChangeError'));
             }
           },
         },
@@ -468,12 +468,12 @@ export default function TeamManagementScreen() {
 
   const handleDeleteEmployee = (employee: User) => {
     Alert.alert(
-      'Mitarbeiter löschen',
-      `${employee.firstName} ${employee.lastName} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      t('adminTeam.deleteEmployee'),
+      t('adminTeam.deleteEmployeeConfirm').replace('{name}', `${employee.firstName} ${employee.lastName}`),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             // Note: This only deletes the Firestore profile, not the Auth user
@@ -483,7 +483,7 @@ export default function TeamManagementScreen() {
               setShowDetailModal(false);
               loadEmployees();
             } catch (error) {
-              Alert.alert('Fehler', 'Mitarbeiter konnte nicht gelöscht werden.');
+              Alert.alert(t('common.error'), t('adminTeam.deleteEmployeeError'));
             }
           },
         },
@@ -534,7 +534,7 @@ export default function TeamManagementScreen() {
       <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Typography variant="body" color="muted" style={{ marginTop: spacing.md }}>
-          Lade Mitarbeiter...
+          {t('adminTeam.loading')}
         </Typography>
       </View>
     );
@@ -548,7 +548,7 @@ export default function TeamManagementScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        <ScreenHeader overline="VERWALTUNG" title={t('adminTeam.title')} />
+        <ScreenHeader overline={t('adminTeam.overline')} title={t('adminTeam.title')} />
 
         {/* Search & Add */}
         <View style={styles.searchRow}>
@@ -571,7 +571,7 @@ export default function TeamManagementScreen() {
         <View style={styles.statsRow}>
           <Card variant="default" style={styles.statCard}>
             <Typography variant="h2" style={{ color: theme.primary }}>{filteredEmployees.length}</Typography>
-            <Typography variant="caption" color="muted">Gesamt</Typography>
+            <Typography variant="caption" color="muted">{t('adminTeam.total')}</Typography>
           </Card>
           <Card variant="default" style={styles.statCard}>
             <Typography variant="h2" style={{ color: theme.success }}>{activeEmployees.length}</Typography>
@@ -587,7 +587,7 @@ export default function TeamManagementScreen() {
         {pendingInvites.length > 0 && (
           <>
             <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-              AUSSTEHENDE EINLADUNGEN ({pendingInvites.length})
+              {t('adminTeam.pendingInvites')} ({pendingInvites.length})
             </Typography>
             {pendingInvites.map((invite) => (
               <View
@@ -604,13 +604,13 @@ export default function TeamManagementScreen() {
                       <View style={[styles.pendingBadge, { backgroundColor: theme.warning + '20' }]}>
                         <Clock size={10} color={theme.warning} />
                         <Typography variant="caption" style={{ color: theme.warning, marginLeft: 4, fontSize: 10 }}>
-                          Eingeladen
+                          {t('adminTeam.invited')}
                         </Typography>
                       </View>
                     </View>
                     <Typography variant="bodySmall" color="muted">{invite.email}</Typography>
                     <Typography variant="caption" color="muted" style={{ marginTop: 2 }}>
-                      Gültig bis {new Date(invite.expiresAt).toLocaleDateString('de-DE')}
+                      {t('adminTeam.validUntil').replace('{date}', new Date(invite.expiresAt).toLocaleDateString('de-DE'))}
                     </Typography>
                   </View>
                   <View style={styles.inviteCardActions}>
@@ -637,7 +637,7 @@ export default function TeamManagementScreen() {
         {activeEmployees.length > 0 && (
           <>
             <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-              AKTIVE MITARBEITER ({activeEmployees.length})
+              {t('adminTeam.activeEmployees')} ({activeEmployees.length})
             </Typography>
             {activeEmployees.map(renderEmployeeCard)}
           </>
@@ -647,7 +647,7 @@ export default function TeamManagementScreen() {
         {inactiveEmployees.length > 0 && (
           <>
             <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-              INAKTIV ({inactiveEmployees.length})
+              {t('adminTeam.inactiveSection')} ({inactiveEmployees.length})
             </Typography>
             {inactiveEmployees.map(renderEmployeeCard)}
           </>
@@ -656,13 +656,13 @@ export default function TeamManagementScreen() {
         {employees.length === 0 && pendingInvites.length === 0 && (
           <View style={styles.emptyState}>
             <Typography variant="body" color="muted">{t('adminTeam.noMembers')}</Typography>
-            <Button title="Ersten Mitarbeiter einladen" onPress={handleAddEmployee} style={{ marginTop: spacing.md }} />
+            <Button title={t('adminTeam.inviteFirst')} onPress={handleAddEmployee} style={{ marginTop: spacing.md }} />
           </View>
         )}
       </ScrollView>
 
       {/* Detail Modal */}
-      <Modal visible={showDetailModal} onClose={() => { setShowDetailModal(false); setIsEditingInDetail(false); }} title="Mitarbeiter Details">
+      <Modal visible={showDetailModal} onClose={() => { setShowDetailModal(false); setIsEditingInDetail(false); }} title={t('adminTeam.employeeDetails')}>
         {selectedEmployee && (
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header with Avatar and Name */}
@@ -680,7 +680,7 @@ export default function TeamManagementScreen() {
                       <Shield size={14} color={theme.primary} />
                     )}
                     <Typography variant="bodySmall" style={{ color: selectedEmployee.role === 'admin' ? theme.secondary : theme.primary, marginLeft: 4 }}>
-                      {selectedEmployee.role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
+                      {selectedEmployee.role === 'admin' ? t('adminTeam.administrator') : t('adminTeam.employee')}
                     </Typography>
                   </View>
                 </>
@@ -688,7 +688,7 @@ export default function TeamManagementScreen() {
                 <View style={{ width: '100%', marginTop: spacing.md }}>
                   <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                     <View style={{ flex: 1 }}>
-                      <Typography variant="caption" color="muted">Vorname</Typography>
+                      <Typography variant="caption" color="muted">{t('adminTeam.firstName')}</Typography>
                       <Input
                         value={detailEditData.firstName}
                         onChangeText={(text) => setDetailEditData({ ...detailEditData, firstName: text })}
@@ -696,7 +696,7 @@ export default function TeamManagementScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Typography variant="caption" color="muted">Nachname</Typography>
+                      <Typography variant="caption" color="muted">{t('adminTeam.lastName')}</Typography>
                       <Input
                         value={detailEditData.lastName}
                         onChangeText={(text) => setDetailEditData({ ...detailEditData, lastName: text })}
@@ -739,13 +739,13 @@ export default function TeamManagementScreen() {
                 </>
               ) : (
                 <>
-                  <Typography variant="caption" color="muted">E-Mail (nicht änderbar)</Typography>
+                  <Typography variant="caption" color="muted">{t('adminTeam.emailReadonly')}</Typography>
                   <Input
                     value={selectedEmployee.email}
                     editable={false}
                     containerStyle={{ marginTop: 4, marginBottom: spacing.md, opacity: 0.6 }}
                   />
-                  <Typography variant="caption" color="muted">Telefon</Typography>
+                  <Typography variant="caption" color="muted">{t('adminTeam.phone')}</Typography>
                   <Input
                     value={detailEditData.phone}
                     onChangeText={(text) => setDetailEditData({ ...detailEditData, phone: text })}
@@ -753,7 +753,7 @@ export default function TeamManagementScreen() {
                     keyboardType="phone-pad"
                     containerStyle={{ marginTop: 4, marginBottom: spacing.md }}
                   />
-                  <Typography variant="caption" color="muted">Standort</Typography>
+                  <Typography variant="caption" color="muted">{t('adminTeam.location')}</Typography>
                   <Input
                     value={detailEditData.location}
                     onChangeText={(text) => setDetailEditData({ ...detailEditData, location: text })}
@@ -776,7 +776,7 @@ export default function TeamManagementScreen() {
             <View style={styles.modalActions}>
               {!isEditingInDetail ? (
                 <Button
-                  title="Bearbeiten"
+                  title={t('common.edit')}
                   icon={Edit}
                   variant="secondary"
                   onPress={handleStartDetailEdit}
@@ -785,13 +785,13 @@ export default function TeamManagementScreen() {
               ) : (
                 <>
                   <Button
-                    title="Abbrechen"
+                    title={t('common.cancel')}
                     variant="secondary"
                     onPress={() => setIsEditingInDetail(false)}
                     style={styles.actionButton}
                   />
                   <Button
-                    title="Speichern"
+                    title={t('common.save')}
                     variant="primary"
                     onPress={handleSaveDetailEdit}
                     loading={formLoading}
@@ -805,7 +805,7 @@ export default function TeamManagementScreen() {
             {!isEditingInDetail && (
               <>
                 <Typography variant="overline" color="muted" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
-                  STUNDEN DIESEN MONAT
+                  {t('adminTeam.hoursThisMonth')}
                 </Typography>
 
                 {employeeStatsLoading ? (
@@ -819,19 +819,19 @@ export default function TeamManagementScreen() {
                           <Typography variant="h3" style={{ color: theme.primary }}>
                             {calculateEmployeeStats().netHours}:{calculateEmployeeStats().netMins.toString().padStart(2, '0')}h
                           </Typography>
-                          <Typography variant="caption" color="muted">Netto</Typography>
+                          <Typography variant="caption" color="muted">{t('adminTeam.netLabel')}</Typography>
                         </View>
                         <View style={styles.statItem}>
                           <Calendar size={16} color={theme.textSecondary} />
                           <Typography variant="h3">{calculateEmployeeStats().entriesCount}</Typography>
-                          <Typography variant="caption" color="muted">Einträge</Typography>
+                          <Typography variant="caption" color="muted">{t('adminTeam.entriesLabel')}</Typography>
                         </View>
                         <View style={styles.statItem}>
                           <Coffee size={16} color={theme.textSecondary} />
                           <Typography variant="h3">
                             {calculateEmployeeStats().breakHours}:{calculateEmployeeStats().breakMins.toString().padStart(2, '0')}h
                           </Typography>
-                          <Typography variant="caption" color="muted">Pause</Typography>
+                          <Typography variant="caption" color="muted">{t('adminTeam.breakLabel')}</Typography>
                         </View>
                       </View>
                     </View>
@@ -840,7 +840,7 @@ export default function TeamManagementScreen() {
                     {employeeTimeEntries.length > 0 && (
                       <>
                         <Typography variant="overline" color="muted" style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
-                          LETZTE EINTRÄGE
+                          {t('adminTeam.recentEntries')}
                         </Typography>
                         {employeeTimeEntries
                           .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
@@ -875,18 +875,18 @@ export default function TeamManagementScreen() {
             {!isEditingInDetail && selectedEmployee.id !== currentUser?.id && (
               <>
                 <Typography variant="overline" color="muted" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
-                  VERWALTUNG
+                  {t('adminTeam.management')}
                 </Typography>
                 <View style={styles.modalActions}>
                   <Button
-                    title={selectedEmployee.role === 'admin' ? 'Zu Mitarbeiter' : 'Zu Admin'}
+                    title={selectedEmployee.role === 'admin' ? t('adminTeam.toEmployee') : t('adminTeam.toAdmin')}
                     icon={selectedEmployee.role === 'admin' ? Shield : ShieldCheck}
                     variant="secondary"
                     onPress={() => handleToggleRole(selectedEmployee)}
                     style={styles.actionButton}
                   />
                   <Button
-                    title={(selectedEmployee.status || 'active') === 'inactive' ? 'Aktivieren' : 'Deaktivieren'}
+                    title={(selectedEmployee.status || 'active') === 'inactive' ? t('adminTeam.activate') : t('adminTeam.deactivate')}
                     icon={(selectedEmployee.status || 'active') === 'inactive' ? UserCheck : UserX}
                     variant={(selectedEmployee.status || 'active') === 'inactive' ? 'primary' : 'danger'}
                     onPress={() => handleToggleStatus(selectedEmployee)}
@@ -900,25 +900,25 @@ export default function TeamManagementScreen() {
       </Modal>
 
       {/* Add Employee Modal - Creates Invite */}
-      <Modal visible={showAddModal} onClose={() => setShowAddModal(false)} title="Mitarbeiter einladen">
+      <Modal visible={showAddModal} onClose={() => setShowAddModal(false)} title={t('adminTeam.inviteEmployee')}>
         <Typography variant="bodySmall" color="muted" style={{ marginBottom: spacing.md }}>
-          Der Mitarbeiter erhält einen Einladungslink und kann sich selbst ein Passwort setzen.
+          {t('adminTeam.inviteDescription')}
         </Typography>
         <Input
-          label="Vorname *"
-          placeholder="Vorname"
+          label={t('adminTeam.firstNameRequired')}
+          placeholder={t('adminTeam.firstName')}
           value={formData.firstName}
           onChangeText={(text) => setFormData({ ...formData, firstName: text })}
         />
         <Input
-          label="Nachname *"
-          placeholder="Nachname"
+          label={t('adminTeam.lastNameRequired')}
+          placeholder={t('adminTeam.lastName')}
           value={formData.lastName}
           onChangeText={(text) => setFormData({ ...formData, lastName: text })}
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="E-Mail *"
+          label={t('adminTeam.emailRequired')}
           placeholder="name@firma.de"
           value={formData.email}
           onChangeText={(text) => setFormData({ ...formData, email: text })}
@@ -927,7 +927,7 @@ export default function TeamManagementScreen() {
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="Telefon"
+          label={t('adminTeam.phone')}
           placeholder="+49 123 456789"
           value={formData.phone}
           onChangeText={(text) => setFormData({ ...formData, phone: text })}
@@ -935,7 +935,7 @@ export default function TeamManagementScreen() {
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="Standort"
+          label={t('adminTeam.location')}
           placeholder="Berlin"
           value={formData.location}
           onChangeText={(text) => setFormData({ ...formData, location: text })}
@@ -944,7 +944,7 @@ export default function TeamManagementScreen() {
 
         {/* Role Selection */}
         <Typography variant="label" style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
-          Rolle
+          {t('adminTeam.role')}
         </Typography>
         <View style={styles.roleSelection}>
           <TouchableOpacity
@@ -959,7 +959,7 @@ export default function TeamManagementScreen() {
               variant="body"
               style={{ color: formData.role === 'employee' ? theme.textInverse : theme.textSecondary, marginLeft: 8 }}
             >
-              Mitarbeiter
+              {t('adminTeam.employee')}
             </Typography>
           </TouchableOpacity>
           <TouchableOpacity
@@ -980,7 +980,7 @@ export default function TeamManagementScreen() {
         </View>
 
         <Button
-          title={formLoading ? 'Wird erstellt...' : 'Einladung erstellen'}
+          title={formLoading ? t('adminTeam.creating') : t('adminTeam.createInvite')}
           onPress={handleCreateEmployee}
           disabled={formLoading}
           style={{ marginTop: spacing.xl }}
@@ -988,33 +988,33 @@ export default function TeamManagementScreen() {
       </Modal>
 
       {/* Edit Employee Modal */}
-      <Modal visible={showEditModal} onClose={() => setShowEditModal(false)} title="Mitarbeiter bearbeiten">
+      <Modal visible={showEditModal} onClose={() => setShowEditModal(false)} title={t('adminTeam.editEmployee')}>
         <Input
-          label="Vorname"
+          label={t('adminTeam.firstName')}
           value={formData.firstName}
           onChangeText={(text) => setFormData({ ...formData, firstName: text })}
         />
         <Input
-          label="Nachname"
+          label={t('adminTeam.lastName')}
           value={formData.lastName}
           onChangeText={(text) => setFormData({ ...formData, lastName: text })}
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="E-Mail"
+          label={t('adminTeam.emailReadonly')}
           value={formData.email}
           editable={false}
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="Telefon"
+          label={t('adminTeam.phone')}
           value={formData.phone}
           onChangeText={(text) => setFormData({ ...formData, phone: text })}
           keyboardType="phone-pad"
           containerStyle={{ marginTop: spacing.md }}
         />
         <Input
-          label="Standort"
+          label={t('adminTeam.location')}
           value={formData.location}
           onChangeText={(text) => setFormData({ ...formData, location: text })}
           containerStyle={{ marginTop: spacing.md }}
@@ -1022,7 +1022,7 @@ export default function TeamManagementScreen() {
 
         {/* Role Selection */}
         <Typography variant="label" style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
-          Rolle
+          {t('adminTeam.role')}
         </Typography>
         <View style={styles.roleSelection}>
           <TouchableOpacity
@@ -1037,7 +1037,7 @@ export default function TeamManagementScreen() {
               variant="body"
               style={{ color: formData.role === 'employee' ? theme.textInverse : theme.textSecondary, marginLeft: 8 }}
             >
-              Mitarbeiter
+              {t('adminTeam.employee')}
             </Typography>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1058,7 +1058,7 @@ export default function TeamManagementScreen() {
         </View>
 
         <Button
-          title={formLoading ? 'Wird gespeichert...' : 'Speichern'}
+          title={formLoading ? t('adminTeam.saving') : t('common.save')}
           onPress={handleUpdateEmployee}
           disabled={formLoading}
           style={{ marginTop: spacing.xl }}
@@ -1072,7 +1072,7 @@ export default function TeamManagementScreen() {
           setShowInviteLinkModal(false);
           setCreatedInvite(null);
         }}
-        title="Einladung erstellt"
+        title={t('adminTeam.inviteCreated')}
       >
         {createdInvite && (
           <>
@@ -1081,14 +1081,12 @@ export default function TeamManagementScreen() {
                 <Link size={24} color={theme.success} />
               </View>
               <Typography variant="body" style={{ textAlign: 'center', marginTop: spacing.md }}>
-                Einladung für <Typography variant="body" style={{ fontWeight: '700' }}>
-                  {createdInvite.firstName} {createdInvite.lastName}
-                </Typography> wurde erstellt.
+                {t('adminTeam.inviteFor').replace('{name}', `${createdInvite.firstName} ${createdInvite.lastName}`)}
               </Typography>
             </View>
 
             <Card variant="default" style={styles.inviteLinkCard}>
-              <Typography variant="caption" color="muted">Einladungslink</Typography>
+              <Typography variant="caption" color="muted">{t('adminTeam.inviteLink')}</Typography>
               <Typography variant="bodySmall" style={{ marginTop: 4 }} numberOfLines={2}>
                 {getInviteLink(createdInvite.token)}
               </Typography>
@@ -1097,20 +1095,20 @@ export default function TeamManagementScreen() {
             <View style={styles.inviteInfo}>
               <Clock size={14} color={theme.textMuted} />
               <Typography variant="caption" color="muted" style={{ marginLeft: 6 }}>
-                Gültig bis {new Date(createdInvite.expiresAt).toLocaleDateString('de-DE')}
+                {t('adminTeam.validUntil').replace('{date}', new Date(createdInvite.expiresAt).toLocaleDateString('de-DE'))}
               </Typography>
             </View>
 
             <View style={styles.inviteActions}>
               <Button
-                title="Link kopieren"
+                title={t('adminTeam.copyLink')}
                 icon={Copy}
                 variant="secondary"
                 onPress={handleCopyInviteLink}
                 style={styles.actionButton}
               />
               <Button
-                title="Per E-Mail"
+                title={t('adminTeam.sendEmail')}
                 icon={Send}
                 onPress={handleShareInvite}
                 style={styles.actionButton}
@@ -1118,7 +1116,7 @@ export default function TeamManagementScreen() {
             </View>
 
             <Button
-              title="Fertig"
+              title={t('adminTeam.done')}
               variant="secondary"
               onPress={() => {
                 setShowInviteLinkModal(false);

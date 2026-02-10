@@ -112,9 +112,9 @@ export default function ChatScreen() {
 
     if (!moderation.isClean) {
       Alert.alert(
-        'Hinweis',
-        'Deine Nachricht enthält unangemessene Wörter. Diese wurden automatisch gefiltert.',
-        [{ text: 'OK' }]
+        t('chat.moderationTitle'),
+        t('chat.moderationMessage'),
+        [{ text: t('common.ok') }]
       );
     }
 
@@ -193,7 +193,7 @@ export default function ChatScreen() {
       return (
         <View style={styles.ownMessageRow}>
           <View style={styles.ownMessageMeta}>
-            <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {formatTime(item.timestamp)}</Text>
+            <Text style={[styles.messageTime, { color: theme.textMuted }]}>{t('chat.you')} · {formatTime(item.timestamp)}</Text>
           </View>
           <View style={[styles.ownMessageBubble, { backgroundColor: theme.success }]}>
             {renderMessageContent(item.content, true)}
@@ -239,8 +239,8 @@ export default function ChatScreen() {
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
           <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>CHAT</Text>
         </View>
-        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} Mitglieder</Text>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Team-Chat</Text>
+        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} {t('chat.members')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('empChat.title')}</Text>
       </View>
 
       {/* Messages */}
@@ -303,7 +303,7 @@ export default function ChatScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.mentionPickerContainer, { backgroundColor: theme.background }]}>
             <View style={styles.mentionPickerHeader}>
-              <Text style={[styles.mentionPickerTitle, { color: theme.text }]}>Person erwähnen</Text>
+              <Text style={[styles.mentionPickerTitle, { color: theme.text }]}>{t('empChat.mentionPerson')}</Text>
               <TouchableOpacity onPress={() => setShowMentionPicker(false)}>
                 <X size={24} color={theme.text} />
               </TouchableOpacity>

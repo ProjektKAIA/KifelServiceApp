@@ -48,7 +48,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>PROFIL</Text>
+          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empProfile.badge')}</Text>
         </View>
 
         {/* Avatar & Name */}
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Text style={[styles.userName, { color: theme.text }]}>{userName}</Text>
-          <Text style={[styles.userRole, { color: theme.textMuted }]}>Mitarbeiter</Text>
+          <Text style={[styles.userRole, { color: theme.textMuted }]}>{t('empProfile.roleEmployee')}</Text>
         </TouchableOpacity>
 
         {/* Info Card */}
@@ -82,13 +82,13 @@ export default function ProfileScreen() {
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <View style={styles.infoRow}>
             <Phone size={18} color={theme.textMuted} />
-            <Text style={[styles.infoText, { color: theme.text }]}>{user?.phone || 'Nicht hinterlegt'}</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>{user?.phone || t('empProfile.notProvided')}</Text>
           </View>
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
           <View style={styles.infoRow}>
             <MapPin size={18} color={theme.textMuted} />
             <Text style={[styles.infoText, { color: theme.text }]}>
-              {user?.city ? `${user.zipCode || ''} ${user.city}`.trim() : 'Nicht hinterlegt'}
+              {user?.city ? `${user.zipCode || ''} ${user.city}`.trim() : t('empProfile.notProvided')}
             </Text>
           </View>
         </View>
@@ -97,13 +97,19 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Calendar size={20} color={theme.primary} />
-            <Text style={[styles.statValue, { color: theme.text }]}>seit 2022</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {user?.startDate
+                ? `${t('empProfile.since')} ${new Date(user.startDate).getFullYear()}`
+                : `${t('empProfile.since')} ${new Date(user?.createdAt || Date.now()).getFullYear()}`}
+            </Text>
             <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empProfile.since')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Clock size={20} color={theme.primary} />
-            <Text style={[styles.statValue, { color: theme.text }]}>1.248h</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empProfile.worked')}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>
+              {user?.vacationDaysTotal != null ? `${user.vacationDaysTotal - (user.vacationDaysUsed || 0)}d` : '-'}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empDashboard.vacationDays')}</Text>
           </View>
         </View>
 
@@ -138,7 +144,7 @@ export default function ProfileScreen() {
         >
           <View style={styles.menuButtonLeft}>
             <User size={20} color={theme.textSecondary} />
-            <Text style={[styles.menuButtonText, { color: theme.text }]}>Persönliche Daten bearbeiten</Text>
+            <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('empProfile.editPersonalData')}</Text>
           </View>
           <ChevronRight size={18} color={theme.textMuted} />
         </TouchableOpacity>
@@ -211,7 +217,7 @@ export default function ProfileScreen() {
               onPress={() => setShowAppearanceModal(false)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.modalButtonText, { color: theme.text }]}>Fertig</Text>
+              <Text style={[styles.modalButtonText, { color: theme.text }]}>{t('empProfile.done')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

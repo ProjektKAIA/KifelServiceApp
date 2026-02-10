@@ -67,32 +67,32 @@ export default function ExportScreen() {
     {
       id: 'employees',
       icon: Users,
-      title: 'Mitarbeiterliste',
-      description: 'Alle Mitarbeiter mit Kontaktdaten',
+      title: t('settingsExport.employees'),
+      description: t('settingsExport.employeesDesc'),
     },
     {
       id: 'timeentries',
       icon: Clock,
-      title: 'Arbeitsstunden',
-      description: 'Zeiterfassung aller Mitarbeiter',
+      title: t('settingsExport.timeentries'),
+      description: t('settingsExport.timeentriesDesc'),
     },
     {
       id: 'shifts',
       icon: Calendar,
-      title: 'Schichtpläne',
-      description: 'Geplante Schichten und Einsätze',
+      title: t('settingsExport.shifts'),
+      description: t('settingsExport.shiftsDesc'),
     },
     {
       id: 'vacation',
       icon: Plane,
-      title: 'Urlaubsanträge',
-      description: 'Alle Urlaubs- und Abwesenheitsanträge',
+      title: t('settingsExport.vacation'),
+      description: t('settingsExport.vacationDesc'),
     },
     {
       id: 'all',
       icon: Building2,
-      title: 'Kompletter Export',
-      description: 'Alle Daten in einer Datei',
+      title: t('settingsExport.completeExport'),
+      description: t('settingsExport.completeExportDesc'),
     },
   ];
 
@@ -307,7 +307,7 @@ export default function ExportScreen() {
   // Main export function
   const handleExport = async () => {
     if (!selectedType) {
-      Alert.alert('Auswahl fehlt', 'Bitte wählen Sie aus, welche Daten exportiert werden sollen.');
+      Alert.alert(t('settingsExport.selectionMissing'), t('settingsExport.selectDataType'));
       return;
     }
 
@@ -343,7 +343,7 @@ export default function ExportScreen() {
           break;
       }
 
-      const title = selectedType === 'all' ? 'Kompletter Datenexport' : tables[0].title;
+      const title = selectedType === 'all' ? t('settingsExport.completeExportTitle') : tables[0].title;
       const fileName = `${companyName.replace(/\s+/g, '_')}_${title.replace(/\s+/g, '_')}_${timestamp}`;
 
       if (selectedFormat === 'pdf') {
@@ -355,7 +355,7 @@ export default function ExportScreen() {
 
         await Sharing.shareAsync(pdfPath, {
           mimeType: 'application/pdf',
-          dialogTitle: `${title} exportieren`,
+          dialogTitle: t('settingsExport.exportDialogTitle').replace('{title}', title),
         });
 
       } else if (selectedFormat === 'excel') {
@@ -381,7 +381,7 @@ export default function ExportScreen() {
 
         await Sharing.shareAsync(excelPath, {
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          dialogTitle: `${title} exportieren`,
+          dialogTitle: t('settingsExport.exportDialogTitle').replace('{title}', title),
         });
 
       } else if (selectedFormat === 'csv') {
@@ -398,15 +398,15 @@ export default function ExportScreen() {
 
         await Sharing.shareAsync(csvPath, {
           mimeType: 'text/csv',
-          dialogTitle: `${title} exportieren`,
+          dialogTitle: t('settingsExport.exportDialogTitle').replace('{title}', title),
         });
       }
 
-      Alert.alert('Export erfolgreich', `${title} wurde erfolgreich exportiert.`);
+      Alert.alert(t('settingsExport.exportSuccess'), t('settingsExport.exportSuccessMessage').replace('{title}', title));
 
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Fehler', 'Export konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      Alert.alert(t('common.error'), t('settingsExport.exportFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -421,13 +421,13 @@ export default function ExportScreen() {
             <ArrowLeft size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>System</Text>
+            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settingsExport.overline')}</Text>
             <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsExport.title')}</Text>
           </View>
         </View>
 
         {/* Export Type Selection */}
-        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>WAS EXPORTIEREN?</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('settingsExport.whatToExport')}</Text>
         <View style={[styles.optionsCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           {exportOptions.map((option, index) => {
             const isSelected = selectedType === option.id;
@@ -531,7 +531,7 @@ export default function ExportScreen() {
         <View style={[styles.infoCard, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
           <Download size={18} color={theme.primary} />
           <Text style={[styles.infoText, { color: theme.text }]}>
-            Der Export wird erstellt und kann dann geteilt oder gespeichert werden.
+            {t('settingsExport.exportInfo')}
           </Text>
         </View>
 
@@ -565,8 +565,8 @@ export default function ExportScreen() {
 
         {/* Footer */}
         <Text style={[styles.footerText, { color: theme.textMuted }]}>
-          Exportierte Daten sind vertraulich.{'\n'}
-          Bitte beachten Sie die Datenschutzrichtlinien.
+          {t('settingsExport.exportConfidential')}{'\n'}
+          {t('settingsExport.privacyNote')}
         </Text>
       </ScrollView>
     </View>

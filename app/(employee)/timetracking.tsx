@@ -177,11 +177,11 @@ export default function TimeTrackingScreen() {
     } else {
       // System permission denied - offer to continue without location
       Alert.alert(
-        'Standort-Berechtigung verweigert',
-        'Sie können trotzdem einstempeln, aber ohne Standorterfassung.',
+        t('timetracking.locationPermissionDenied'),
+        t('timetracking.canClockInWithout'),
         [
-          { text: 'Ohne Standort fortfahren', onPress: () => performClockIn(null) },
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('timetracking.continueWithoutLocation'), onPress: () => performClockIn(null) },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     }
@@ -191,11 +191,11 @@ export default function TimeTrackingScreen() {
     setShowPermissionModal(false);
     // User declined in our modal - offer to continue without location
     Alert.alert(
-      'Ohne Standort fortfahren?',
-      'Sie können trotzdem einstempeln, aber ohne Standorterfassung.',
+      t('timetracking.continueWithoutLocationQuestion'),
+      t('timetracking.canClockInWithout'),
       [
-        { text: 'Ohne Standort fortfahren', onPress: () => performClockIn(null) },
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('timetracking.continueWithoutLocation'), onPress: () => performClockIn(null) },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   };
@@ -295,14 +295,14 @@ export default function TimeTrackingScreen() {
       }
     }
 
-    Alert.alert('Arbeitsbeginn', `Arbeit gestartet um ${currentTime} Uhr.`);
+    Alert.alert(t('timetracking.clockInTitle'), t('timetracking.clockInMessage').replace('{time}', currentTime));
   };
 
   const handleClockOut = async () => {
-    Alert.alert('Arbeit beenden', 'Möchten Sie die Arbeit wirklich beenden?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('timetracking.clockOutTitle'), t('timetracking.clockOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Beenden',
+        text: t('timetracking.endButton'),
         style: 'destructive',
         onPress: async () => {
           // Firestore-ID vor clockOut holen (wird danach geloescht)
@@ -347,7 +347,7 @@ export default function TimeTrackingScreen() {
             }
           }
 
-          Alert.alert('Arbeitszeit erfasst', `Arbeit beendet um ${format(new Date(), 'HH:mm')} Uhr.`);
+          Alert.alert(t('timetracking.clockOutDone'), t('timetracking.clockOutMessage').replace('{time}', format(new Date(), 'HH:mm')));
         },
       },
     ]);
@@ -355,12 +355,12 @@ export default function TimeTrackingScreen() {
 
   const handleStartBreak = () => {
     startBreak();
-    Alert.alert('Pause', `Pause gestartet um ${format(new Date(), 'HH:mm')} Uhr.`);
+    Alert.alert(t('timetracking.breakStartTitle'), t('timetracking.breakStartMessage').replace('{time}', format(new Date(), 'HH:mm')));
   };
 
   const handleEndBreak = () => {
     endBreak();
-    Alert.alert('Pause beendet', `Pause beendet um ${format(new Date(), 'HH:mm')} Uhr.`);
+    Alert.alert(t('timetracking.breakEndTitle'), t('timetracking.breakEndMessage').replace('{time}', format(new Date(), 'HH:mm')));
   };
 
   // Get start time for display
@@ -394,7 +394,7 @@ export default function TimeTrackingScreen() {
             <View style={styles.workingHeader}>
               <View style={[styles.statusDot, { backgroundColor: isOnBreak ? theme.warning : theme.success }]} />
               <Typography variant="label" style={{ color: theme.text }}>
-                {isOnBreak ? 'Pause läuft' : 'Arbeit läuft'}
+                {isOnBreak ? t('timetracking.breakRunning') : t('timetracking.workRunning')}
               </Typography>
             </View>
 
@@ -405,7 +405,7 @@ export default function TimeTrackingScreen() {
                   <Timer size={20} color={theme.success} />
                 </View>
                 <Text style={[styles.timerText, { color: theme.text }]}>{displayTime}</Text>
-                <Typography variant="caption" color="muted">Arbeitszeit</Typography>
+                <Typography variant="caption" color="muted">{t('timetracking.workTime')}</Typography>
               </View>
 
               {/* Startzeit */}
@@ -414,7 +414,7 @@ export default function TimeTrackingScreen() {
                   <Play size={20} color={theme.primary} />
                 </View>
                 <Text style={[styles.timerText, { color: theme.text }]}>{getStartTimeDisplay()}</Text>
-                <Typography variant="caption" color="muted">Gestartet</Typography>
+                <Typography variant="caption" color="muted">{t('timetracking.started')}</Typography>
               </View>
 
               {/* Pausenzeit */}
@@ -423,7 +423,7 @@ export default function TimeTrackingScreen() {
                   <Coffee size={20} color={theme.warning} />
                 </View>
                 <Text style={[styles.timerText, { color: isOnBreak ? theme.warning : theme.text }]}>{breakTime}</Text>
-                <Typography variant="caption" color="muted">Pause</Typography>
+                <Typography variant="caption" color="muted">{t('timetracking.breakLabel')}</Typography>
               </View>
             </View>
           </Card>
@@ -447,7 +447,7 @@ export default function TimeTrackingScreen() {
             <View style={styles.locationRow}>
               <LoadingSpinner size="small" />
               <Typography variant="caption" color="muted">
-                Standort wird ermittelt...
+                {t('timetracking.locating')}
               </Typography>
             </View>
           </Card>
@@ -501,14 +501,14 @@ export default function TimeTrackingScreen() {
 
         {/* Action Buttons - State-based flow */}
         <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          AKTIONEN
+          {t('timetracking.actions')}
         </Typography>
 
         {/* State: Not Working - Show Arbeitsbeginn */}
         {!isWorking && (
           <View style={styles.actionContainer}>
             <Button
-              title={isLocationLoading ? 'Standort wird ermittelt...' : t('timetracking.startWork')}
+              title={isLocationLoading ? t('timetracking.locating') : t('timetracking.startWork')}
               icon={Play}
               onPress={handleClockIn}
               fullWidth
@@ -516,7 +516,7 @@ export default function TimeTrackingScreen() {
               style={{ ...styles.primaryActionButton, backgroundColor: theme.success }}
             />
             <Typography variant="caption" color="muted" style={styles.actionHint}>
-              Tippen Sie, um Ihre Arbeitszeit zu starten
+              {t('timetracking.tapToStart')}
             </Typography>
           </View>
         )}
@@ -561,14 +561,14 @@ export default function TimeTrackingScreen() {
               style={styles.secondaryActionButton}
             />
             <Typography variant="caption" color="muted" style={styles.actionHint}>
-              Pause beenden und weiterarbeiten
+              {t('timetracking.endBreakHint')}
             </Typography>
           </View>
         )}
 
         {/* Stats */}
         <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-          ÜBERSICHT
+          {t('timetracking.overviewSection')}
         </Typography>
         <StatsGrid stats={stats} />
       </ScrollView>

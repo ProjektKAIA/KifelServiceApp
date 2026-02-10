@@ -105,25 +105,25 @@ interface EmployeeLocationStats {
   gpsPointsCount: number;
 }
 
-const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
-  { key: 'day', label: 'Tag' },
-  { key: 'week', label: 'Woche' },
-  { key: 'month', label: 'Monat' },
-  { key: 'quarter', label: 'Quartal' },
-  { key: 'halfyear', label: 'Halbjahr' },
-  { key: 'year', label: 'Jahr' },
-];
-
-const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
-  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
-  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
-  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
-];
-
 export default function AdminReportsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+
+  const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = useMemo(() => [
+    { key: 'day', label: t('reports.periodDay') },
+    { key: 'week', label: t('reports.periodWeek') },
+    { key: 'month', label: t('reports.periodMonth') },
+    { key: 'quarter', label: t('reports.periodQuarter') },
+    { key: 'halfyear', label: t('reports.periodHalfYear') },
+    { key: 'year', label: t('reports.periodYear') },
+  ], [t]);
+
+  const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = useMemo(() => [
+    { key: 'pdf', label: 'PDF', icon: FileText, description: t('reports.exportPdfDesc') },
+    { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: t('reports.exportExcelDesc') },
+    { key: 'csv', label: 'CSV', icon: FileText, description: t('reports.exportCsvDesc') },
+  ], [t]);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('stunden');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
@@ -212,7 +212,7 @@ export default function AdminReportsScreen() {
         return `Q${q} ${format(start, 'yyyy')}`;
       case 'halfyear':
         const h = start.getMonth() < 6 ? '1' : '2';
-        return `${h}. Halbjahr ${format(start, 'yyyy')}`;
+        return `${h}. ${t('reports.halfYearLabel')} ${format(start, 'yyyy')}`;
       case 'year':
         return format(start, 'yyyy');
     }
@@ -579,7 +579,7 @@ export default function AdminReportsScreen() {
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <View style={[styles.badge, { backgroundColor: theme.pillSecondary }]}>
-              <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>AUSWERTUNG</Text>
+              <Text style={[styles.badgeText, { color: theme.pillSecondaryText }]}>{t('reports.evaluation')}</Text>
             </View>
             <Text style={[styles.headerSmall, { color: theme.textMuted }]}>
               {activeTab === 'stunden' ? t('adminReports.workHours') : t('adminReports.gpsTracking')}
@@ -688,7 +688,7 @@ export default function AdminReportsScreen() {
         {activeTab === 'stunden' && (
           <>
             {/* Employee Filter */}
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FILTER</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('reports.filter')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.employeeFilter}>
               <TouchableOpacity
                 style={[
@@ -707,7 +707,7 @@ export default function AdminReportsScreen() {
                     { color: !selectedEmployeeId ? theme.textInverse : theme.textSecondary },
                   ]}
                 >
-                  Alle
+                  {t('reports.all')}
                 </Text>
               </TouchableOpacity>
               {employees.map((emp) => (
@@ -740,7 +740,7 @@ export default function AdminReportsScreen() {
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIconRow}>
                     <Clock size={16} color={theme.primary} />
-                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Netto-Stunden</Text>
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('reports.netHours')}</Text>
                   </View>
                   <Text style={[styles.summaryValue, { color: theme.primary }]}>
                     {formatHoursMinutes(Math.floor(totals.totalMinutes / 60), totals.totalMinutes % 60)} h
@@ -749,7 +749,7 @@ export default function AdminReportsScreen() {
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIconRow}>
                     <TrendingUp size={16} color={theme.textSecondary} />
-                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Einträge</Text>
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('reports.entries')}</Text>
                   </View>
                   <Text style={[styles.summaryValue, { color: theme.text }]}>{totals.entriesCount}</Text>
                 </View>
@@ -757,7 +757,7 @@ export default function AdminReportsScreen() {
               <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
-                  Pause gesamt: {Math.floor(totals.breakMinutes / 60)}:{(totals.breakMinutes % 60).toString().padStart(2, '0')} h
+                  {t('reports.totalBreak')}: {Math.floor(totals.breakMinutes / 60)}:{(totals.breakMinutes % 60).toString().padStart(2, '0')} h
                 </Text>
               </View>
               {/* Soll/Differenz Summary */}
@@ -796,11 +796,11 @@ export default function AdminReportsScreen() {
             </View>
 
             {/* Employee Stats */}
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MITARBEITER</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('reports.employeesSection')}</Text>
 
             {employeeStats.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-                <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Einträge im gewählten Zeitraum</Text>
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>{t('reports.noEntriesInPeriod')}</Text>
               </View>
             ) : (
               employeeStats.map((stats) => (
@@ -819,7 +819,7 @@ export default function AdminReportsScreen() {
                     <View style={styles.statsInfo}>
                       <Text style={[styles.statsName, { color: theme.text }]}>{stats.userName}</Text>
                       <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
-                        {stats.entriesCount} {stats.entriesCount === 1 ? 'Eintrag' : 'Einträge'}
+                        {stats.entriesCount} {stats.entriesCount === 1 ? t('reports.entry') : t('reports.entries')}
                       </Text>
                     </View>
                     <View style={styles.statsHours}>
@@ -832,19 +832,19 @@ export default function AdminReportsScreen() {
                   </View>
                   <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
                     <View style={styles.statsDetailItem}>
-                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Brutto</Text>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>{t('reports.gross')}</Text>
                       <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
                         {formatHoursMinutes(stats.totalHours, stats.totalMinutes)} h
                       </Text>
                     </View>
                     <View style={styles.statsDetailItem}>
-                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Pause</Text>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>{t('reports.break')}</Text>
                       <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
                         {Math.floor(stats.breakMinutes / 60)}:{(stats.breakMinutes % 60).toString().padStart(2, '0')} h
                       </Text>
                     </View>
                     <View style={styles.statsDetailItem}>
-                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Netto</Text>
+                      <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>{t('reports.net')}</Text>
                       <Text style={[styles.statsDetailValue, { color: theme.primary, fontWeight: '700' }]}>
                         {formatHoursMinutes(stats.netHours, stats.netMinutes)} h
                       </Text>
@@ -886,12 +886,12 @@ export default function AdminReportsScreen() {
         {activeTab === 'standort' && (
           <>
             {/* Location Filter */}
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>FILTER</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('reports.filter')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.employeeFilter}>
               {([
-                { key: 'alle' as const, label: 'Alle', icon: Users },
-                { key: 'aussen' as const, label: 'Außen', icon: Navigation },
-                { key: 'innen' as const, label: 'Innen', icon: Home },
+                { key: 'alle' as const, label: t('reports.all'), icon: Users },
+                { key: 'aussen' as const, label: t('adminReports.outside'), icon: Navigation },
+                { key: 'innen' as const, label: t('adminReports.inside'), icon: Home },
               ]).map((opt) => (
                 <TouchableOpacity
                   key={opt.key}
@@ -923,7 +923,7 @@ export default function AdminReportsScreen() {
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIconRow}>
                     <Navigation size={16} color={theme.primary} />
-                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Außen-MA</Text>
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('adminReports.fieldEmployees')}</Text>
                   </View>
                   <Text style={[styles.summaryValue, { color: theme.primary }]}>
                     {locationSummary.fieldCount}
@@ -932,7 +932,7 @@ export default function AdminReportsScreen() {
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIconRow}>
                     <Route size={16} color={theme.textSecondary} />
-                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>GPS-Punkte</Text>
+                    <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('adminReports.gpsPoints')}</Text>
                   </View>
                   <Text style={[styles.summaryValue, { color: theme.text }]}>
                     {locationSummary.totalGpsPoints}
@@ -942,14 +942,12 @@ export default function AdminReportsScreen() {
             </View>
 
             {/* Employee Location List */}
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MITARBEITER</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('reports.employeesSection')}</Text>
 
             {employeeLocationStats.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
                 <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-                  Keine Mitarbeiter mit{' '}
-                  {locationFilter === 'aussen' ? 'Außen-' : locationFilter === 'innen' ? 'Innen-' : ''}
-                  Einträgen im gewählten Zeitraum
+                  {t('reports.noEntriesInPeriod')}
                 </Text>
               </View>
             ) : (
@@ -983,12 +981,12 @@ export default function AdminReportsScreen() {
                               { color: stats.isField ? theme.pillSuccessText : theme.pillInfoText },
                             ]}
                           >
-                            {stats.isField ? 'Außen' : 'Innen'}
+                            {stats.isField ? t('adminReports.outside') : t('adminReports.inside')}
                           </Text>
                         </View>
                       </View>
                       <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
-                        {stats.totalEntries} {stats.totalEntries === 1 ? 'Eintrag' : 'Einträge'}
+                        {stats.totalEntries} {stats.totalEntries === 1 ? t('reports.entry') : t('reports.entries')}
                         {stats.isField ? ` · ${formatDistance(stats.totalDistance)}` : ''}
                       </Text>
                     </View>
@@ -999,7 +997,7 @@ export default function AdminReportsScreen() {
                   {stats.isField && (
                     <View style={[styles.statsDetails, { borderTopColor: theme.borderLight }]}>
                       <View style={styles.statsDetailItem}>
-                        <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>Außen</Text>
+                        <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>{t('adminReports.outside')}</Text>
                         <Text style={[styles.statsDetailValue, { color: theme.success }]}>
                           {stats.fieldEntries.length}
                         </Text>
@@ -1141,7 +1139,7 @@ export default function AdminReportsScreen() {
                     <Text style={[styles.detailStatValue, { color: theme.primary }]}>
                       {formatHoursMinutes(detailEmployee.stats.netHours, detailEmployee.stats.netMinutes)}h
                     </Text>
-                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>Netto</Text>
+                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>{t('reports.net')}</Text>
                   </View>
                   <View style={styles.detailStatItem}>
                     <Calendar size={18} color={theme.textSecondary} />
@@ -1155,7 +1153,7 @@ export default function AdminReportsScreen() {
                     <Text style={[styles.detailStatValue, { color: theme.text }]}>
                       {Math.floor(detailEmployee.stats.breakMinutes / 60)}:{(detailEmployee.stats.breakMinutes % 60).toString().padStart(2, '0')}h
                     </Text>
-                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>Pause</Text>
+                    <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>{t('reports.break')}</Text>
                   </View>
                 </View>
               </View>
@@ -1228,11 +1226,11 @@ export default function AdminReportsScreen() {
                             <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>{formatted.clockOut}</Text>
                           </View>
                           <View style={styles.detailEntryTimeItem}>
-                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Pause</Text>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>{t('reports.break')}</Text>
                             <Text style={[styles.detailEntryTimeValue, { color: theme.text }]}>{formatted.breakMins} min</Text>
                           </View>
                           <View style={styles.detailEntryTimeItem}>
-                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>Brutto</Text>
+                            <Text style={[styles.detailEntryTimeLabel, { color: theme.textMuted }]}>{t('reports.gross')}</Text>
                             <Text style={[styles.detailEntryTimeValue, { color: theme.textSecondary }]}>
                               {formatHoursMinutes(formatted.grossHours, formatted.grossMins)}h
                             </Text>

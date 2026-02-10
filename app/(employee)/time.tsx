@@ -56,7 +56,7 @@ export default function TimeTrackingScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLocationError('Standortberechtigung nicht erteilt');
+        setLocationError(t('empTime.locationDenied'));
         return null;
       }
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -78,7 +78,7 @@ export default function TimeTrackingScreen() {
       updateLocation(locationData);
       return locationData;
     } catch {
-      setLocationError('Standort konnte nicht ermittelt werden');
+      setLocationError(t('empTime.locationFetchError'));
       return null;
     } finally {
       setLocationLoading(false);
@@ -88,17 +88,17 @@ export default function TimeTrackingScreen() {
   const handleClockIn = async () => {
     const location = await getCurrentLocation();
     if (!location) {
-      Alert.alert('Fehler', 'Standort erforderlich für Arbeitsbeginn.');
+      Alert.alert(t('common.error'), t('empTime.locationRequired'));
       return;
     }
     if (user) clockIn(user.id, location);
   };
 
   const handleClockOut = async () => {
-    Alert.alert('Arbeitsende', 'Möchten Sie Ihre Arbeitszeit jetzt beenden?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('empTime.clockOutTitle'), t('empTime.clockOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Beenden',
+        text: t('empTime.endButton'),
         style: 'destructive',
         onPress: async () => {
           const location = await getCurrentLocation();
@@ -139,11 +139,11 @@ export default function TimeTrackingScreen() {
       <View style={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>ZEITERFASSUNG</Text>
+          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empTime.badge')}</Text>
         </View>
 
         {/* Header */}
-        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>GPS-gestützt</Text>
+        <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('empTime.gpsSupported')}</Text>
         <Text style={[styles.headerLarge, { color: theme.text }]}>{t('empTime.title')}</Text>
 
         {/* Big Time Display */}
@@ -154,9 +154,9 @@ export default function TimeTrackingScreen() {
           <View style={[styles.gpsDot, { backgroundColor: hasLocation ? theme.success : theme.danger }]} />
           <Text style={[styles.gpsText, { color: hasLocation ? theme.statusActive : theme.statusInactive }]}>
             {isLocationLoading
-              ? 'Standort wird ermittelt...'
+              ? t('empTime.locating')
               : hasLocation
-              ? `${t('empTime.gpsActive')} · Standort erkannt`
+              ? `${t('empTime.gpsActive')} · ${t('empTime.locationDetected')}`
               : locationError || t('empTime.gpsInactive')}
           </Text>
         </View>
@@ -171,13 +171,13 @@ export default function TimeTrackingScreen() {
             },
           ]}
         >
-          <Text style={[styles.workLabel, { color: theme.textMuted }]}>Heutige Arbeitszeit</Text>
+          <Text style={[styles.workLabel, { color: theme.textMuted }]}>{t('empTime.todayWorkTime')}</Text>
           <Text style={[styles.workTime, { color: theme.text }]}>{formatTime(elapsedSeconds)}</Text>
           {isTracking && (
             <View style={[styles.statusPill, { backgroundColor: theme.pillSuccess }]}>
               <View style={[styles.statusDot, { backgroundColor: theme.pillSuccessText }]} />
               <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>
-                Aktiv seit {formatStartTime()}
+                {t('empTime.activeSince').replace('{time}', formatStartTime())}
               </Text>
             </View>
           )}
@@ -199,15 +199,15 @@ export default function TimeTrackingScreen() {
         <View style={[styles.locationCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
           <View style={styles.locationHeader}>
             <MapPin size={18} color={theme.textSecondary} />
-            <Text style={[styles.locationTitle, { color: theme.text }]}>Aktueller Standort</Text>
+            <Text style={[styles.locationTitle, { color: theme.text }]}>{t('empTime.currentLocation')}</Text>
           </View>
           <Text style={[styles.locationAddress, { color: theme.textMuted }]}>
-            {currentLocation?.address || 'Standort wird ermittelt...'}
+            {currentLocation?.address || t('empTime.locating')}
           </Text>
           {hasLocation && (
             <View style={styles.locationStatus}>
               <CheckCircle size={14} color={theme.statusActive} />
-              <Text style={[styles.locationStatusText, { color: theme.statusActive }]}>Im Einsatzgebiet</Text>
+              <Text style={[styles.locationStatusText, { color: theme.statusActive }]}>{t('empTime.inServiceArea')}</Text>
             </View>
           )}
         </View>

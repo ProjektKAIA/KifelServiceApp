@@ -47,23 +47,25 @@ interface DisplayShift extends Shift {
 
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
-const viewModeLabels: Record<ViewMode, string> = {
-  day: 'Tag',
-  week: 'Woche',
-  month: 'Monat',
-  year: 'Jahr',
-};
-
-const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
-  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
-  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
-  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
-];
-
 export default function ScheduleManagementScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+
+  // Constants that need t() - moved inside component
+  const viewModeLabels: Record<ViewMode, string> = {
+    day: t('adminSchedules.viewDay'),
+    week: t('adminSchedules.viewWeek'),
+    month: t('adminSchedules.viewMonth'),
+    year: t('adminSchedules.viewYear'),
+  };
+
+  const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
+    { key: 'pdf', label: 'PDF', icon: FileText, description: t('adminSchedules.exportPdfDesc') },
+    { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: t('adminSchedules.exportExcelDesc') },
+    { key: 'csv', label: 'CSV', icon: FileText, description: t('adminSchedules.exportCsvDesc') },
+  ];
+
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   // Store date as ISO string to prevent reference comparison issues
   const [currentDateStr, setCurrentDateStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -155,7 +157,7 @@ export default function ScheduleManagementScreen() {
         const employee = employeesData.find(e => e.id === shift.userId);
         return {
           ...shift,
-          employeeName: employee ? `${employee.firstName} ${employee.lastName}` : (shift.employeeName || 'Unbekannt'),
+          employeeName: employee ? `${employee.firstName} ${employee.lastName}` : (shift.employeeName || t('adminSchedules.unknown')),
         };
       });
 
@@ -261,7 +263,7 @@ export default function ScheduleManagementScreen() {
     try {
       // Determine location name: from selected location or freetext
       const selectedLoc = savedLocations.find(l => l.id === selectedLocationId);
-      const locationName = selectedLoc ? selectedLoc.name : (location || 'Büro');
+      const locationName = selectedLoc ? selectedLoc.name : (location || t('adminSchedules.defaultLocation'));
 
       const newShift: Omit<Shift, 'id'> = {
         userId: selectedEmployeeId,
@@ -346,12 +348,12 @@ export default function ScheduleManagementScreen() {
           setSelectedImportUserId(matchingEmployee.id);
         }
       } else {
-        setImportError(importResult.error || 'Unbekannter Fehler');
-        Alert.alert('Import-Fehler', importResult.error || 'Die Datei konnte nicht gelesen werden.');
+        setImportError(importResult.error || t('adminSchedules.importUnknownError'));
+        Alert.alert(t('adminSchedules.importError'), importResult.error || t('adminSchedules.importFileError'));
       }
     } catch (error) {
       console.error('File pick error:', error);
-      Alert.alert('Fehler', 'Datei konnte nicht geöffnet werden.');
+      Alert.alert(t('common.error'), t('adminSchedules.importOpenError'));
     } finally {
       setIsImporting(false);
     }
@@ -359,7 +361,7 @@ export default function ScheduleManagementScreen() {
 
   const handleConfirmImport = async () => {
     if (!importData || !selectedImportUserId) {
-      Alert.alert('Fehler', 'Bitte wählen Sie einen Mitarbeiter aus.');
+      Alert.alert(t('common.error'), t('adminSchedules.importSelectEmployee'));
       return;
     }
 
@@ -380,7 +382,7 @@ export default function ScheduleManagementScreen() {
             date: shift.date,
             startTime: shift.startTime,
             endTime: shift.endTime,
-            location: shift.client ? `${shift.client}${shift.address ? ' - ' + shift.address : ''}` : shift.address || 'Importiert',
+            location: shift.client ? `${shift.client}${shift.address ? ' - ' + shift.address : ''}` : shift.address || t('adminSchedules.importImported'),
             status: 'scheduled',
           };
           await shiftsCollection.create(newShift);
@@ -396,13 +398,13 @@ export default function ScheduleManagementScreen() {
       loadData();
 
       if (errorCount === 0) {
-        Alert.alert('Import erfolgreich', `${successCount} Schichten wurden importiert.`);
+        Alert.alert(t('adminSchedules.importSuccess'), t('adminSchedules.importSuccessMessage').replace('{count}', String(successCount)));
       } else {
-        Alert.alert('Import abgeschlossen', `${successCount} importiert, ${errorCount} fehlgeschlagen.`);
+        Alert.alert(t('adminSchedules.importPartial'), t('adminSchedules.importPartialMessage').replace('{success}', String(successCount)).replace('{errors}', String(errorCount)));
       }
     } catch (error) {
       console.error('Import error:', error);
-      Alert.alert('Fehler', 'Import konnte nicht abgeschlossen werden.');
+      Alert.alert(t('common.error'), t('adminSchedules.importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -431,7 +433,7 @@ export default function ScheduleManagementScreen() {
       });
 
       await exportSchedule(format, {
-        title: 'Dienstplan',
+        title: t('adminSchedules.exportSchedule'),
         periodLabel: getNavigationLabel(),
         shifts: exportData,
         generatedAt: new Date(),
@@ -439,7 +441,7 @@ export default function ScheduleManagementScreen() {
       });
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Fehler', 'Export konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('adminSchedules.exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -460,7 +462,7 @@ export default function ScheduleManagementScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <ScreenHeader overline="VERWALTUNG" title={t('adminSchedules.title')} />
+            <ScreenHeader overline={t('adminSchedules.overline')} title={t('adminSchedules.title')} />
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity
@@ -575,11 +577,11 @@ export default function ScheduleManagementScreen() {
                   </View>
                   <View style={styles.monthStats}>
                     <Typography variant="h3" style={{ color: theme.primary }}>{monthShifts.length}</Typography>
-                    <Typography variant="caption" color="muted">Schichten</Typography>
+                    <Typography variant="caption" color="muted">{t('adminSchedules.shifts')}</Typography>
                   </View>
                   {totalHours > 0 && (
                     <Typography variant="caption" color="muted">
-                      {Math.round(totalHours)} Stunden
+                      {Math.round(totalHours)} {t('adminSchedules.hours')}
                     </Typography>
                   )}
                 </TouchableOpacity>
@@ -643,7 +645,7 @@ export default function ScheduleManagementScreen() {
                   ) : (
                     viewMode !== 'month' && (
                       <Card style={styles.emptyCard}>
-                        <Typography variant="caption" color="muted">Keine Schichten geplant</Typography>
+                        <Typography variant="caption" color="muted">{t('adminSchedules.noShifts')}</Typography>
                       </Card>
                     )
                   )}
@@ -654,15 +656,15 @@ export default function ScheduleManagementScreen() {
             {/* Month summary */}
             {viewMode === 'month' && shifts.length > 0 && (
               <View style={[styles.monthSummary, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-                <Typography variant="overline" color="muted">ZUSAMMENFASSUNG</Typography>
+                <Typography variant="overline" color="muted">{t('adminSchedules.summary')}</Typography>
                 <View style={styles.summaryRow}>
-                  <Typography variant="body">{shifts.length} Schichten</Typography>
+                  <Typography variant="body">{shifts.length} {t('adminSchedules.shifts')}</Typography>
                   <Typography variant="body" color="muted">
                     {Math.round(shifts.reduce((sum, s) => {
                       const [startH, startM] = s.startTime.split(':').map(Number);
                       const [endH, endM] = s.endTime.split(':').map(Number);
                       return sum + (endH + endM / 60) - (startH + startM / 60);
-                    }, 0))} Stunden
+                    }, 0))} {t('adminSchedules.hours')}
                   </Typography>
                 </View>
               </View>
@@ -675,10 +677,10 @@ export default function ScheduleManagementScreen() {
       <Modal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Schicht hinzufügen"
+        title={t('adminSchedules.addShift')}
         subtitle={selectedDate ? format(selectedDate, 'EEEE, d. MMMM yyyy', { locale: de }) : ''}
       >
-        <Typography variant="overline" color="muted" style={styles.modalLabel}>MITARBEITER AUSWÄHLEN</Typography>
+        <Typography variant="overline" color="muted" style={styles.modalLabel}>{t('adminSchedules.selectEmployeeSection')}</Typography>
         {employees.map((emp) => (
           <TouchableOpacity
             key={emp.id}
@@ -698,14 +700,14 @@ export default function ScheduleManagementScreen() {
 
         {employees.length === 0 && (
           <Typography variant="caption" color="muted" style={{ textAlign: 'center', marginVertical: spacing.md }}>
-            Keine Mitarbeiter vorhanden
+            {t('adminSchedules.noEmployees')}
           </Typography>
         )}
 
-        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>ZEIT</Typography>
+        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>{t('adminSchedules.timeSection')}</Typography>
         <View style={styles.timeRow}>
           <View style={styles.timeInput}>
-            <Typography variant="caption" color="muted">Von</Typography>
+            <Typography variant="caption" color="muted">{t('adminSchedules.timeFrom')}</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={startTime}
@@ -715,7 +717,7 @@ export default function ScheduleManagementScreen() {
             />
           </View>
           <View style={styles.timeInput}>
-            <Typography variant="caption" color="muted">Bis</Typography>
+            <Typography variant="caption" color="muted">{t('adminSchedules.timeTo')}</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={endTime}
@@ -772,7 +774,7 @@ export default function ScheduleManagementScreen() {
             setLocation(text);
             if (text) setSelectedLocationId(null);
           }}
-          placeholder={savedLocations.length > 0 ? t('adminSchedules.locationFreetext') : 'z.B. Büro, Baustelle Nord'}
+          placeholder={savedLocations.length > 0 ? t('adminSchedules.locationFreetext') : t('adminSchedules.locationPlaceholder')}
           placeholderTextColor={theme.textMuted}
           editable={!selectedLocationId}
         />
@@ -782,7 +784,7 @@ export default function ScheduleManagementScreen() {
           onPress={handleAddShift}
           disabled={!selectedEmployeeId}
         >
-          <Typography variant="label" style={{ color: theme.textInverse }}>Schicht hinzufügen</Typography>
+          <Typography variant="label" style={{ color: theme.textInverse }}>{t('adminSchedules.addShift')}</Typography>
         </TouchableOpacity>
       </Modal>
 
@@ -790,7 +792,7 @@ export default function ScheduleManagementScreen() {
       <Modal
         visible={showImportModal}
         onClose={() => { setShowImportModal(false); setImportData(null); }}
-        title="Dienstplan importieren"
+        title={t('adminSchedules.importTitle')}
         subtitle={importData ? `${importData.employee.firstName} ${importData.employee.lastName}` : ''}
       >
         {importData && (
@@ -800,16 +802,16 @@ export default function ScheduleManagementScreen() {
               <View style={styles.importSummaryRow}>
                 <FileSpreadsheet size={20} color={theme.primary} />
                 <View style={styles.importSummaryText}>
-                  <Typography variant="label">{importData.shifts.length} Schichten</Typography>
+                  <Typography variant="label">{importData.shifts.length} {t('adminSchedules.shifts')}</Typography>
                   <Typography variant="caption" color="muted">
-                    {importData.totalHours} Std. | {importData.workDays} Tage
+                    {importData.totalHours} {t('adminSchedules.hoursShort')} | {importData.workDays} {t('adminSchedules.days')}
                   </Typography>
                 </View>
               </View>
               <Typography variant="caption" color="muted" style={styles.importPeriod}>
                 {importData.periodStart && importData.periodEnd
                   ? `${format(parseISO(importData.periodStart), 'd. MMM', { locale: de })} - ${format(parseISO(importData.periodEnd), 'd. MMM yyyy', { locale: de })}`
-                  : 'Zeitraum unbekannt'}
+                  : t('adminSchedules.importPeriodUnknown')}
               </Typography>
             </View>
 
@@ -825,7 +827,7 @@ export default function ScheduleManagementScreen() {
 
             {/* Employee Selection */}
             <Typography variant="overline" color="muted" style={styles.modalLabel}>
-              MITARBEITER ZUORDNEN
+              {t('adminSchedules.importAssign')}
             </Typography>
             <ScrollView style={styles.employeeList} nestedScrollEnabled>
               {employees.map((emp) => (
@@ -859,7 +861,7 @@ export default function ScheduleManagementScreen() {
 
             {/* Preview */}
             <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.md }}>
-              VORSCHAU (ERSTE 3)
+              {t('adminSchedules.importPreview')}
             </Typography>
             {importData.shifts.slice(0, 3).map((shift, idx) => (
               <View key={idx} style={[styles.previewShift, { borderColor: theme.border }]}>
@@ -891,7 +893,7 @@ export default function ScheduleManagementScreen() {
                 <ActivityIndicator size="small" color={theme.textInverse} />
               ) : (
                 <Typography variant="label" style={{ color: theme.textInverse }}>
-                  {importData.shifts.length} Schichten importieren
+                  {t('adminSchedules.importShiftsButton').replace('{count}', String(importData.shifts.length))}
                 </Typography>
               )}
             </TouchableOpacity>
@@ -903,7 +905,7 @@ export default function ScheduleManagementScreen() {
       <Modal
         visible={showExportModal}
         onClose={() => setShowExportModal(false)}
-        title="Export-Format wählen"
+        title={t('adminSchedules.exportTitle')}
         subtitle={getNavigationLabel()}
       >
         {EXPORT_OPTIONS.map((option) => (
@@ -927,7 +929,7 @@ export default function ScheduleManagementScreen() {
           <View style={[styles.emptyExport, { backgroundColor: theme.pillWarning }]}>
             <AlertCircle size={16} color={theme.warning} />
             <Typography variant="caption" style={{ flex: 1, marginLeft: 8 }}>
-              Keine Schichten im gewählten Zeitraum vorhanden
+              {t('adminSchedules.noShiftsInPeriod')}
             </Typography>
           </View>
         )}

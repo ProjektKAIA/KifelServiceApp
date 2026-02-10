@@ -2,9 +2,10 @@
 
 import { Tabs } from 'expo-router';
 import { Home, Calendar, Clock, MessageCircle, User, BarChart2 } from 'lucide-react-native';
-import { useTheme, useFeatures } from '@/src/hooks';
+import { useTheme, useFeatures, useTranslation } from '@/src/hooks';
 
 export default function EmployeeLayout() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const { scheduleEnabled, timeTrackingEnabled, chatEnabled } = useFeatures();
 
@@ -43,7 +44,7 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="schedule"
         options={{
-          title: 'Plan',
+          title: t('tabs.plan'),
           tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
           href: scheduleEnabled ? undefined : null,
         }}
@@ -51,7 +52,7 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="time"
         options={{
-          title: 'Zeit',
+          title: t('tabs.time'),
           tabBarIcon: ({ color, size }) => <Clock size={size} color={color} />,
           href: timeTrackingEnabled ? undefined : null,
         }}
@@ -67,14 +68,14 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Stunden',
+          title: t('tabs.hours'),
           tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />

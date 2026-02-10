@@ -104,12 +104,12 @@ export default function ProfileScreen() {
 
   const pickImage = async (type: 'avatar' | 'logo') => {
     if (!ImagePicker) {
-      Alert.alert('Nicht verfügbar', 'Bildauswahl ist in dieser Umgebung nicht verfügbar.');
+      Alert.alert(t('settingsProfile.imageNotAvailable'), t('settingsProfile.imageNotAvailableMessage'));
       return;
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+      Alert.alert(t('settingsProfile.permissionRequired'), t('settingsProfile.photoPermission'));
       return;
     }
 
@@ -224,7 +224,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.avatarHint, { color: theme.textMuted }]}>
-          Tippen zum Ändern
+          {t('settingsProfile.tapToChange')}
         </Text>
       </View>
 
@@ -273,9 +273,9 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>ADRESSE</Text>
+        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>{t('settingsProfile.addressSection')}</Text>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Straße & Hausnummer</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.streetAndNumber')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
           value={street}
@@ -286,7 +286,7 @@ export default function ProfileScreen() {
 
         <View style={styles.formRow}>
           <View style={[styles.formHalf, { flex: 0.35 }]}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>PLZ</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.zipCode')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={zipCode}
@@ -298,7 +298,7 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={[styles.formHalf, { flex: 0.65 }]}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Stadt</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.city')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={city}
@@ -347,7 +347,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.avatarHint, { color: theme.textMuted }]}>
-          Firmenlogo hochladen
+          {t('settingsProfile.uploadLogo')}
         </Text>
       </View>
 
@@ -365,7 +365,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>KONTAKT</Text>
+        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>{t('settingsProfile.contactSection')}</Text>
 
         <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.phone')}</Text>
         <View style={styles.inputWithIcon}>
@@ -407,7 +407,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>ADRESSE</Text>
+        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>{t('settingsProfile.addressSection')}</Text>
 
         <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.companyAddress')}</Text>
         <TextInput
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
 
         <View style={styles.formRow}>
           <View style={[styles.formHalf, { flex: 0.35 }]}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>PLZ</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.zipCode')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={companyZipCode}
@@ -432,7 +432,7 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={[styles.formHalf, { flex: 0.65 }]}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Stadt</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.city')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
               value={companyCity}
@@ -443,9 +443,9 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>RECHTLICHES</Text>
+        <Text style={[styles.sectionDivider, { color: theme.textMuted }]}>{t('settingsProfile.legalSection')}</Text>
 
-        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Steuernummer / USt-IdNr.</Text>
+        <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsProfile.taxId')}</Text>
         <View style={styles.inputWithIcon}>
           <FileText size={18} color={theme.textMuted} style={styles.inputIcon} />
           <TextInput
@@ -500,7 +500,7 @@ export default function ProfileScreen() {
               <ArrowLeft size={24} color={theme.text} />
             </TouchableOpacity>
             <View style={styles.headerText}>
-              <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Verwaltung</Text>
+              <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settingsProfile.overline')}</Text>
               <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsProfile.title')}</Text>
             </View>
           </View>

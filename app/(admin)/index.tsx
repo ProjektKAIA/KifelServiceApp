@@ -33,38 +33,15 @@ export default function AdminDashboardScreen() {
     const hour = new Date().getHours();
     const random = Math.random();
 
-    // Frühmorgens (5-9)
-    if (hour >= 5 && hour < 9) {
-      const greetings = ['Moin Chef!', 'Guten Morgen!', 'Moin Moin!', 'Früh dran heute!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
+    let key: string;
+    if (hour >= 5 && hour < 9) key = 'adminDashboard.greetingsEarlyMorning';
+    else if (hour >= 9 && hour < 11) key = 'adminDashboard.greetingsMorning';
+    else if (hour >= 11 && hour < 14) key = 'adminDashboard.greetingsNoon';
+    else if (hour >= 14 && hour < 17) key = 'adminDashboard.greetingsAfternoon';
+    else if (hour >= 17 && hour < 21) key = 'adminDashboard.greetingsEvening';
+    else key = 'adminDashboard.greetingsNight';
 
-    // Vormittag (9-11)
-    if (hour >= 9 && hour < 11) {
-      const greetings = ['Guten Morgen!', 'Moin!', 'Na, alles im Griff?', 'Schönen Vormittag!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    // Mittag (11-14)
-    if (hour >= 11 && hour < 14) {
-      const greetings = ['Mahlzeit!', 'Guten Mittag!', 'Mahlzeit Chef!', 'Schon Hunger?'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    // Nachmittag (14-17)
-    if (hour >= 14 && hour < 17) {
-      const greetings = ['Moin!', 'Na, wie läuft\'s?', 'Hallo!', 'Alles klar?'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    // Abend (17-21)
-    if (hour >= 17 && hour < 21) {
-      const greetings = ['Guten Abend!', 'N\'Abend!', 'Nabend!', 'Noch fleißig?'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    // Spät (21-5)
-    const greetings = ['Noch wach?', 'N\'Abend!', 'Nachtschicht?', 'Hallo Nachteule!'];
+    const greetings = t(key as any).split('|');
     return greetings[Math.floor(random * greetings.length)];
   }
 
@@ -98,7 +75,7 @@ export default function AdminDashboardScreen() {
         const employee = employees.find(e => e.id === req.userId);
         return {
           ...req,
-          employeeName: employee ? `${employee.firstName} ${employee.lastName.charAt(0)}.` : 'Unbekannt',
+          employeeName: employee ? `${employee.firstName} ${employee.lastName.charAt(0)}.` : t('adminDashboard.unknown'),
         };
       });
 
@@ -109,7 +86,7 @@ export default function AdminDashboardScreen() {
         adminNotificationsCollection.deleteOld(30).catch(() => {});
       }
     } catch (error) {
-      toast.loadError('Dashboard-Daten');
+      toast.loadError(t('adminDashboard.dashboardData'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -130,10 +107,10 @@ export default function AdminDashboardScreen() {
 
     try {
       await vacationRequestsCollection.updateStatus(requestId, 'approved', user.id);
-      toast.success('Antrag wurde genehmigt');
+      toast.success(t('adminDashboard.requestApproved'));
       loadData();
     } catch (error) {
-      toast.error(error, 'Genehmigung fehlgeschlagen');
+      toast.error(error, t('adminDashboard.approvalFailed'));
     }
   };
 
@@ -141,20 +118,20 @@ export default function AdminDashboardScreen() {
     if (!user) return;
 
     Alert.alert(
-      'Antrag ablehnen',
-      'Möchten Sie diesen Antrag wirklich ablehnen?',
+      t('adminDashboard.rejectRequest'),
+      t('adminDashboard.rejectConfirm'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Ablehnen',
+          text: t('adminRequests.reject'),
           style: 'destructive',
           onPress: async () => {
             try {
               await vacationRequestsCollection.updateStatus(requestId, 'rejected', user.id);
-              toast.success('Antrag wurde abgelehnt');
+              toast.success(t('adminDashboard.requestRejected'));
               loadData();
             } catch (error) {
-              toast.error(error, 'Ablehnung fehlgeschlagen');
+              toast.error(error, t('adminDashboard.rejectionFailed'));
             }
           },
         },
@@ -174,9 +151,9 @@ export default function AdminDashboardScreen() {
 
   const getRequestTypeLabel = (type: VacationRequest['type']) => {
     switch (type) {
-      case 'vacation': return 'Urlaub';
-      case 'sick': return 'Krankmeldung';
-      case 'other': return 'Sonstiges';
+      case 'vacation': return t('empVacation.typeVacation');
+      case 'sick': return t('empVacation.typeSick');
+      case 'other': return t('empVacation.typeOther');
       default: return type;
     }
   };
@@ -187,7 +164,7 @@ export default function AdminDashboardScreen() {
       await adminNotificationsCollection.markAsRead(notificationId, user.id);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (error) {
-      toast.error(error, 'Fehler beim Markieren');
+      toast.error(error, t('adminDashboard.markReadError'));
     }
   };
 
@@ -196,9 +173,9 @@ export default function AdminDashboardScreen() {
     try {
       await adminNotificationsCollection.markAllAsRead(user.id);
       setNotifications([]);
-      toast.success('Alle als gelesen markiert');
+      toast.success(t('adminDashboard.allMarkedRead'));
     } catch (error) {
-      toast.error(error, 'Fehler');
+      toast.error(error, t('common.error'));
     }
   };
 
@@ -211,10 +188,10 @@ export default function AdminDashboardScreen() {
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-      if (diffMins < 1) return 'gerade eben';
-      if (diffMins < 60) return `vor ${diffMins} Min.`;
-      if (diffHours < 24) return `vor ${diffHours} Std.`;
-      if (diffDays < 7) return `vor ${diffDays} Tagen`;
+      if (diffMins < 1) return t('adminDashboard.justNow');
+      if (diffMins < 60) return t('adminDashboard.minutesAgo').replace('{count}', String(diffMins));
+      if (diffHours < 24) return t('adminDashboard.hoursAgo').replace('{count}', String(diffHours));
+      if (diffDays < 7) return t('adminDashboard.daysAgo').replace('{count}', String(diffDays));
       return format(date, 'd. MMM', { locale: de });
     } catch {
       return dateString;
@@ -262,25 +239,25 @@ export default function AdminDashboardScreen() {
           backgroundColor: theme.pillSecondary,
           borderColor: theme.secondary
         }]}>
-          <Text style={[styles.statusLabel, { color: theme.textMuted }]}>Live-Status</Text>
+          <Text style={[styles.statusLabel, { color: theme.textMuted }]}>{t('adminDashboard.liveStatus')}</Text>
 
           <View style={styles.statusRow}>
-            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Mitarbeiter gesamt</Text>
+            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>{t('adminDashboard.totalEmployees')}</Text>
             <Text style={[styles.statusItemValue, { color: theme.text }]}>{stats.totalEmployees}</Text>
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Aktiv arbeitend</Text>
+            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>{t('adminDashboard.activeWorking')}</Text>
             <Text style={[styles.statusItemValue, { color: theme.statusActive }]}>{stats.activeToday}</Text>
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Krank gemeldet</Text>
+            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>{t('adminDashboard.reportedSick')}</Text>
             <Text style={[styles.statusItemValue, { color: theme.statusPending }]}>{stats.sick}</Text>
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>Im Urlaub</Text>
+            <Text style={[styles.statusItemLabel, { color: theme.textSecondary }]}>{t('adminDashboard.onVacation')}</Text>
             <Text style={[styles.statusItemValue, { color: theme.primary }]}>{stats.onVacation}</Text>
           </View>
         </View>
@@ -290,10 +267,10 @@ export default function AdminDashboardScreen() {
           <>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>
-                BENACHRICHTIGUNGEN ({notifications.length})
+                {t('adminDashboard.notifications')} ({notifications.length})
               </Text>
               <TouchableOpacity onPress={handleMarkAllNotificationsAsRead}>
-                <Text style={[styles.markAllText, { color: theme.primary }]}>Alle gelesen</Text>
+                <Text style={[styles.markAllText, { color: theme.primary }]}>{t('adminDashboard.markAllRead')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -323,7 +300,7 @@ export default function AdminDashboardScreen() {
                       ))}
                       {Object.keys(notification.changes).length > 2 && (
                         <Text style={[styles.changeText, { color: theme.textMuted }]}>
-                          +{Object.keys(notification.changes).length - 2} weitere
+                          {t('adminDashboard.moreChanges').replace('{count}', String(Object.keys(notification.changes).length - 2))}
                         </Text>
                       )}
                     </View>
@@ -338,7 +315,7 @@ export default function AdminDashboardScreen() {
 
             {notifications.length > 3 && (
               <Text style={[styles.moreNotifications, { color: theme.textMuted }]}>
-                +{notifications.length - 3} weitere Benachrichtigungen
+                {t('adminDashboard.moreNotifications').replace('{count}', String(notifications.length - 3))}
               </Text>
             )}
           </>
@@ -353,7 +330,7 @@ export default function AdminDashboardScreen() {
           activeOpacity={0.7}
         >
           <Calendar size={20} color={theme.textSecondary} />
-          <Text style={[styles.menuButtonText, { color: theme.text }]}>Dienstplan bearbeiten</Text>
+          <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('adminDashboard.editSchedule')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -362,12 +339,12 @@ export default function AdminDashboardScreen() {
           activeOpacity={0.7}
         >
           <Users size={20} color={theme.textSecondary} />
-          <Text style={[styles.menuButtonText, { color: theme.text }]}>Mitarbeiter verwalten</Text>
+          <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('adminDashboard.manageEmployees')}</Text>
         </TouchableOpacity>
 
         {/* Open Requests */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>
-          OFFENE ANTRÄGE ({openRequests.length})
+          {t('adminDashboard.openRequestsSection')} ({openRequests.length})
         </Text>
 
         {openRequests.length === 0 ? (
@@ -385,7 +362,7 @@ export default function AdminDashboardScreen() {
                   {request.employeeName} – {getRequestTypeLabel(request.type)}
                 </Text>
                 <Text style={[styles.requestDate, { color: theme.textMuted }]}>
-                  {formatDateRange(request.startDate, request.endDate)} ({request.days} Tage)
+                  {formatDateRange(request.startDate, request.endDate)} ({request.days} {t('adminDashboard.days')})
                 </Text>
                 {request.reason && (
                   <Text style={[styles.requestReason, { color: theme.textSecondary }]} numberOfLines={1}>

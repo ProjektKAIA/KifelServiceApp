@@ -32,41 +32,22 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    let key: string;
+    if (hour >= 5 && hour < 9) key = 'empDashboard.greetingsEarlyMorning';
+    else if (hour >= 9 && hour < 12) key = 'empDashboard.greetingsMorning';
+    else if (hour >= 12 && hour < 14) key = 'empDashboard.greetingsNoon';
+    else if (hour >= 14 && hour < 18) key = 'empDashboard.greetingsAfternoon';
+    else if (hour >= 18 && hour < 22) key = 'empDashboard.greetingsEvening';
+    else key = 'empDashboard.greetingsNight';
+
+    const greetings = t(key as any).split('|');
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  };
+
   const greeting = getGreeting();
   const userName = user?.firstName || '';
-
-  function getGreeting(): string {
-    const hour = new Date().getHours();
-    const random = Math.random();
-
-    if (hour >= 5 && hour < 9) {
-      const greetings = ['Moin!', 'Guten Morgen!', 'Moin Moin!', 'Morgen!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    if (hour >= 9 && hour < 11) {
-      const greetings = ['Guten Morgen!', 'Moin!', 'Morgen!', 'Schönen Vormittag!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    if (hour >= 11 && hour < 14) {
-      const greetings = ['Mahlzeit!', 'Guten Mittag!', 'Moin!', 'Mahlzeit!', 'Guten Appetit!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    if (hour >= 14 && hour < 17) {
-      const greetings = ['Moin!', 'Guten Tag!', 'Hallo!', 'Na, wie läuft\'s?'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    if (hour >= 17 && hour < 21) {
-      const greetings = ['Guten Abend!', 'N\'Abend!', 'Nabend!', 'Schönen Feierabend!'];
-      return greetings[Math.floor(random * greetings.length)];
-    }
-
-    const greetings = ['Gute Nacht!', 'N\'Abend!', 'Noch wach?', 'Hallo Nachteule!'];
-    return greetings[Math.floor(random * greetings.length)];
-  }
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -130,7 +111,7 @@ export default function DashboardScreen() {
         <View style={styles.headerRow}>
           <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
           <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>MITARBEITER</Text>
+            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empDashboard.employeeBadge')}</Text>
           </View>
         </View>
         <Text style={[styles.userName, { color: theme.textMuted }]}>{userName}</Text>
@@ -143,32 +124,32 @@ export default function DashboardScreen() {
           }]}>
             <View style={styles.shiftHeader}>
               <View>
-                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>Heutige Schicht</Text>
+                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>{t('empDashboard.todayShift')}</Text>
                 <Text style={[styles.shiftTime, { color: theme.text }]}>{formatShiftTime(todayShift)}</Text>
               </View>
               <View style={[styles.statusPill, { backgroundColor: isTracking ? theme.pillSuccess : theme.pillWarning }]}>
                 <View style={[styles.statusDot, { backgroundColor: isTracking ? theme.pillSuccessText : theme.pillWarningText }]} />
                 <Text style={[styles.statusText, { color: isTracking ? theme.pillSuccessText : theme.pillWarningText }]}>
-                  {isTracking ? 'Aktiv' : 'Geplant'}
+                  {isTracking ? t('empDashboard.active') : t('empDashboard.planned')}
                 </Text>
               </View>
             </View>
             <View style={styles.locationRow}>
               <MapPin size={14} color={theme.textMuted} />
-              <Text style={[styles.locationText, { color: theme.textMuted }]}>{todayShift.location || 'Kein Standort'}</Text>
+              <Text style={[styles.locationText, { color: theme.textMuted }]}>{todayShift.location || t('empDashboard.noLocation')}</Text>
             </View>
           </View>
         ) : (
           <View style={[styles.shiftCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <View style={styles.shiftHeader}>
               <View>
-                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>Heute</Text>
-                <Text style={[styles.shiftTime, { color: theme.text }]}>Keine Schicht</Text>
+                <Text style={[styles.shiftLabel, { color: theme.textMuted }]}>{t('empDashboard.today')}</Text>
+                <Text style={[styles.shiftTime, { color: theme.text }]}>{t('empDashboard.noShift')}</Text>
               </View>
               {isTracking && (
                 <View style={[styles.statusPill, { backgroundColor: theme.pillSuccess }]}>
                   <View style={[styles.statusDot, { backgroundColor: theme.pillSuccessText }]} />
-                  <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>Aktiv</Text>
+                  <Text style={[styles.statusText, { color: theme.pillSuccessText }]}>{t('empDashboard.active')}</Text>
                 </View>
               )}
             </View>
@@ -181,13 +162,13 @@ export default function DashboardScreen() {
             <Text style={[styles.statValue, { color: theme.text }]}>
               {isLoading ? '–' : Math.round(stats.hoursThisMonth)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Stunden / Monat</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empDashboard.hoursPerMonth')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
             <Text style={[styles.statValue, { color: theme.text }]}>
               {isLoading ? '–' : stats.remainingVacationDays}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Resturlaub</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>{t('empDashboard.remainingVacation')}</Text>
           </View>
         </View>
 
@@ -201,7 +182,7 @@ export default function DashboardScreen() {
             activeOpacity={0.8}
           >
             <Clock size={18} color={theme.textInverse} />
-            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>Zeit</Text>
+            <Text style={[styles.actionButtonText, { color: theme.textInverse }]}>{t('tabs.time')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -210,7 +191,7 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
           >
             <Calendar size={18} color={theme.textSecondary} />
-            <Text style={[styles.actionButtonText, { color: theme.text }]}>Plan</Text>
+            <Text style={[styles.actionButtonText, { color: theme.text }]}>{t('tabs.plan')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

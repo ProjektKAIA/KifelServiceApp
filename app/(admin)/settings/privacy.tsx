@@ -127,7 +127,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
             <ArrowLeft size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Rechtliches</Text>
+            <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settingsPrivacy.legal')}</Text>
             <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsPrivacy.title')}</Text>
           </View>
         </View>
@@ -135,7 +135,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
         {/* Last Updated */}
         <View style={[styles.updateBadge, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
           <Text style={[styles.updateText, { color: theme.text }]}>
-            Stand: {LAST_UPDATED}
+            {t('settingsPrivacy.asOf')}: {LAST_UPDATED}
           </Text>
         </View>
 
@@ -169,7 +169,7 @@ Zur Ausübung Ihrer Rechte wenden Sie sich an: ${DATA_PROTECTION_OFFICER}`,
             {DATA_PROTECTION_OFFICER}
           </Text>
           <Text style={[styles.footerVersion, { color: theme.textMuted }]}>
-            Version 1.0 | Gültig ab {LAST_UPDATED}
+            {t('settingsPrivacy.versionLabel')} 1.0 | {t('settingsPrivacy.validSince')} {LAST_UPDATED}
           </Text>
         </View>
       </ScrollView>

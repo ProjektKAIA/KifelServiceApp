@@ -49,7 +49,7 @@ export default function VacationScreen() {
       setRemainingDays(userStats.remainingVacationDays);
       setUsedDays(userStats.usedVacationDays);
     } catch (error) {
-      toast.loadError('Urlaubsdaten');
+      toast.loadError(t('empVacation.vacationData'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -113,14 +113,14 @@ export default function VacationScreen() {
 
   const handleSubmitRequest = async () => {
     if (!user?.id || !startDate || !endDate) {
-      Alert.alert(t('common.error'), 'Bitte Start- und Enddatum angeben.');
+      Alert.alert(t('common.error'), t('empVacation.dateRequired'));
       return;
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-      Alert.alert(t('common.error'), 'Bitte Datum im Format JJJJ-MM-TT eingeben (z.B. 2025-01-15).');
+      Alert.alert(t('common.error'), t('empVacation.dateFormatError'));
       return;
     }
 
@@ -129,7 +129,7 @@ export default function VacationScreen() {
       const end = parseISO(endDate);
 
       if (end < start) {
-        Alert.alert(t('common.error'), 'Das Enddatum muss nach dem Startdatum liegen.');
+        Alert.alert(t('common.error'), t('empVacation.endBeforeStart'));
         return;
       }
 
@@ -148,10 +148,10 @@ export default function VacationScreen() {
 
       setShowNewRequestModal(false);
       resetForm();
-      toast.success('Antrag wurde eingereicht');
+      toast.success(t('empVacation.requestSubmitted'));
       loadData();
     } catch (error) {
-      toast.error(error, 'Antrag fehlgeschlagen');
+      toast.error(error, t('empVacation.requestFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -177,7 +177,7 @@ export default function VacationScreen() {
       >
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>ABWESENHEIT</Text>
+          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>{t('empVacation.badge')}</Text>
         </View>
 
         {/* Header */}
@@ -217,7 +217,7 @@ export default function VacationScreen() {
             onPress={() => openNewRequest('sick')}
           >
             <AlertCircle size={18} color={theme.danger} />
-            <Text style={[styles.actionButtonText, { color: theme.danger }]}>Krank</Text>
+            <Text style={[styles.actionButtonText, { color: theme.danger }]}>{t('empVacation.sick')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -242,7 +242,7 @@ export default function VacationScreen() {
                     {formatDateRange(request.startDate, request.endDate)}
                   </Text>
                   <Text style={[styles.requestType, { color: theme.textMuted }]}>
-                    {getTypeLabel(request.type)} · {request.days} {request.days === 1 ? 'Tag' : 'Tage'}
+                    {getTypeLabel(request.type)} · {request.days} {request.days === 1 ? t('empVacation.day') : t('empVacation.days')}
                   </Text>
                 </View>
                 <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
@@ -259,13 +259,13 @@ export default function VacationScreen() {
       <Modal
         visible={showNewRequestModal}
         onClose={() => setShowNewRequestModal(false)}
-        title={requestType === 'vacation' ? 'Urlaub beantragen' : 'Krankmeldung'}
+        title={requestType === 'vacation' ? t('empVacation.requestVacation') : t('empVacation.sickReport')}
       >
-        <Typography variant="overline" color="muted" style={styles.modalLabel}>ZEITRAUM</Typography>
+        <Typography variant="overline" color="muted" style={styles.modalLabel}>{t('empVacation.periodSection')}</Typography>
 
         <View style={styles.dateRow}>
           <View style={styles.dateInput}>
-            <Typography variant="caption" color="muted">{t('empVacation.from')} (JJJJ-MM-TT)</Typography>
+            <Typography variant="caption" color="muted">{t('empVacation.from')} ({t('empVacation.dateFormatLabel')})</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={startDate}
@@ -275,7 +275,7 @@ export default function VacationScreen() {
             />
           </View>
           <View style={styles.dateInput}>
-            <Typography variant="caption" color="muted">{t('empVacation.to')} (JJJJ-MM-TT)</Typography>
+            <Typography variant="caption" color="muted">{t('empVacation.to')} ({t('empVacation.dateFormatLabel')})</Typography>
             <TextInput
               style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
               value={endDate}
@@ -286,7 +286,7 @@ export default function VacationScreen() {
           </View>
         </View>
 
-        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>GRUND (OPTIONAL)</Typography>
+        <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>{t('empVacation.reasonSection')}</Typography>
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
           value={reason}
@@ -303,7 +303,7 @@ export default function VacationScreen() {
           disabled={isSubmitting}
         >
           <Typography variant="label" style={{ color: theme.textInverse }}>
-            {isSubmitting ? 'Wird eingereicht...' : t('empVacation.submitRequest')}
+            {isSubmitting ? t('empVacation.submitting') : t('empVacation.submitRequest')}
           </Typography>
         </TouchableOpacity>
       </Modal>

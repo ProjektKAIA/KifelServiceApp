@@ -29,8 +29,6 @@ export default function RootLayout() {
   // Offline-Services initialisieren
   useEffect(() => {
     if (isFeatureEnabled('offlineMode')) {
-      console.log('[App] Initializing offline services');
-
       // Network-Listener starten
       initNetworkListener();
 
@@ -39,12 +37,10 @@ export default function RootLayout() {
 
       // Callback setzen fuer automatische Sync bei Netzwerkwiederkehr
       setSyncCallback(() => {
-        console.log('[App] Network restored - processing sync queue');
         processSyncQueue();
       });
 
       return () => {
-        console.log('[App] Cleaning up offline services');
         cleanupNetworkListener();
       };
     }
@@ -53,8 +49,6 @@ export default function RootLayout() {
   // Push-Notification-Service initialisieren
   useEffect(() => {
     if (isFeatureEnabled('pushNotifications') && isAuthenticated && user?.id) {
-      console.log('[App] Initializing push notification service');
-
       const initializeNotifications = async () => {
         await useNotificationStore.getState().initialize(user.id);
       };
@@ -62,7 +56,6 @@ export default function RootLayout() {
       initializeNotifications();
 
       return () => {
-        console.log('[App] Cleaning up push notification service');
         pushNotificationService.cleanup();
       };
     }
@@ -80,13 +73,6 @@ export default function RootLayout() {
     const inEmployeeGroup = currentSegment === '(employee)';
     const inAdminGroup = currentSegment === '(admin)';
 
-    console.log('🧭 Navigation check:', {
-      isAuthenticated,
-      role: user?.role,
-      currentSegment,
-      isLoading
-    });
-
     if (isAuthenticated && user) {
       // Eingeloggt - zur richtigen Gruppe navigieren
       const shouldBeInAdmin = user.role === 'admin';
@@ -94,16 +80,13 @@ export default function RootLayout() {
 
       // Wenn in falscher Gruppe oder noch in public/auth
       if (shouldBeInAdmin && !inAdminGroup) {
-        console.log('🧭 Navigating to admin');
         router.replace('/(admin)');
       } else if (shouldBeInEmployee && !inEmployeeGroup) {
-        console.log('🧭 Navigating to employee');
         router.replace('/(employee)');
       }
     } else {
       // Nicht eingeloggt - zum öffentlichen Bereich
       if (inEmployeeGroup || inAdminGroup) {
-        console.log('🧭 Navigating to public (not authenticated)');
         router.replace('/(public)');
       }
     }
@@ -114,7 +97,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         {/* Offline-Indikator am oberen Bildschirmrand */}
         {isFeatureEnabled('offlineMode') && <OfflineIndicatorWrapper />}
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
           <Stack.Screen name="(public)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(employee)" />

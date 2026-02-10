@@ -112,8 +112,8 @@ export default function InviteScreen() {
       await invitesCollection.accept(token, uid);
 
       Alert.alert(
-        'Willkommen!',
-        `Hallo ${invite.firstName}, dein Konto wurde erfolgreich erstellt. Du kannst dich jetzt anmelden.`,
+        t('invite.welcomeTitle'),
+        t('invite.welcomeMessage').replace('{name}', invite.firstName),
         [
           {
             text: t('invite.goToLogin'),
@@ -126,11 +126,11 @@ export default function InviteScreen() {
       let message = t('invite.registrationFailed');
 
       if (error.code === 'auth/email-already-in-use') {
-        message = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.';
+        message = t('invite.emailInUse');
       } else if (error.code === 'auth/weak-password') {
-        message = 'Das Passwort ist zu schwach. Bitte wähle ein stärkeres Passwort.';
+        message = t('invite.weakPassword');
       } else if (error.code === 'auth/invalid-email') {
-        message = 'Ungültige E-Mail-Adresse.';
+        message = t('invite.invalidEmail');
       }
 
       Alert.alert(t('common.error'), message);
@@ -142,7 +142,7 @@ export default function InviteScreen() {
   // Loading state
   if (status === 'loading') {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Text style={[styles.loadingText, { color: theme.textMuted }]}>
           {t('invite.loading')}
@@ -183,7 +183,7 @@ export default function InviteScreen() {
     const Icon = errorContent.icon;
 
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <View style={styles.errorContainer}>
           <View style={[styles.errorIcon, { backgroundColor: errorContent.color + '20' }]}>
             <Icon size={48} color={errorContent.color} />
@@ -207,7 +207,7 @@ export default function InviteScreen() {
             onPress={() => router.replace('/(public)')}
           >
             <Text style={[styles.secondaryButtonText, { color: theme.text }]}>
-              Zur Startseite
+              {t('invite.goHome')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -217,7 +217,7 @@ export default function InviteScreen() {
 
   // Valid invite - show registration form
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -246,7 +246,7 @@ export default function InviteScreen() {
 
           {/* User Info Card */}
           <View style={[styles.infoCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>DEINE DATEN</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('invite.yourData')}</Text>
 
             <View style={styles.infoRow}>
               <User size={18} color={theme.textMuted} />
@@ -274,8 +274,8 @@ export default function InviteScreen() {
                 <View style={styles.infoRow}>
                   <Shield size={18} color={theme.secondary} />
                   <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Rolle</Text>
-                    <Text style={[styles.infoValue, { color: theme.secondary }]}>Administrator</Text>
+                    <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{t('invite.role')}</Text>
+                    <Text style={[styles.infoValue, { color: theme.secondary }]}>{t('invite.administrator')}</Text>
                   </View>
                 </View>
               </>
@@ -284,7 +284,7 @@ export default function InviteScreen() {
 
           {/* Password Form */}
           <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PASSWORT ERSTELLEN</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('invite.createPasswordSection')}</Text>
 
             <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('invite.password')}</Text>
             <View style={styles.passwordInput}>
@@ -329,7 +329,7 @@ export default function InviteScreen() {
 
           {/* Info text */}
           <Text style={[styles.infoText, { color: theme.textMuted }]}>
-            Mit der Registrierung akzeptierst du die Nutzungsbedingungen und Datenschutzrichtlinien.
+            {t('invite.termsNote')}
           </Text>
 
           {/* Submit Button */}

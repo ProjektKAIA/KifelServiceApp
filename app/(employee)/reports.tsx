@@ -64,26 +64,26 @@ interface DayEntry {
   netMinutes: number;
 }
 
-const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
-  { key: 'day', label: 'Tag' },
-  { key: 'week', label: 'Woche' },
-  { key: 'month', label: 'Monat' },
-  { key: 'quarter', label: 'Quartal' },
-  { key: 'halfyear', label: 'Halbjahr' },
-  { key: 'year', label: 'Jahr' },
-];
-
-const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
-  { key: 'pdf', label: 'PDF', icon: FileText, description: 'Formatierter Bericht zum Drucken' },
-  { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: 'Bearbeitbare Tabelle (.xlsx)' },
-  { key: 'csv', label: 'CSV', icon: FileText, description: 'Einfache Textdatei für Import' },
-];
-
 export default function EmployeeReportsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
+
+  const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = [
+    { key: 'day', label: t('reports.periodDay') },
+    { key: 'week', label: t('reports.periodWeek') },
+    { key: 'month', label: t('reports.periodMonth') },
+    { key: 'quarter', label: t('reports.periodQuarter') },
+    { key: 'halfyear', label: t('reports.periodHalfYear') },
+    { key: 'year', label: t('reports.periodYear') },
+  ];
+
+  const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
+    { key: 'pdf', label: 'PDF', icon: FileText, description: t('reports.exportPdfDesc') },
+    { key: 'excel', label: 'Excel', icon: FileSpreadsheet, description: t('reports.exportExcelDesc') },
+    { key: 'csv', label: 'CSV', icon: FileText, description: t('reports.exportCsvDesc') },
+  ];
 
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -158,11 +158,11 @@ export default function EmployeeReportsScreen() {
         return `Q${q} ${format(start, 'yyyy')}`;
       case 'halfyear':
         const h = start.getMonth() < 6 ? '1' : '2';
-        return `${h}. Halbjahr ${format(start, 'yyyy')}`;
+        return `${h}. ${t('reports.halfYearLabel')} ${format(start, 'yyyy')}`;
       case 'year':
         return format(start, 'yyyy');
     }
-  }, [currentDate, periodType, getDateRange]);
+  }, [currentDate, periodType, getDateRange, t]);
 
   // Calculate hours from time entry
   const calculateHours = (entry: TimeEntry): { grossMinutes: number; breakMinutes: number } => {
@@ -230,12 +230,12 @@ export default function EmployeeReportsScreen() {
 
       setDayEntries(dayStats);
     } catch (error) {
-      toast.loadError('Arbeitsstunden');
+      toast.loadError(t('adminReports.hoursReportTitle'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user?.id, currentDate, periodType, getDateRange]);
+  }, [user?.id, currentDate, periodType, getDateRange, t]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -258,7 +258,7 @@ export default function EmployeeReportsScreen() {
       const totalNet = dayEntries.reduce((sum, d) => sum + d.netMinutes, 0);
       const totalEntriesCount = dayEntries.reduce((sum, d) => sum + d.entries.length, 0);
 
-      const employeeName = user ? `${user.firstName} ${user.lastName}` : 'Mitarbeiter';
+      const employeeName = user ? `${user.firstName} ${user.lastName}` : t('adminReports.employee');
 
       const exportData: ExportEmployeeData[] = [{
         name: employeeName,
@@ -271,7 +271,7 @@ export default function EmployeeReportsScreen() {
       }];
 
       await exportReport(formatType, {
-        title: `Arbeitsstunden — ${employeeName}`,
+        title: `${t('adminReports.hoursReportTitle')} — ${employeeName}`,
         periodLabel: getPeriodLabel(),
         employees: exportData,
         generatedAt: new Date(),
@@ -431,7 +431,7 @@ export default function EmployeeReportsScreen() {
           <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
-              Pause gesamt: {formatHoursMinutes(totals.breakMinutes)} h
+              {t('reports.break')} gesamt: {formatHoursMinutes(totals.breakMinutes)} h
             </Text>
             {totals.daysWorked > 0 && (
               <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
@@ -489,7 +489,7 @@ export default function EmployeeReportsScreen() {
 
         {dayEntries.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>Keine Einträge im gewählten Zeitraum</Text>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>{t('reports.noEntriesInPeriod')}</Text>
           </View>
         ) : (
           dayEntries.map((day) => (
@@ -503,7 +503,7 @@ export default function EmployeeReportsScreen() {
                   <Text style={[styles.dayHoursValue, { color: theme.primary }]}>
                     {formatHoursMinutes(day.netMinutes)}
                   </Text>
-                  <Text style={[styles.dayHoursLabel, { color: theme.textMuted }]}>Stunden</Text>
+                  <Text style={[styles.dayHoursLabel, { color: theme.textMuted }]}>{t('tabs.hours')}</Text>
                 </View>
               </View>
 
@@ -526,13 +526,13 @@ export default function EmployeeReportsScreen() {
                       </Text>
                       <Text style={[styles.entryTimeSeparator, { color: theme.textMuted }]}>–</Text>
                       <Text style={[styles.entryTime, { color: theme.textSecondary }]}>
-                        {entry.clockOut ? formatTime(entry.clockOut) : 'läuft'}
+                        {entry.clockOut ? formatTime(entry.clockOut) : t('reports.running')}
                       </Text>
                     </View>
                     <View style={styles.entryStats}>
                       {entry.breakMinutes > 0 && (
                         <Text style={[styles.entryBreak, { color: theme.textMuted }]}>
-                          -{entry.breakMinutes} min Pause
+                          -{entry.breakMinutes} {t('reports.minBreak')}
                         </Text>
                       )}
                       <Text style={[styles.entryHours, { color: theme.text }]}>
@@ -546,13 +546,13 @@ export default function EmployeeReportsScreen() {
               {/* Day summary */}
               <View style={[styles.daySummary, { backgroundColor: theme.surface }]}>
                 <Text style={[styles.daySummaryLabel, { color: theme.textMuted }]}>
-                  Brutto: {formatHoursMinutes(day.totalMinutes)} h
+                  {t('reports.gross')}: {formatHoursMinutes(day.totalMinutes)} h
                 </Text>
                 <Text style={[styles.daySummaryLabel, { color: theme.textMuted }]}>
-                  Pause: {formatHoursMinutes(day.breakMinutes)} h
+                  {t('reports.break')}: {formatHoursMinutes(day.breakMinutes)} h
                 </Text>
                 <Text style={[styles.daySummaryValue, { color: theme.primary }]}>
-                  Netto: {formatHoursMinutes(day.netMinutes)} h
+                  {t('reports.net')}: {formatHoursMinutes(day.netMinutes)} h
                 </Text>
                 {!checkBreakCompliance(day.totalMinutes, day.breakMinutes).isCompliant && (
                   <View style={[styles.breakWarningBadge, { backgroundColor: theme.warning + '20' }]}>

@@ -49,9 +49,9 @@ export default function SupportScreen() {
 ${message}
 
 ---
-Gesendet von: ${user?.firstName} ${user?.lastName}
+${t('settingsSupport.sentFrom')}: ${user?.firstName} ${user?.lastName}
 Email: ${user?.email}
-Rolle: ${user?.role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
+${t('settingsSupport.role')}: ${user?.role === 'admin' ? t('settingsSupport.administrator') : t('settingsSupport.employee')}
 App Version: 1.0.0
     `.trim();
 
@@ -64,13 +64,13 @@ App Version: 1.0.0
         // Clear form after opening mail app
         setSubject('');
         setMessage('');
-        Alert.alert('Email-App geöffnet', 'Bitte senden Sie die Email über Ihre Mail-App.');
+        Alert.alert(t('settingsSupport.emailOpened'), t('settingsSupport.emailOpenedMessage'));
       } else {
         Alert.alert(
-          'Keine Email-App',
-          `Bitte senden Sie Ihre Anfrage direkt an:\n${SUPPORT_EMAIL}`,
+          t('settingsSupport.noEmailApp'),
+          t('settingsSupport.noEmailAppMessage').replace('{email}', SUPPORT_EMAIL),
           [
-            { text: 'Email kopieren', onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`) },
+            { text: t('settingsSupport.copyEmail'), onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`) },
             { text: 'OK' },
           ]
         );
@@ -110,7 +110,7 @@ App Version: 1.0.0
               <ArrowLeft size={24} color={theme.text} />
             </TouchableOpacity>
             <View style={styles.headerText}>
-              <Text style={[styles.headerSmall, { color: theme.textMuted }]}>Hilfe</Text>
+              <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settingsSupport.overline')}</Text>
               <Text style={[styles.headerLarge, { color: theme.text }]}>{t('settingsSupport.title')}</Text>
             </View>
           </View>
@@ -124,7 +124,7 @@ App Version: 1.0.0
           </View>
 
           {/* Quick Actions */}
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>SCHNELLKONTAKT</Text>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('settingsSupport.quickContact')}</Text>
           <View style={styles.quickActions}>
             {quickActions.map((action, index) => (
               <TouchableOpacity
@@ -141,26 +141,26 @@ App Version: 1.0.0
           </View>
 
           {/* Contact Form */}
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>NACHRICHT SENDEN</Text>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('settingsSupport.sendMessageSection')}</Text>
 
           <View style={[styles.formCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
-            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Betreff</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('settingsSupport.subject')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
-              placeholder="z.B. Frage zur Zeiterfassung"
+              placeholder={t('settingsSupport.subjectPlaceholder')}
               placeholderTextColor={theme.textMuted}
               value={subject}
               onChangeText={setSubject}
             />
 
-            <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>Ihre Nachricht</Text>
+            <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: spacing.md }]}>{t('settingsSupport.yourMessage')}</Text>
             <TextInput
               style={[
                 styles.input,
                 styles.textArea,
                 { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text },
               ]}
-              placeholder="Beschreiben Sie Ihr Anliegen..."
+              placeholder={t('settingsSupport.messagePlaceholder')}
               placeholderTextColor={theme.textMuted}
               value={message}
               onChangeText={setMessage}
@@ -184,7 +184,7 @@ App Version: 1.0.0
               ) : (
                 <>
                   <Send size={18} color={theme.textInverse} />
-                  <Text style={[styles.sendButtonText, { color: theme.textInverse }]}>Nachricht senden</Text>
+                  <Text style={[styles.sendButtonText, { color: theme.textInverse }]}>{t('settingsSupport.sendButton')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -192,8 +192,8 @@ App Version: 1.0.0
 
           {/* Footer Info */}
           <Text style={[styles.footerText, { color: theme.textMuted }]}>
-            Ihre Anfrage wird an {SUPPORT_EMAIL} gesendet.{'\n'}
-            Wir antworten in der Regel innerhalb von 24 Stunden.
+            {t('settingsSupport.footerSentTo').replace('{email}', SUPPORT_EMAIL)}{'\n'}
+            {t('settingsSupport.footerResponse')}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

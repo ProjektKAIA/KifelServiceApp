@@ -43,8 +43,8 @@ export default function RequestsScreen() {
 
   const filterOptions = [
     { key: 'all', label: t('adminRequests.all') },
-    { key: 'vacation', label: 'Urlaub' },
-    { key: 'sick', label: 'Krank' },
+    { key: 'vacation', label: t('adminRequests.filterVacation') },
+    { key: 'sick', label: t('adminRequests.filterSick') },
   ];
 
   // Load requests from Firestore
@@ -60,7 +60,7 @@ export default function RequestsScreen() {
         const reqUser = userMap.get(req.userId);
         const employeeName = reqUser
           ? `${reqUser.firstName} ${reqUser.lastName}`
-          : 'Unbekannt';
+          : t('adminRequests.unknown');
 
         const startDate = format(new Date(req.startDate), 'dd.MM.', { locale: de });
         const endDate = format(new Date(req.endDate), 'dd.MM.yyyy', { locale: de });
@@ -78,7 +78,7 @@ export default function RequestsScreen() {
       setRequests(enriched);
     } catch (error) {
       console.error('Error loading requests:', error);
-      Alert.alert(t('common.error'), 'Anträge konnten nicht geladen werden.');
+      Alert.alert(t('common.error'), t('adminRequests.loadError'));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -104,10 +104,10 @@ export default function RequestsScreen() {
     try {
       await vacationRequestsCollection.updateStatus(id, 'approved', user.id);
       setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'approved' } : r)));
-      Alert.alert('Genehmigt', 'Der Antrag wurde genehmigt.');
+      Alert.alert(t('adminRequests.approvedAlert'), t('adminRequests.approvedMessage'));
     } catch (error) {
       console.error('Error approving request:', error);
-      Alert.alert(t('common.error'), 'Antrag konnte nicht genehmigt werden.');
+      Alert.alert(t('common.error'), t('adminRequests.approveError'));
     }
   };
 
@@ -117,10 +117,10 @@ export default function RequestsScreen() {
     try {
       await vacationRequestsCollection.updateStatus(id, 'rejected', user.id);
       setRequests(requests.map((r) => (r.id === id ? { ...r, status: 'rejected' } : r)));
-      Alert.alert('Abgelehnt', 'Der Antrag wurde abgelehnt.');
+      Alert.alert(t('adminRequests.rejectedAlert'), t('adminRequests.rejectedMessage'));
     } catch (error) {
       console.error('Error rejecting request:', error);
-      Alert.alert(t('common.error'), 'Antrag konnte nicht abgelehnt werden.');
+      Alert.alert(t('common.error'), t('adminRequests.rejectError'));
     }
   };
 
@@ -136,7 +136,7 @@ export default function RequestsScreen() {
           />
         }
       >
-        <ScreenHeader overline="VERWALTUNG" title={t('adminRequests.title')} />
+        <ScreenHeader overline={t('adminRequests.overline')} title={t('adminRequests.title')} />
 
         <FilterTabs
           options={filterOptions}
@@ -149,7 +149,7 @@ export default function RequestsScreen() {
         {pendingRequests.length > 0 && (
           <>
             <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-              AUSSTEHEND ({pendingRequests.length})
+              {t('adminRequests.pendingSection')} ({pendingRequests.length})
             </Typography>
             {pendingRequests.map((r) => (
               <RequestCard
@@ -171,7 +171,7 @@ export default function RequestsScreen() {
         {processedRequests.length > 0 && (
           <>
             <Typography variant="overline" color="muted" style={styles.sectionTitle}>
-              BEARBEITET
+              {t('adminRequests.processedSection')}
             </Typography>
             {processedRequests.map((r) => (
               <RequestCard
@@ -189,7 +189,7 @@ export default function RequestsScreen() {
         {/* Empty State */}
         {!isLoading && requests.length === 0 && (
           <Typography variant="body" color="muted" style={styles.emptyText}>
-            Keine Anträge vorhanden.
+            {t('adminRequests.noRequestsMessage')}
           </Typography>
         )}
       </ScrollView>

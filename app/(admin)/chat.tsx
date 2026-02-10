@@ -114,9 +114,9 @@ export default function AdminChatScreen() {
 
     if (!moderation.isClean) {
       Alert.alert(
-        'Hinweis',
-        'Die Nachricht enthält unangemessene Wörter. Diese wurden automatisch gefiltert.',
-        [{ text: 'OK' }]
+        t('chat.moderationTitle'),
+        t('chat.moderationMessage'),
+        [{ text: t('common.ok') }]
       );
     }
 
@@ -231,7 +231,7 @@ export default function AdminChatScreen() {
       return (
         <View style={styles.deletedMessageRow}>
           <Text style={[styles.deletedMessageText, { color: theme.textMuted }]}>
-            Nachricht wurde gelöscht
+            {t('chat.messageDeleted')}
           </Text>
         </View>
       );
@@ -245,7 +245,7 @@ export default function AdminChatScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.ownMessageMeta}>
-            <Text style={[styles.messageTime, { color: theme.textMuted }]}>Du · {formatTime(item.timestamp)}</Text>
+            <Text style={[styles.messageTime, { color: theme.textMuted }]}>{t('chat.you')} · {formatTime(item.timestamp)}</Text>
           </View>
           <View style={[styles.ownMessageBubble, { backgroundColor: theme.success }]}>
             {renderMessageContent(item.content, true)}
@@ -301,7 +301,7 @@ export default function AdminChatScreen() {
             <Text style={[styles.adminBadgeText, { color: theme.pillSecondaryText }]}>ADMIN</Text>
           </View>
         </View>
-        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} Mitglieder</Text>
+        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} {t('chat.members')}</Text>
         <Text style={[styles.headerTitle, { color: theme.text }]}>{t('adminChat.title')}</Text>
         <Text style={[styles.adminHint, { color: theme.textMuted }]}>
           {t('adminChat.longPressHint')}
@@ -340,7 +340,7 @@ export default function AdminChatScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
-            placeholder="Nachricht..."
+            placeholder={t('adminChat.placeholder')}
             placeholderTextColor={theme.textMuted}
             value={inputText}
             onChangeText={setInputText}
@@ -385,10 +385,10 @@ export default function AdminChatScreen() {
                 </View>
                 <View style={styles.mentionInfo}>
                   <Text style={[styles.mentionName, { color: theme.danger, fontWeight: '700' }]}>
-                    @alle
+                    {t('adminChat.mentionAll')}
                   </Text>
                   <Text style={[styles.mentionHandle, { color: theme.textMuted }]}>
-                    Benachrichtigt alle {memberCount} Mitglieder
+                    {t('adminChat.notifiesAllMembers').replace('{count}', String(memberCount))}
                   </Text>
                 </View>
               </TouchableOpacity>

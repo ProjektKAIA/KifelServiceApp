@@ -14,7 +14,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp, Download, FileText, FileSpreadsheet, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp, Download, FileText, FileSpreadsheet, X, Target, AlertTriangle } from 'lucide-react-native';
 import {
   format,
   startOfDay,
@@ -40,9 +40,19 @@ import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { useAuthStore } from '@/src/store/authStore';
 import { spacing, borderRadius } from '@/src/theme/spacing';
-import { timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
+import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/firestore';
+import { User } from '@/src/types';
 import { toast } from '@/src/utils/toast';
 import { exportReport, ExportFormat, ExportEmployeeData } from '@/src/utils/exportUtils';
+import {
+  calculateTargetMinutes,
+  calculateDifference,
+  formatMinutesAsHours,
+  checkBreakCompliance,
+  analyzePeriodBreakCompliance,
+  type PeriodBreakComplianceResult,
+  type DifferenceResult,
+} from '@/src/utils/hoursUtils';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
 
@@ -82,6 +92,7 @@ export default function EmployeeReportsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
 
   // Calculate date range based on period type
   const getDateRange = useCallback((date: Date, type: PeriodType): { start: Date; end: Date } => {
@@ -176,7 +187,11 @@ export default function EmployeeReportsScreen() {
       const startStr = format(start, 'yyyy-MM-dd');
       const endStr = format(end, 'yyyy-MM-dd');
 
-      const entries = await timeEntriesCollection.getForUserInRange(user.id, startStr, endStr);
+      const [entries, profile] = await Promise.all([
+        timeEntriesCollection.getForUserInRange(user.id, startStr, endStr),
+        usersCollection.get(user.id),
+      ]);
+      if (profile) setUserProfile(profile);
 
       // Group entries by day
       const dayMap = new Map<string, TimeEntry[]>();
@@ -278,6 +293,21 @@ export default function EmployeeReportsScreen() {
       daysWorked: acc.daysWorked + 1,
     }),
     { totalMinutes: 0, breakMinutes: 0, daysWorked: 0 }
+  );
+
+  // Soll/Ist computed values
+  const weeklyTarget = userProfile?.weeklyTargetHours;
+  const { start: rangeStart, end: rangeEnd } = getDateRange(currentDate, periodType);
+  const targetMinutes = weeklyTarget && weeklyTarget > 0
+    ? calculateTargetMinutes(weeklyTarget, rangeStart, rangeEnd)
+    : undefined;
+  const diffResult: DifferenceResult | undefined = targetMinutes !== undefined
+    ? calculateDifference(totals.totalMinutes, targetMinutes)
+    : undefined;
+
+  // Break compliance
+  const breakCompliance: PeriodBreakComplianceResult = analyzePeriodBreakCompliance(
+    dayEntries.map(d => ({ totalMinutes: d.totalMinutes, breakMinutes: d.breakMinutes }))
   );
 
   const formatHoursMinutes = (minutes: number): string => {
@@ -411,6 +441,49 @@ export default function EmployeeReportsScreen() {
           </View>
         </View>
 
+        {/* Soll/Ist Card */}
+        {targetMinutes !== undefined && diffResult && (
+          <View style={[styles.targetCard, { backgroundColor: diffResult.isOvertime ? theme.success + '12' : theme.danger + '12', borderColor: diffResult.isOvertime ? theme.success : theme.danger }]}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <View style={styles.summaryIconRow}>
+                  <Target size={16} color={theme.textSecondary} />
+                  <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('empReports.targetHours')}</Text>
+                </View>
+                <Text style={[styles.summaryValue, { color: theme.textSecondary, fontSize: 22 }]}>
+                  {formatMinutesAsHours(targetMinutes)} h
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <View style={styles.summaryIconRow}>
+                  <TrendingUp size={16} color={diffResult.isOvertime ? theme.success : theme.danger} />
+                  <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('empReports.difference')}</Text>
+                </View>
+                <Text style={[styles.summaryValue, { color: diffResult.isOvertime ? theme.success : theme.danger, fontSize: 22 }]}>
+                  {diffResult.formattedDifference} h
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+            <Text style={[styles.summaryNote, { color: theme.textMuted }]}>
+              {t('empReports.basedOnWeekly')}: {weeklyTarget} {t('empReports.hoursPerWeek')}
+            </Text>
+          </View>
+        )}
+
+        {/* Break Compliance Warning */}
+        {breakCompliance.nonCompliantDays > 0 && (
+          <View style={[styles.complianceWarning, { backgroundColor: theme.warning + '15', borderColor: theme.warning + '40' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <AlertTriangle size={18} color={theme.warning} />
+              <Text style={[styles.complianceWarningTitle, { color: theme.warning }]}>{t('empReports.breakWarning')}</Text>
+            </View>
+            <Text style={[styles.complianceWarningText, { color: theme.textSecondary }]}>
+              {breakCompliance.nonCompliantDays} {t('empReports.nonCompliantDays')} (ArbZG)
+            </Text>
+          </View>
+        )}
+
         {/* Day Entries */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{t('empReports.details')}</Text>
 
@@ -481,6 +554,11 @@ export default function EmployeeReportsScreen() {
                 <Text style={[styles.daySummaryValue, { color: theme.primary }]}>
                   Netto: {formatHoursMinutes(day.netMinutes)} h
                 </Text>
+                {!checkBreakCompliance(day.totalMinutes, day.breakMinutes).isCompliant && (
+                  <View style={[styles.breakWarningBadge, { backgroundColor: theme.warning + '20' }]}>
+                    <AlertTriangle size={10} color={theme.warning} />
+                  </View>
+                )}
               </View>
             </View>
           ))
@@ -783,5 +861,33 @@ const styles = StyleSheet.create({
   exportOptionDesc: {
     fontSize: 13,
     marginTop: 2,
+  },
+  targetCard: {
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+  },
+  complianceWarning: {
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+    gap: 6,
+  },
+  complianceWarningTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  complianceWarningText: {
+    fontSize: 13,
+    marginLeft: 26,
+  },
+  breakWarningBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

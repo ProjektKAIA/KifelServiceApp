@@ -32,6 +32,8 @@ import {
   Navigation,
   Home,
   Route,
+  Target,
+  AlertTriangle,
 } from 'lucide-react-native';
 import {
   format,
@@ -60,6 +62,14 @@ import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/fir
 import { User } from '@/src/types';
 import { exportReport, exportLocationReport, ExportFormat, ExportEmployeeData, ExportLocationData } from '@/src/utils/exportUtils';
 import { isFieldEntry, calculateTotalDistance, formatDistance } from '@/src/utils/locationUtils';
+import {
+  calculateTargetMinutes,
+  calculateDifference,
+  formatMinutesAsHours,
+  checkBreakCompliance,
+  analyzePeriodBreakCompliance,
+  type PeriodBreakComplianceResult,
+} from '@/src/utils/hoursUtils';
 import RouteMap from '@/src/components/organisms/RouteMap';
 
 type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
@@ -76,6 +86,12 @@ interface EmployeeStats {
   netMinutes: number;
   entriesCount: number;
   entries: TimeEntry[];
+  weeklyTargetHours?: number;
+  targetMinutes?: number;
+  differenceMinutes?: number;
+  isOvertime?: boolean;
+  formattedDifference?: string;
+  breakCompliance?: PeriodBreakComplianceResult;
 }
 
 interface EmployeeLocationStats {
@@ -264,15 +280,56 @@ export default function AdminReportsScreen() {
         stats.entries.push(entry);
       });
 
-      // Convert to hours and sort
+      // Convert to hours, compute target/difference and break compliance
       const statsList = Array.from(statsMap.values())
-        .map(stats => ({
-          ...stats,
-          totalHours: Math.floor(stats.totalMinutes / 60),
-          totalMinutes: stats.totalMinutes % 60,
-          netHours: Math.floor(stats.netMinutes / 60),
-          netMinutes: stats.netMinutes % 60,
-        }))
+        .map(stats => {
+          const totalGrossMinutes = stats.totalMinutes;
+          const totalNetMinutes = stats.netMinutes;
+          const employee = employeesData.find(e => e.id === stats.userId);
+          const weeklyTarget = employee?.weeklyTargetHours;
+
+          // Soll/Ist calculation
+          let targetMinutes: number | undefined;
+          let differenceMinutes: number | undefined;
+          let isOvertime: boolean | undefined;
+          let formattedDifference: string | undefined;
+
+          if (weeklyTarget && weeklyTarget > 0) {
+            targetMinutes = calculateTargetMinutes(weeklyTarget, start, end);
+            const diff = calculateDifference(totalNetMinutes, targetMinutes);
+            differenceMinutes = diff.differenceMinutes;
+            isOvertime = diff.isOvertime;
+            formattedDifference = diff.formattedDifference;
+          }
+
+          // Break compliance per day
+          const dayMap = new Map<string, { totalMinutes: number; breakMinutes: number }>();
+          stats.entries.forEach(entry => {
+            const dateKey = entry.clockIn.split('T')[0];
+            if (!dayMap.has(dateKey)) {
+              dayMap.set(dateKey, { totalMinutes: 0, breakMinutes: 0 });
+            }
+            const dayData = dayMap.get(dateKey)!;
+            const { grossMinutes, breakMinutes: bm } = calculateHours(entry);
+            dayData.totalMinutes += grossMinutes;
+            dayData.breakMinutes += bm;
+          });
+          const breakCompliance = analyzePeriodBreakCompliance(Array.from(dayMap.values()));
+
+          return {
+            ...stats,
+            totalHours: Math.floor(totalGrossMinutes / 60),
+            totalMinutes: totalGrossMinutes % 60,
+            netHours: Math.floor(totalNetMinutes / 60),
+            netMinutes: totalNetMinutes % 60,
+            weeklyTargetHours: weeklyTarget,
+            targetMinutes,
+            differenceMinutes,
+            isOvertime,
+            formattedDifference,
+            breakCompliance,
+          };
+        })
         .filter(stats => selectedEmployeeId ? stats.userId === selectedEmployeeId : true)
         .sort((a, b) => (b.netHours * 60 + b.netMinutes) - (a.netHours * 60 + a.netMinutes));
 
@@ -703,6 +760,39 @@ export default function AdminReportsScreen() {
                   Pause gesamt: {Math.floor(totals.breakMinutes / 60)}:{(totals.breakMinutes % 60).toString().padStart(2, '0')} h
                 </Text>
               </View>
+              {/* Soll/Differenz Summary */}
+              {(() => {
+                const totalTarget = employeeStats.reduce((sum, s) => sum + (s.targetMinutes || 0), 0);
+                const totalDiff = employeeStats.reduce((sum, s) => sum + (s.differenceMinutes || 0), 0);
+                const hasAnyTarget = employeeStats.some(s => s.targetMinutes !== undefined);
+                if (!hasAnyTarget) return null;
+                const isOT = totalDiff >= 0;
+                return (
+                  <>
+                    <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+                    <View style={styles.summaryRow}>
+                      <View style={styles.summaryItem}>
+                        <View style={styles.summaryIconRow}>
+                          <Target size={16} color={theme.textSecondary} />
+                          <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('adminReports.targetHours')}</Text>
+                        </View>
+                        <Text style={[styles.summaryValue, { color: theme.textSecondary, fontSize: 22 }]}>
+                          {formatMinutesAsHours(totalTarget)} h
+                        </Text>
+                      </View>
+                      <View style={styles.summaryItem}>
+                        <View style={styles.summaryIconRow}>
+                          <TrendingUp size={16} color={isOT ? theme.success : theme.danger} />
+                          <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>{t('adminReports.difference')}</Text>
+                        </View>
+                        <Text style={[styles.summaryValue, { color: isOT ? theme.success : theme.danger, fontSize: 22 }]}>
+                          {isOT ? '+' : '-'}{formatMinutesAsHours(Math.abs(totalDiff))} h
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
             </View>
 
             {/* Employee Stats */}
@@ -759,7 +849,31 @@ export default function AdminReportsScreen() {
                         {formatHoursMinutes(stats.netHours, stats.netMinutes)} h
                       </Text>
                     </View>
+                    {stats.targetMinutes !== undefined && (
+                      <>
+                        <View style={styles.statsDetailItem}>
+                          <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>{t('adminReports.target')}</Text>
+                          <Text style={[styles.statsDetailValue, { color: theme.textSecondary }]}>
+                            {formatMinutesAsHours(stats.targetMinutes)} h
+                          </Text>
+                        </View>
+                        <View style={styles.statsDetailItem}>
+                          <Text style={[styles.statsDetailLabel, { color: theme.textMuted }]}>+/-</Text>
+                          <Text style={[styles.statsDetailValue, { color: stats.isOvertime ? theme.success : theme.danger, fontWeight: '700' }]}>
+                            {stats.formattedDifference}
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
+                  {stats.breakCompliance && stats.breakCompliance.nonCompliantDays > 0 && (
+                    <View style={[styles.complianceWarning, { backgroundColor: theme.warning + '15', borderTopColor: theme.borderLight }]}>
+                      <AlertTriangle size={14} color={theme.warning} />
+                      <Text style={[styles.complianceWarningText, { color: theme.warning }]}>
+                        {stats.breakCompliance.nonCompliantDays} {t('adminReports.nonCompliantDays')}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))
             )}
@@ -1046,6 +1160,39 @@ export default function AdminReportsScreen() {
                 </View>
               </View>
 
+              {/* Soll/Ist + Break Compliance */}
+              {detailEmployee.stats.targetMinutes !== undefined && (
+                <View style={[styles.detailStatsCard, { backgroundColor: detailEmployee.stats.isOvertime ? theme.success + '12' : theme.danger + '12', borderColor: detailEmployee.stats.isOvertime ? theme.success : theme.danger }]}>
+                  <View style={styles.detailStatsRow}>
+                    <View style={styles.detailStatItem}>
+                      <Target size={18} color={theme.textSecondary} />
+                      <Text style={[styles.detailStatValue, { color: theme.textSecondary }]}>
+                        {formatMinutesAsHours(detailEmployee.stats.targetMinutes)}h
+                      </Text>
+                      <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>{t('adminReports.targetHours')}</Text>
+                    </View>
+                    <View style={styles.detailStatItem}>
+                      <TrendingUp size={18} color={detailEmployee.stats.isOvertime ? theme.success : theme.danger} />
+                      <Text style={[styles.detailStatValue, { color: detailEmployee.stats.isOvertime ? theme.success : theme.danger }]}>
+                        {detailEmployee.stats.formattedDifference}h
+                      </Text>
+                      <Text style={[styles.detailStatLabel, { color: theme.textMuted }]}>{t('adminReports.difference')}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+              {detailEmployee.stats.breakCompliance && detailEmployee.stats.breakCompliance.nonCompliantDays > 0 && (
+                <View style={[styles.complianceBox, { backgroundColor: theme.warning + '15', borderColor: theme.warning + '40' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle size={18} color={theme.warning} />
+                    <Text style={[styles.complianceBoxTitle, { color: theme.warning }]}>{t('adminReports.breakWarning')}</Text>
+                  </View>
+                  <Text style={[styles.complianceBoxText, { color: theme.textSecondary }]}>
+                    {detailEmployee.stats.breakCompliance.nonCompliantDays} {t('adminReports.nonCompliantDays')} (ArbZG)
+                  </Text>
+                </View>
+              )}
+
               {/* Time Entries List */}
               <Text style={[styles.detailSectionTitle, { color: theme.textMuted }]}>ZEITEINTRÄGE</Text>
 
@@ -1091,6 +1238,20 @@ export default function AdminReportsScreen() {
                             </Text>
                           </View>
                         </View>
+                        {(() => {
+                          const comp = checkBreakCompliance(formatted.grossHours * 60 + formatted.grossMins, formatted.breakMins);
+                          if (!comp.isCompliant) {
+                            return (
+                              <View style={[styles.detailEntryLocation, { borderTopColor: theme.warning + '40', backgroundColor: theme.warning + '10' }]}>
+                                <AlertTriangle size={12} color={theme.warning} />
+                                <Text style={[styles.detailEntryLocationText, { color: theme.warning }]}>
+                                  {t('adminReports.breakWarning')}: {comp.actualBreakMinutes} min / {comp.requiredBreakMinutes} min
+                                </Text>
+                              </View>
+                            );
+                          }
+                          return null;
+                        })()}
                         {formatted.location && (
                           <View style={[styles.detailEntryLocation, { borderTopColor: theme.border }]}>
                             <MapPin size={12} color={theme.textMuted} />
@@ -1698,5 +1859,32 @@ const styles = StyleSheet.create({
   detailEntryLocationText: {
     fontSize: 12,
     flex: 1,
+  },
+  complianceWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.base,
+    borderTopWidth: 1,
+  },
+  complianceWarningText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  complianceBox: {
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+    gap: 6,
+  },
+  complianceBoxTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  complianceBoxText: {
+    fontSize: 13,
+    marginLeft: 26,
   },
 });

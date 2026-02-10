@@ -272,6 +272,16 @@ export const de = {
   'empReports.weekly': 'Woche',
   'empReports.monthly': 'Monat',
   'empReports.details': 'DETAILS',
+  'empReports.targetHours': 'Soll-Stunden',
+  'empReports.actualHours': 'Ist-Stunden',
+  'empReports.difference': 'Differenz',
+  'empReports.deficit': 'Minusstunden',
+  'empReports.breakCompliance': 'Pausen-Compliance',
+  'empReports.breakWarning': 'Pausenverstoß',
+  'empReports.nonCompliantDays': 'Tage ohne gesetzl. Pause',
+  'empReports.basedOnWeekly': 'Basis',
+  'empReports.noTargetSet': 'Kein Soll gesetzt',
+  'empReports.hoursPerWeek': 'h/Woche',
 
   // Admin Dashboard
   'adminDashboard.greeting': 'Hallo',
@@ -299,6 +309,8 @@ export const de = {
   'adminTeam.inactive': 'Inaktiv',
   'adminTeam.inviteSent': 'Einladung gesendet',
   'adminTeam.inviteError': 'Fehler beim Senden der Einladung',
+  'adminTeam.weeklyTargetHours': 'Soll-Stunden/Woche',
+  'adminTeam.noTargetSet': 'Kein Soll gesetzt',
 
   // Admin Requests
   'adminRequests.title': 'Anträge',
@@ -363,6 +375,15 @@ export const de = {
   'adminReports.chooseExportFormat': 'Export-Format wählen',
   'adminReports.employeeDetails': 'Mitarbeiter-Details',
   'adminReports.locationDetails': 'Standort-Details',
+  'adminReports.targetHours': 'Soll-Stunden',
+  'adminReports.actualHours': 'Ist-Stunden',
+  'adminReports.difference': 'Differenz',
+  'adminReports.overtime': 'Überstunden',
+  'adminReports.deficit': 'Minusstunden',
+  'adminReports.breakCompliance': 'Pausen-Compliance',
+  'adminReports.breakWarning': 'Pausenverstoß',
+  'adminReports.nonCompliantDays': 'Tage ohne gesetzl. Pause',
+  'adminReports.target': 'Soll',
 
   // Admin Settings
   'settings.admin': 'Verwaltung',

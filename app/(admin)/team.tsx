@@ -36,6 +36,7 @@ interface EmployeeFormData {
   phone: string;
   location: string;
   role: 'employee' | 'admin';
+  weeklyTargetHours: string;
 }
 
 const initialFormData: EmployeeFormData = {
@@ -45,6 +46,7 @@ const initialFormData: EmployeeFormData = {
   phone: '',
   location: '',
   role: 'employee',
+  weeklyTargetHours: '40',
 };
 
 export default function TeamManagementScreen() {
@@ -200,6 +202,7 @@ export default function TeamManagementScreen() {
         phone: selectedEmployee.phone || '',
         location: selectedEmployee.location || '',
         role: selectedEmployee.role,
+        weeklyTargetHours: selectedEmployee.weeklyTargetHours?.toString() || '',
       });
       setIsEditingInDetail(true);
     }
@@ -211,11 +214,13 @@ export default function TeamManagementScreen() {
 
     setFormLoading(true);
     try {
+      const parsedTarget = detailEditData.weeklyTargetHours ? parseFloat(detailEditData.weeklyTargetHours) : undefined;
       await usersCollection.update(selectedEmployee.id, {
         firstName: detailEditData.firstName,
         lastName: detailEditData.lastName,
         phone: detailEditData.phone || undefined,
         location: detailEditData.location || undefined,
+        weeklyTargetHours: parsedTarget && !isNaN(parsedTarget) ? parsedTarget : undefined,
       });
 
       // Update local state
@@ -225,6 +230,7 @@ export default function TeamManagementScreen() {
         lastName: detailEditData.lastName,
         phone: detailEditData.phone || undefined,
         location: detailEditData.location || undefined,
+        weeklyTargetHours: parsedTarget && !isNaN(parsedTarget) ? parsedTarget : undefined,
       };
       setSelectedEmployee(updatedEmployee);
       setIsEditingInDetail(false);
@@ -251,6 +257,7 @@ export default function TeamManagementScreen() {
       phone: employee.phone || '',
       location: employee.location || '',
       role: employee.role,
+      weeklyTargetHours: employee.weeklyTargetHours?.toString() || '',
     });
     setSelectedEmployee(employee);
     setShowDetailModal(false);
@@ -721,11 +728,14 @@ export default function TeamManagementScreen() {
                       <Typography variant="body">{selectedEmployee.location}</Typography>
                     </View>
                   )}
-                  {!selectedEmployee.phone && !selectedEmployee.location && (
-                    <Typography variant="caption" color="muted" style={{ textAlign: 'center' }}>
-                      Keine weiteren Kontaktdaten hinterlegt
+                  <View style={styles.detailRow}>
+                    <Clock size={16} color={theme.textMuted} />
+                    <Typography variant="body">
+                      {selectedEmployee.weeklyTargetHours
+                        ? `${selectedEmployee.weeklyTargetHours}h / ${t('empReports.hoursPerWeek')} (${t('adminReports.target')})`
+                        : t('adminTeam.noTargetSet')}
                     </Typography>
-                  )}
+                  </View>
                 </>
               ) : (
                 <>
@@ -748,6 +758,14 @@ export default function TeamManagementScreen() {
                     value={detailEditData.location}
                     onChangeText={(text) => setDetailEditData({ ...detailEditData, location: text })}
                     placeholder="Berlin"
+                    containerStyle={{ marginTop: 4, marginBottom: spacing.md }}
+                  />
+                  <Typography variant="caption" color="muted">{t('adminTeam.weeklyTargetHours')}</Typography>
+                  <Input
+                    value={detailEditData.weeklyTargetHours}
+                    onChangeText={(text) => setDetailEditData({ ...detailEditData, weeklyTargetHours: text })}
+                    placeholder="40"
+                    keyboardType="numeric"
                     containerStyle={{ marginTop: 4 }}
                   />
                 </>

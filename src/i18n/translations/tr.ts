@@ -274,6 +274,16 @@ export const tr: Record<TranslationKey, string> = {
   'empReports.weekly': 'Hafta',
   'empReports.monthly': 'Ay',
   'empReports.details': 'DETAYLAR',
+  'empReports.targetHours': 'Hedef saatler',
+  'empReports.actualHours': 'Gerçek saatler',
+  'empReports.difference': 'Fark',
+  'empReports.deficit': 'Eksik saat',
+  'empReports.breakCompliance': 'Mola uyumluluğu',
+  'empReports.breakWarning': 'Mola ihlali',
+  'empReports.nonCompliantDays': 'Yasal molasız günler',
+  'empReports.basedOnWeekly': 'Baz',
+  'empReports.noTargetSet': 'Hedef belirlenmedi',
+  'empReports.hoursPerWeek': 's/hafta',
 
   // Admin Dashboard
   'adminDashboard.greeting': 'Merhaba',
@@ -301,6 +311,8 @@ export const tr: Record<TranslationKey, string> = {
   'adminTeam.inactive': 'Pasif',
   'adminTeam.inviteSent': 'Davet gönderildi',
   'adminTeam.inviteError': 'Davet gönderme hatası',
+  'adminTeam.weeklyTargetHours': 'Hedef saat/hafta',
+  'adminTeam.noTargetSet': 'Hedef belirlenmedi',
 
   // Admin Requests
   'adminRequests.title': 'Talepler',
@@ -365,6 +377,15 @@ export const tr: Record<TranslationKey, string> = {
   'adminReports.chooseExportFormat': 'Dışa aktarma formatı seçin',
   'adminReports.employeeDetails': 'Çalışan detayları',
   'adminReports.locationDetails': 'Konum detayları',
+  'adminReports.targetHours': 'Hedef saatler',
+  'adminReports.actualHours': 'Gerçek saatler',
+  'adminReports.difference': 'Fark',
+  'adminReports.overtime': 'Fazla mesai',
+  'adminReports.deficit': 'Eksik saat',
+  'adminReports.breakCompliance': 'Mola uyumluluğu',
+  'adminReports.breakWarning': 'Mola ihlali',
+  'adminReports.nonCompliantDays': 'Yasal molasız günler',
+  'adminReports.target': 'Hedef',
 
   // Admin Settings
   'settings.admin': 'Yönetim',

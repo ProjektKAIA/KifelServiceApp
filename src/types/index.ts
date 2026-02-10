@@ -27,6 +27,7 @@ export interface User {
   // Urlaubstage
   vacationDaysTotal?: number;
   vacationDaysUsed?: number;
+  weeklyTargetHours?: number; // Wochensollstunden (z.B. 40 = Vollzeit)
   createdAt: string;
   updatedAt: string;
 }

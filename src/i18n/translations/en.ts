@@ -274,6 +274,16 @@ export const en: Record<TranslationKey, string> = {
   'empReports.weekly': 'Week',
   'empReports.monthly': 'Month',
   'empReports.details': 'DETAILS',
+  'empReports.targetHours': 'Target hours',
+  'empReports.actualHours': 'Actual hours',
+  'empReports.difference': 'Difference',
+  'empReports.deficit': 'Deficit',
+  'empReports.breakCompliance': 'Break compliance',
+  'empReports.breakWarning': 'Break violation',
+  'empReports.nonCompliantDays': 'Days without legal break',
+  'empReports.basedOnWeekly': 'Based on',
+  'empReports.noTargetSet': 'No target set',
+  'empReports.hoursPerWeek': 'h/week',
 
   // Admin Dashboard
   'adminDashboard.greeting': 'Hello',
@@ -301,6 +311,8 @@ export const en: Record<TranslationKey, string> = {
   'adminTeam.inactive': 'Inactive',
   'adminTeam.inviteSent': 'Invitation sent',
   'adminTeam.inviteError': 'Error sending invitation',
+  'adminTeam.weeklyTargetHours': 'Target hours/week',
+  'adminTeam.noTargetSet': 'No target set',
 
   // Admin Requests
   'adminRequests.title': 'Requests',
@@ -365,6 +377,15 @@ export const en: Record<TranslationKey, string> = {
   'adminReports.chooseExportFormat': 'Choose export format',
   'adminReports.employeeDetails': 'Employee details',
   'adminReports.locationDetails': 'Location details',
+  'adminReports.targetHours': 'Target hours',
+  'adminReports.actualHours': 'Actual hours',
+  'adminReports.difference': 'Difference',
+  'adminReports.overtime': 'Overtime',
+  'adminReports.deficit': 'Deficit',
+  'adminReports.breakCompliance': 'Break compliance',
+  'adminReports.breakWarning': 'Break violation',
+  'adminReports.nonCompliantDays': 'Days without legal break',
+  'adminReports.target': 'Target',
 
   // Admin Settings
   'settings.admin': 'Administration',

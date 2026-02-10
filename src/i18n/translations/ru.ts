@@ -274,6 +274,16 @@ export const ru: Record<TranslationKey, string> = {
   'empReports.weekly': 'Неделя',
   'empReports.monthly': 'Месяц',
   'empReports.details': 'ДЕТАЛИ',
+  'empReports.targetHours': 'Плановые часы',
+  'empReports.actualHours': 'Фактические часы',
+  'empReports.difference': 'Разница',
+  'empReports.deficit': 'Недоработка',
+  'empReports.breakCompliance': 'Соблюдение перерывов',
+  'empReports.breakWarning': 'Нарушение перерыва',
+  'empReports.nonCompliantDays': 'Дней без обязат. перерыва',
+  'empReports.basedOnWeekly': 'Основа',
+  'empReports.noTargetSet': 'План не установлен',
+  'empReports.hoursPerWeek': 'ч/нед',
 
   // Admin Dashboard
   'adminDashboard.greeting': 'Привет',
@@ -301,6 +311,8 @@ export const ru: Record<TranslationKey, string> = {
   'adminTeam.inactive': 'Неактивен',
   'adminTeam.inviteSent': 'Приглашение отправлено',
   'adminTeam.inviteError': 'Ошибка отправки приглашения',
+  'adminTeam.weeklyTargetHours': 'Плановые часы/нед',
+  'adminTeam.noTargetSet': 'План не установлен',
 
   // Admin Requests
   'adminRequests.title': 'Заявки',
@@ -365,6 +377,15 @@ export const ru: Record<TranslationKey, string> = {
   'adminReports.chooseExportFormat': 'Выберите формат экспорта',
   'adminReports.employeeDetails': 'Детали сотрудника',
   'adminReports.locationDetails': 'Детали локации',
+  'adminReports.targetHours': 'Плановые часы',
+  'adminReports.actualHours': 'Фактические часы',
+  'adminReports.difference': 'Разница',
+  'adminReports.overtime': 'Сверхурочные',
+  'adminReports.deficit': 'Недоработка',
+  'adminReports.breakCompliance': 'Соблюдение перерывов',
+  'adminReports.breakWarning': 'Нарушение перерыва',
+  'adminReports.nonCompliantDays': 'Дней без обязат. перерыва',
+  'adminReports.target': 'План',
 
   // Admin Settings
   'settings.admin': 'Управление',

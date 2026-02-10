@@ -96,13 +96,10 @@ class PushNotificationService {
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
     if (!isFeatureEnabled('pushNotifications')) {
-      console.log('[PushNotification] Feature disabled, skipping initialization');
       return;
     }
 
     try {
-      console.log('[PushNotification] Initializing service...');
-
       // Setup Android notification channels
       if (Platform.OS === 'android') {
         await this.setupAndroidChannels();
@@ -112,7 +109,6 @@ class PushNotificationService {
       this.setupListeners();
 
       this.isInitialized = true;
-      console.log('[PushNotification] Service initialized successfully');
     } catch (error) {
       logError(error, 'PushNotificationService:initialize');
     }
@@ -122,8 +118,6 @@ class PushNotificationService {
    * Setup Android notification channels
    */
   private async setupAndroidChannels(): Promise<void> {
-    console.log('[PushNotification] Setting up Android channels...');
-
     for (const channel of NOTIFICATION_CHANNELS) {
       await Notifications.setNotificationChannelAsync(channel.id, {
         name: channel.name,
@@ -136,8 +130,6 @@ class PushNotificationService {
         lightColor: '#1a73e8',
       });
     }
-
-    console.log('[PushNotification] Android channels configured');
   }
 
   /**
@@ -145,14 +137,12 @@ class PushNotificationService {
    */
   private setupListeners(): void {
     // Listener for notifications received while app is in foreground
-    this.notificationListener = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('[PushNotification] Notification received in foreground:', notification.request.content.title);
+    this.notificationListener = Notifications.addNotificationReceivedListener((_notification) => {
+      // Notification received in foreground
     });
 
     // Listener for when user taps on notification
     this.responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('[PushNotification] Notification tapped:', response.notification.request.content.title);
-
       const data = response.notification.request.content.data as NotificationData | undefined;
 
       if (this.onNotificationTap && data) {
@@ -177,7 +167,6 @@ class PushNotificationService {
    */
   canReceivePushNotifications(): boolean {
     if (!Device.isDevice) {
-      console.log('[PushNotification] Not a physical device - push notifications may not work');
       return false;
     }
     return true;
@@ -196,7 +185,6 @@ class PushNotificationService {
    */
   async requestPermissions(): Promise<boolean> {
     if (!this.canReceivePushNotifications()) {
-      console.log('[PushNotification] Skipping permission request - not a physical device');
       return false;
     }
 
@@ -204,12 +192,10 @@ class PushNotificationService {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
       if (existingStatus === 'granted') {
-        console.log('[PushNotification] Permissions already granted');
         return true;
       }
 
       const { status } = await Notifications.requestPermissionsAsync();
-      console.log('[PushNotification] Permission request result:', status);
 
       return status === 'granted';
     } catch (error) {
@@ -223,7 +209,6 @@ class PushNotificationService {
    */
   async getExpoPushToken(): Promise<string | null> {
     if (!this.canReceivePushNotifications()) {
-      console.log('[PushNotification] Cannot get token - not a physical device');
       return null;
     }
 
@@ -231,7 +216,6 @@ class PushNotificationService {
       // Ensure permissions are granted
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
-        console.log('[PushNotification] Cannot get token - permissions not granted');
         return null;
       }
 
@@ -239,14 +223,13 @@ class PushNotificationService {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
       if (!projectId) {
-        console.log('[PushNotification] No project ID found - using default');
+        // No project ID found - using default
       }
 
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId,
       });
 
-      console.log('[PushNotification] Token obtained:', tokenData.data.substring(0, 30) + '...');
       return tokenData.data;
     } catch (error) {
       logError(error, 'PushNotificationService:getExpoPushToken');
@@ -331,7 +314,6 @@ class PushNotificationService {
 
     this.onNotificationTap = null;
     this.isInitialized = false;
-    console.log('[PushNotification] Service cleaned up');
   }
 }
 

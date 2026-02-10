@@ -74,8 +74,6 @@ export const useNotificationStore = create<NotificationState>()(
         set({ isInitializing: true });
 
         try {
-          console.log('[NotificationStore] Initializing for user:', userId);
-
           // Initialize the push notification service
           await pushNotificationService.initialize();
 
@@ -91,7 +89,6 @@ export const useNotificationStore = create<NotificationState>()(
             await get().registerToken(userId);
           }
 
-          console.log('[NotificationStore] Initialization complete');
         } catch (error) {
           logError(error, 'NotificationStore:initialize');
         } finally {
@@ -125,7 +122,6 @@ export const useNotificationStore = create<NotificationState>()(
           const token = await pushNotificationService.getExpoPushToken();
 
           if (!token) {
-            console.log('[NotificationStore] Could not get push token');
             return false;
           }
 
@@ -146,7 +142,6 @@ export const useNotificationStore = create<NotificationState>()(
             isTokenRegistered: true,
           });
 
-          console.log('[NotificationStore] Token registered successfully');
           return true;
         } catch (error) {
           logError(error, 'NotificationStore:registerToken');
@@ -163,13 +158,11 @@ export const useNotificationStore = create<NotificationState>()(
         const { tokenId } = get();
 
         if (!tokenId) {
-          console.log('[NotificationStore] No token to deactivate');
           return;
         }
 
         try {
           await pushTokensCollection.deactivate(tokenId);
-          console.log('[NotificationStore] Token deactivated');
         } catch (error) {
           logError(error, 'NotificationStore:deactivateToken');
         }

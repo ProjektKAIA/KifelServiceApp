@@ -46,8 +46,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
 
-    console.log(`[BackgroundLocation] Received ${locations.length} location(s)`);
-
     // Locations verarbeiten
     for (const location of locations) {
       const locationData = {
@@ -56,12 +54,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
         accuracy: location.coords.accuracy,
         timestamp: location.timestamp,
       };
-
-      console.log('[BackgroundLocation] Location:', {
-        lat: locationData.latitude.toFixed(6),
-        lng: locationData.longitude.toFixed(6),
-        accuracy: locationData.accuracy?.toFixed(0),
-      });
 
       // Callback aufrufen wenn gesetzt
       if (locationUpdateCallback) {
@@ -91,7 +83,6 @@ export async function requestBackgroundPermission(): Promise<boolean> {
       return false;
     }
 
-    console.log('[BackgroundLocation] All permissions granted');
     return true;
   } catch (error) {
     console.error('[BackgroundLocation] Error requesting permissions:', error);
@@ -121,7 +112,6 @@ export async function hasBackgroundPermission(): Promise<boolean> {
 export async function startBackgroundLocationTask(): Promise<boolean> {
   // GPS-Tracking muss in Features aktiviert sein
   if (!features.gpsTracking) {
-    console.log('[BackgroundLocation] GPS tracking disabled in features');
     return false;
   }
 
@@ -144,7 +134,6 @@ export async function startBackgroundLocationTask(): Promise<boolean> {
   // Pruefen ob Task bereits laeuft
   const isRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
   if (isRunning) {
-    console.log('[BackgroundLocation] Task already running');
     return true;
   }
 
@@ -168,7 +157,6 @@ export async function startBackgroundLocationTask(): Promise<boolean> {
       activityType: Location.ActivityType.Other,
     });
 
-    console.log(`[BackgroundLocation] Task started (interval: ${intervalMinutes} min)`);
     return true;
   } catch (error) {
     console.error('[BackgroundLocation] Error starting task:', error);
@@ -186,9 +174,6 @@ export async function stopBackgroundLocationTask(): Promise<void> {
     const isRunning = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
     if (isRunning) {
       await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-      console.log('[BackgroundLocation] Task stopped');
-    } else {
-      console.log('[BackgroundLocation] Task was not running');
     }
   } catch (error) {
     console.error('[BackgroundLocation] Error stopping task:', error);

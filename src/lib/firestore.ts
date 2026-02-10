@@ -944,8 +944,10 @@ export const statsCollection = {
         const today = new Date().toISOString().split('T')[0];
 
         // Count active employees (those with open time entries today)
-        // This is simplified - in production you'd query time entries
-        const activeToday = 0; // Would need to query time entries
+        const todayEntries = await timeEntriesCollection.getAllInRange(today, today);
+        const activeToday = new Set(
+          todayEntries.filter(e => e.clockIn && !e.clockOut).map(e => e.userId)
+        ).size;
 
         // Count on vacation/sick today
         let onVacation = 0;

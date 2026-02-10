@@ -60,7 +60,6 @@ export async function loadQueue(): Promise<void> {
     const stored = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
     if (stored) {
       queueState.items = JSON.parse(stored);
-      console.log(`[OfflineQueue] Loaded ${queueState.items.length} items from storage`);
       notifyListeners();
     }
   } catch (error) {
@@ -110,8 +109,6 @@ export async function addToSyncQueue(
   await saveQueue();
   notifyListeners();
 
-  console.log(`[OfflineQueue] Added item: ${type} (${item.id})`);
-
   // Sofort versuchen zu syncen wenn online
   if (isOnline()) {
     // Async ohne await, damit der Aufrufer nicht blockiert wird
@@ -140,7 +137,6 @@ export async function updateEntryIdMapping(localEntryId: string, firestoreEntryI
 
   if (updated) {
     await saveQueue();
-    console.log(`[OfflineQueue] Updated entryId mapping: ${localEntryId} -> ${firestoreEntryId}`);
   }
 }
 
@@ -149,23 +145,19 @@ export async function updateEntryIdMapping(localEntryId: string, firestoreEntryI
  */
 export async function processSyncQueue(): Promise<void> {
   if (queueState.isProcessing) {
-    console.log('[OfflineQueue] Already processing');
     return;
   }
 
   if (queueState.items.length === 0) {
-    console.log('[OfflineQueue] Queue is empty');
     return;
   }
 
   if (!isOnline()) {
-    console.log('[OfflineQueue] Offline - skipping sync');
     return;
   }
 
   queueState.isProcessing = true;
   notifyListeners();
-  console.log(`[OfflineQueue] Processing ${queueState.items.length} items`);
 
   // Dynamischer Import um zirkulaere Abhaengigkeiten zu vermeiden
   const { timeEntriesCollection } = await import('@/src/lib/firestore');
@@ -183,7 +175,6 @@ export async function processSyncQueue(): Promise<void> {
         await saveQueue();
         notifyListeners();
 
-        console.log(`[OfflineQueue] Successfully processed: ${item.type} (${item.id})`);
       } catch (error) {
         console.error(`[OfflineQueue] Error processing item ${item.id}:`, error);
 
@@ -206,7 +197,6 @@ export async function processSyncQueue(): Promise<void> {
   } finally {
     queueState.isProcessing = false;
     notifyListeners();
-    console.log(`[OfflineQueue] Processing complete. ${queueState.items.length} items remaining`);
   }
 }
 
@@ -305,7 +295,6 @@ export async function clearQueue(): Promise<void> {
   queueState.items = [];
   await saveQueue();
   notifyListeners();
-  console.log('[OfflineQueue] Queue cleared');
 }
 
 /**

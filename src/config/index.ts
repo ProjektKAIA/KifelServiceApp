@@ -33,6 +33,7 @@ const config: AppConfig = {
     timeout: 30000,
   },
 
+  // TODO: Replace with real Supabase credentials before production deployment
   supabase: {
     url: ENV === 'development'
       ? 'https://xxx-dev.supabase.co'

@@ -91,7 +91,6 @@ export const useAuthStore = create<AuthState>()(
           if (__DEV__ && DEV_ACCOUNTS[email.toLowerCase()]) {
             const devAccount = DEV_ACCOUNTS[email.toLowerCase()];
             if (password === devAccount.password) {
-              console.log('🔧 DEV LOGIN:', devAccount.user.role);
               set({
                 user: devAccount.user,
                 token: 'dev-token-' + Date.now(),
@@ -113,7 +112,6 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Firebase Authentication
-          console.log('🔥 Using Firebase authentication');
           const userCredential = await firebaseAuth.signIn(email, password);
           const firebaseUser = userCredential.user;
 
@@ -138,8 +136,6 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const token = await firebaseUser.getIdToken();
-
-          console.log('🔥 Login successful, role:', userProfile.role);
 
           set({
             user: userProfile,
@@ -178,7 +174,6 @@ export const useAuthStore = create<AuthState>()(
           if (isFeatureEnabled('pushNotifications') && user?.id) {
             try {
               await pushTokensCollection.deactivateAllForUser(user.id);
-              console.log('[Auth] Push tokens deactivated');
             } catch (tokenError) {
               console.error('[Auth] Error deactivating push tokens:', tokenError);
             }
@@ -186,7 +181,6 @@ export const useAuthStore = create<AuthState>()(
 
           // Reset notification store state
           useNotificationStore.getState().reset();
-          console.log('[Auth] Notification store reset');
 
           if (isFirebaseConfigured()) {
             await firebaseAuth.signOut();
@@ -211,7 +205,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           const freshUserData = await usersCollection.get(user.id);
           if (freshUserData) {
-            console.log('🔥 User refreshed, role:', freshUserData.role);
             set({ user: freshUserData });
           }
         } catch (error) {
@@ -263,8 +256,6 @@ const initializeAuth = async () => {
 
   // Wait for Firebase Auth to initialize
   firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
-    console.log('🔥 Auth state changed:', firebaseUser ? `signed in (${firebaseUser.uid})` : 'signed out');
-
     if (!firebaseUser) {
       useAuthStore.getState().reset();
       return;
@@ -276,7 +267,6 @@ const initializeAuth = async () => {
 
       if (userProfile) {
         const token = await firebaseUser.getIdToken();
-        console.log('🔥 Setting user from Firestore, role:', userProfile.role);
 
         useAuthStore.setState({
           user: userProfile,
@@ -285,7 +275,6 @@ const initializeAuth = async () => {
           isLoading: false,
         });
       } else {
-        console.log('🔥 No profile found for user');
         useAuthStore.setState({ isLoading: false });
       }
     } catch (error) {

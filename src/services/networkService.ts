@@ -47,11 +47,8 @@ export function initNetworkListener(): void {
     return;
   }
   if (unsubscribe) {
-    console.log('[NetworkService] Already initialized');
     return;
   }
-
-  console.log('[NetworkService] Initializing network listener');
 
   unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
     const wasOffline = !useNetworkStore.getState().isConnected;
@@ -65,7 +62,6 @@ export function initNetworkListener(): void {
 
     // Wenn wir von Offline zu Online gewechselt haben, Queue verarbeiten
     if (wasOffline && isNowOnline) {
-      console.log('[NetworkService] Back online - triggering sync');
       if (syncCallback) {
         syncCallback();
       }
@@ -79,11 +75,6 @@ export function initNetworkListener(): void {
       isInternetReachable: state.isInternetReachable,
       connectionType: state.type,
     });
-    console.log('[NetworkService] Initial state:', {
-      connected: state.isConnected,
-      reachable: state.isInternetReachable,
-      type: state.type,
-    });
   });
 }
 
@@ -93,7 +84,6 @@ export function initNetworkListener(): void {
  */
 export function cleanupNetworkListener(): void {
   if (unsubscribe) {
-    console.log('[NetworkService] Cleaning up network listener');
     unsubscribe();
     unsubscribe = null;
   }

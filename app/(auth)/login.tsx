@@ -7,17 +7,12 @@ import { useRouter } from 'expo-router';
 import { X, Eye, EyeOff, Check, Phone } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
+import { firebaseAuth, isFirebaseConfigured } from '@/src/lib/firebase';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { SocialMediaButtons } from '@/src/components/molecules';
 import { validateLoginInput } from '@/src/utils/validation';
 import { checkLoginAllowed, recordFailedLogin, recordSuccessfulLogin } from '@/src/utils/rateLimiter';
-
-// Dev Test-Zugänge (nur in Development, ohne Firebase)
-const DEV_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@dev.local', password: 'admin' },
-  { label: 'Mitarbeiter', email: 'test@dev.local', password: 'test' },
-];
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -31,10 +26,33 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
 
-  // Dev-Login: Felder ausfüllen
-  const fillDevCredentials = (devEmail: string, devPassword: string) => {
-    setEmail(devEmail);
-    setPassword(devPassword);
+  const handlePasswordReset = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      Alert.alert(t('common.error'), t('auth.resetEnterEmail'));
+      return;
+    }
+    if (!isFirebaseConfigured()) {
+      Alert.alert(t('common.error'), t('auth.resetUnavailable'));
+      return;
+    }
+    try {
+      await firebaseAuth.resetPassword(trimmedEmail);
+      Alert.alert(t('auth.resetSuccess'), t('auth.resetSuccessMessage'));
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+        Alert.alert(
+          t('auth.resetNotFound'),
+          t('auth.resetContactSupport'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('auth.callSupport'), onPress: () => Linking.openURL('tel:+4921312945497') },
+          ]
+        );
+      } else {
+        Alert.alert(t('common.error'), t('auth.resetError'));
+      }
+    }
   };
 
   const handleLogin = async () => {
@@ -57,7 +75,12 @@ export default function LoginScreen() {
 
     if (success) {
       await recordSuccessfulLogin(validation.email);
-      router.replace('/(employee)');
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'admin') {
+        router.replace('/(admin)');
+      } else {
+        router.replace('/(employee)');
+      }
     } else {
       const result = await recordFailedLogin(validation.email);
 
@@ -156,29 +179,6 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Dev Login Buttons - nur in Development */}
-          {__DEV__ && (
-            <View style={styles.devSection}>
-              <Text style={[styles.devLabel, { color: theme.textMuted }]}>
-                🔧 Dev Quick Login
-              </Text>
-              <View style={styles.devButtonsRow}>
-                {DEV_ACCOUNTS.map((account) => (
-                  <TouchableOpacity
-                    key={account.email}
-                    style={[styles.devButton, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
-                    onPress={() => fillDevCredentials(account.email, account.password)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.devButtonText, { color: theme.primary }]}>
-                      {account.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
           <TouchableOpacity
             style={[styles.loginButton, { backgroundColor: theme.primary }, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
@@ -191,16 +191,21 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.helpSection}>
-            <Text style={[styles.helpText, { color: theme.textMuted }]}>
-              {t('auth.forgotPassword')}
-            </Text>
             <TouchableOpacity
-              style={[styles.supportButton, { backgroundColor: theme.primary }]}
+              onPress={handlePasswordReset}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.resetLink, { color: theme.primary }]}>
+                {t('auth.forgotPasswordReset')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.supportButton, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
               onPress={() => Linking.openURL('tel:+4921312945497')}
               activeOpacity={0.7}
             >
-              <Phone size={16} color={theme.textInverse} />
-              <Text style={[styles.supportButtonText, { color: theme.textInverse }]}>{t('auth.callSupport')}</Text>
+              <Phone size={16} color={theme.textMuted} />
+              <Text style={[styles.supportButtonText, { color: theme.text }]}>{t('auth.callSupport')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -328,8 +333,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     gap: spacing.sm,
   },
-  helpText: {
-    fontSize: 13,
+  resetLink: {
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   supportButton: {
@@ -339,6 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
+    borderWidth: 1,
   },
   supportButtonText: {
     fontSize: 14,
@@ -346,30 +353,5 @@ const styles = StyleSheet.create({
   },
   socialSection: {
     marginTop: spacing.lg,
-  },
-  devSection: {
-    marginTop: spacing.xl,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.2)',
-    alignItems: 'center',
-  },
-  devLabel: {
-    fontSize: 12,
-    marginBottom: spacing.sm,
-  },
-  devButtonsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  devButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  devButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

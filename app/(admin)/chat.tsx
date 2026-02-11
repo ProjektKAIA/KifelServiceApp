@@ -14,6 +14,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, X, AtSign, Trash2, Users, Shield } from 'lucide-react-native';
@@ -289,23 +290,27 @@ export default function AdminChatScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.bottom > 0 ? 60 : 30) : 30}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-            <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>CHAT</Text>
-          </View>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+        <View style={styles.headerTop}>
+          <View style={{ width: 70 }} />
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
           <View style={[styles.adminBadge, { backgroundColor: theme.pillSecondary }]}>
-            <Shield size={12} color={theme.pillSecondaryText} />
+            <Shield size={10} color={theme.pillSecondaryText} />
             <Text style={[styles.adminBadgeText, { color: theme.pillSecondaryText }]}>ADMIN</Text>
           </View>
         </View>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Team Chat</Text>
         <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} {t('chat.members')}</Text>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('adminChat.title')}</Text>
-        <Text style={[styles.adminHint, { color: theme.textMuted }]}>
-          {t('adminChat.longPressHint')}
-        </Text>
       </View>
 
       {/* Messages */}
@@ -317,6 +322,7 @@ export default function AdminChatScreen() {
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
@@ -327,36 +333,35 @@ export default function AdminChatScreen() {
       />
 
       {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-          {/* @mention Button */}
-          <TouchableOpacity
-            style={[styles.mentionButton, { backgroundColor: theme.surface }]}
-            onPress={() => setShowMentionPicker(true)}
-            activeOpacity={0.7}
-          >
-            <AtSign size={20} color={theme.primary} />
-          </TouchableOpacity>
+      <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+        {/* @mention Button */}
+        <TouchableOpacity
+          style={[styles.mentionButton, { backgroundColor: theme.surface }]}
+          onPress={() => setShowMentionPicker(true)}
+          activeOpacity={0.7}
+        >
+          <AtSign size={20} color={theme.primary} />
+        </TouchableOpacity>
 
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
-            placeholder={t('adminChat.placeholder')}
-            placeholderTextColor={theme.textMuted}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            editable={!isSending}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, { backgroundColor: theme.primary, opacity: isSending ? 0.5 : 1 }]}
-            onPress={handleSend}
-            activeOpacity={0.8}
-            disabled={isSending || !inputText.trim()}
-          >
-            <Send size={20} color={theme.textInverse} />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
+          placeholder={t('adminChat.placeholder')}
+          placeholderTextColor={theme.textMuted}
+          value={inputText}
+          onChangeText={setInputText}
+          multiline
+          maxLength={500}
+          editable={!isSending}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, { backgroundColor: theme.primary, opacity: isSending ? 0.5 : 1 }]}
+          onPress={handleSend}
+          activeOpacity={0.8}
+          disabled={isSending || !inputText.trim()}
+        >
+          <Send size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+      </View>
 
       {/* @mention Picker Modal (mit @all für Admin) */}
       <Modal
@@ -465,7 +470,7 @@ export default function AdminChatScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -479,31 +484,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    padding: spacing.base,
-    paddingTop: 0,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
   },
-  headerRow: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  headerLogo: {
+    width: 120,
+    height: 32,
   },
   adminBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   adminBadgeText: {
@@ -511,18 +512,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  memberCount: {
-    fontSize: 13,
-    marginBottom: 4,
-  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
   },
-  adminHint: {
-    fontSize: 11,
-    marginTop: spacing.xs,
-    fontStyle: 'italic',
+  memberCount: {
+    fontSize: 13,
+    marginTop: 2,
   },
   messagesList: {
     padding: spacing.base,
@@ -609,32 +605,36 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: spacing.base,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
     borderTopWidth: 1,
     gap: spacing.sm,
   },
   input: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    borderRadius: 22,
+    minHeight: 36,
+    maxHeight: 80,
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    fontSize: 16,
+    lineHeight: 20,
+    textAlignVertical: 'center',
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mentionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

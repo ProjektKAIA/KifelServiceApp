@@ -86,8 +86,12 @@ export default function InviteScreen() {
   };
 
   const validatePassword = (): boolean => {
-    if (password.length < 8) {
+    if (password.length < 10) {
       Alert.alert(t('common.error'), t('invite.passwordMin'));
+      return false;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      Alert.alert(t('common.error'), t('invite.passwordSpecialChar'));
       return false;
     }
     if (password !== confirmPassword) {

@@ -255,10 +255,7 @@ export default function TimeTrackingScreen() {
 
     // Background-GPS-Tracking starten (DSGVO: nur waehrend Arbeitszeit)
     if (gpsEnabled) {
-      const bgStarted = await startBackgroundTracking();
-      if (bgStarted) {
-        console.log('[TimeTracking] Background-GPS gestartet');
-      }
+      await startBackgroundTracking();
     }
 
     // Firestore-Sync (online oder Queue)
@@ -317,7 +314,6 @@ export default function TimeTrackingScreen() {
 
           // Background-GPS-Tracking stoppen (DSGVO: sofort bei Arbeitsende)
           await stopBackgroundTracking();
-          console.log('[TimeTracking] Background-GPS gestoppt');
 
           // Lokalen Eintrag beenden
           clockOut(loc || undefined);

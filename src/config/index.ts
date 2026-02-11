@@ -12,11 +12,6 @@ export interface AppConfig {
     baseUrl: string;
     timeout: number;
   };
-
-  supabase: {
-    url: string;
-    anonKey: string;
-  };
 }
 
 const ENV = __DEV__ ? 'development' : 'production';
@@ -31,16 +26,6 @@ const config: AppConfig = {
       ? 'https://dev-api.kifel-service.de'
       : 'https://api.kifel-service.de',
     timeout: 30000,
-  },
-
-  // TODO: Replace with real Supabase credentials before production deployment
-  supabase: {
-    url: ENV === 'development'
-      ? 'https://xxx-dev.supabase.co'
-      : 'https://xxx-prod.supabase.co',
-    anonKey: ENV === 'development'
-      ? 'dev-anon-key'
-      : 'prod-anon-key',
   },
 };
 

@@ -9,37 +9,6 @@ import { usersCollection, pushTokensCollection } from '../lib/firestore';
 import { isFeatureEnabled } from '../config/features';
 import { useNotificationStore } from './notificationStore';
 
-// Dev Test-Accounts (ohne Firebase)
-const DEV_ACCOUNTS: Record<string, { password: string; user: User }> = {
-  'admin@dev.local': {
-    password: 'admin',
-    user: {
-      id: 'dev-admin-001',
-      email: 'admin@dev.local',
-      firstName: 'Admin',
-      lastName: 'Test',
-      role: 'admin',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  },
-  'test@dev.local': {
-    password: 'test',
-    user: {
-      id: 'dev-employee-001',
-      email: 'test@dev.local',
-      firstName: 'Max',
-      lastName: 'Mustermann',
-      role: 'employee',
-      status: 'active',
-      location: 'Düsseldorf',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  },
-};
-
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -87,24 +56,6 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // DEV: Check for dev accounts first (only in __DEV__ mode)
-          if (__DEV__ && DEV_ACCOUNTS[email.toLowerCase()]) {
-            const devAccount = DEV_ACCOUNTS[email.toLowerCase()];
-            if (password === devAccount.password) {
-              set({
-                user: devAccount.user,
-                token: 'dev-token-' + Date.now(),
-                isAuthenticated: true,
-                isLoading: false,
-                error: null,
-              });
-              return true;
-            } else {
-              set({ isLoading: false, error: 'Falsches Dev-Passwort' });
-              return false;
-            }
-          }
-
           // Check if Firebase is configured
           if (!isFirebaseConfigured()) {
             set({ isLoading: false, error: 'Firebase ist nicht konfiguriert. Bitte kontaktieren Sie den Support.' });

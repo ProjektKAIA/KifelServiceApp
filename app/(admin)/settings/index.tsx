@@ -56,7 +56,7 @@ export default function SettingsScreen() {
       setLocationPermissionStatus(status);
       setGpsTracking(status === 'granted');
     } catch (error) {
-      console.log('Error checking location permission:', error);
+      console.error('Error checking location permission:', error);
     }
   };
 

@@ -58,9 +58,7 @@ if (isFirebaseConfigured()) {
   }
   db = getFirestore(app);
   storage = getStorage(app);
-  console.log('🔥 Firebase initialized');
 } else {
-  console.warn('⚠️ Firebase nicht konfiguriert. Authentifizierung nicht verfügbar.');
 }
 
 export { app, auth, db, storage };

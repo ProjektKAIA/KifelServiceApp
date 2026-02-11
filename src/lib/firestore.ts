@@ -46,9 +46,10 @@ const COLLECTIONS = {
   NOTIFICATION_PREFERENCES: 'notificationPreferences',
 } as const;
 
-// Helper: Convert Firestore timestamp to ISO string
-const toISOString = (timestamp: Timestamp | null | undefined): string => {
+// Helper: Convert Firestore timestamp or string to ISO string
+const toISOString = (timestamp: Timestamp | string | null | undefined): string => {
   if (!timestamp) return new Date().toISOString();
+  if (typeof timestamp === 'string') return timestamp;
   return timestamp.toDate().toISOString();
 };
 

@@ -14,9 +14,10 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Send, X, AtSign } from 'lucide-react-native';
+import { Send, X, AtSign, User as UserIcon } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
@@ -233,14 +234,27 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.bottom > 0 ? 60 : 30) : 30}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>
-          <Text style={[styles.badgeText, { color: theme.pillInfoText }]}>CHAT</Text>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+        <View style={styles.headerTop}>
+          <View style={{ width: 80 }} />
+          <Image
+            source={require('@/assets/images/kifel-service-logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+          <View style={[styles.employeeBadge, { backgroundColor: theme.pillInfo }]}>
+            <UserIcon size={10} color={theme.pillInfoText} />
+            <Text style={[styles.employeeBadgeText, { color: theme.pillInfoText }]}>MITARBEITER</Text>
+          </View>
         </View>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Team Chat</Text>
         <Text style={[styles.memberCount, { color: theme.textMuted }]}>{memberCount} {t('chat.members')}</Text>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{t('empChat.title')}</Text>
       </View>
 
       {/* Messages */}
@@ -252,6 +266,7 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
@@ -262,36 +277,35 @@ export default function ChatScreen() {
       />
 
       {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-          {/* @mention Button */}
-          <TouchableOpacity
-            style={[styles.mentionButton, { backgroundColor: theme.surface }]}
-            onPress={() => setShowMentionPicker(true)}
-            activeOpacity={0.7}
-          >
-            <AtSign size={20} color={theme.primary} />
-          </TouchableOpacity>
+      <View style={[styles.inputContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+        {/* @mention Button */}
+        <TouchableOpacity
+          style={[styles.mentionButton, { backgroundColor: theme.surface }]}
+          onPress={() => setShowMentionPicker(true)}
+          activeOpacity={0.7}
+        >
+          <AtSign size={20} color={theme.primary} />
+        </TouchableOpacity>
 
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
-            placeholder={t('empChat.placeholder')}
-            placeholderTextColor={theme.textMuted}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            editable={!isSending}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, { backgroundColor: theme.primary, opacity: isSending ? 0.5 : 1 }]}
-            onPress={handleSend}
-            activeOpacity={0.8}
-            disabled={isSending || !inputText.trim()}
-          >
-            <Send size={20} color={theme.textInverse} />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        <TextInput
+          style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.inputBorder }]}
+          placeholder={t('empChat.placeholder')}
+          placeholderTextColor={theme.textMuted}
+          value={inputText}
+          onChangeText={setInputText}
+          multiline
+          maxLength={500}
+          editable={!isSending}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, { backgroundColor: theme.primary, opacity: isSending ? 0.5 : 1 }]}
+          onPress={handleSend}
+          activeOpacity={0.8}
+          disabled={isSending || !inputText.trim()}
+        >
+          <Send size={20} color={theme.textInverse} />
+        </TouchableOpacity>
+      </View>
 
       {/* @mention Picker Modal */}
       <Modal
@@ -337,7 +351,7 @@ export default function ChatScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -351,28 +365,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    padding: spacing.base,
-    paddingTop: 0,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
   },
-  badge: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  headerLogo: {
+    width: 120,
+    height: 32,
+  },
+  employeeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
-    marginBottom: spacing.md,
   },
-  badgeText: {
-    fontSize: 9,
+  employeeBadgeText: {
+    fontSize: 8,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
   memberCount: {
     fontSize: 13,
-    marginBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    marginTop: 2,
   },
   messagesList: {
     padding: spacing.base,
@@ -451,32 +478,36 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: spacing.base,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
     borderTopWidth: 1,
     gap: spacing.sm,
   },
   input: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    borderRadius: 22,
+    minHeight: 36,
+    maxHeight: 80,
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    fontSize: 16,
+    lineHeight: 20,
+    textAlignVertical: 'center',
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mentionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

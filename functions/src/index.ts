@@ -36,6 +36,7 @@ const translations: Record<Language, {
   // Chat
   chatNewMessage: (name: string) => string;
   chatMention: (name: string) => string;
+  chatAllMention: (name: string) => string;
 
   // Shifts
   shiftNew: string;
@@ -60,6 +61,7 @@ const translations: Record<Language, {
 
     chatNewMessage: (name) => `Neue Nachricht von ${name}`,
     chatMention: (name) => `${name} hat Sie erwähnt`,
+    chatAllMention: (name) => `${name} hat alle erwähnt`,
 
     shiftNew: 'Neue Schicht zugewiesen',
     shiftNewBody: (date, start, end) => `${date}: ${start} - ${end}`,
@@ -83,6 +85,7 @@ const translations: Record<Language, {
 
     chatNewMessage: (name) => `New message from ${name}`,
     chatMention: (name) => `${name} mentioned you`,
+    chatAllMention: (name) => `${name} mentioned everyone`,
 
     shiftNew: 'New shift assigned',
     shiftNewBody: (date, start, end) => `${date}: ${start} - ${end}`,
@@ -106,6 +109,7 @@ const translations: Record<Language, {
 
     chatNewMessage: (name) => `${name} adlı kişiden yeni mesaj`,
     chatMention: (name) => `${name} sizden bahsetti`,
+    chatAllMention: (name) => `${name} herkesten bahsetti`,
 
     shiftNew: 'Yeni vardiya atandı',
     shiftNewBody: (date, start, end) => `${date}: ${start} - ${end}`,
@@ -129,6 +133,7 @@ const translations: Record<Language, {
 
     chatNewMessage: (name) => `Новое сообщение от ${name}`,
     chatMention: (name) => `${name} упомянул(а) вас`,
+    chatAllMention: (name) => `${name} упомянул(а) всех`,
 
     shiftNew: 'Назначена новая смена',
     shiftNewBody: (date, start, end) => `${date}: ${start} - ${end}`,
@@ -407,17 +412,23 @@ export const onChatMessageCreated = functions.firestore
     const usersSnapshot = await db.collection('users').get();
     const messages: ExpoPushMessage[] = [];
 
+    // Check if this is an @all message
+    const isAllMention = message.content && message.content.includes('@all');
+
     for (const userDoc of usersSnapshot.docs) {
       if (userDoc.id === message.userId) continue;
 
       const userData = userDoc.data();
       const prefs = await getPreferences(userDoc.id);
 
-      // Check if this is a mention
-      const isMention =
-        message.content && message.content.includes(`@${userData.firstName}`);
+      // Check if this is a personal mention
+      const isPersonalMention =
+        !isAllMention && message.content && message.content.includes(`@${userData.firstName}`);
 
-      if (isMention) {
+      // @all → treat as mention (always notify, respects chatMentions pref)
+      // @personal → chatMentions pref
+      // normal → chatMessages pref
+      if (isAllMention || isPersonalMention) {
         if (!shouldSendNotification(prefs, 'chatMentions')) continue;
       } else {
         if (!shouldSendNotification(prefs, 'chatMessages')) continue;
@@ -430,9 +441,15 @@ export const onChatMessageCreated = functions.firestore
       for (const tokenData of tokens) {
         if (!Expo.isExpoPushToken(tokenData.token)) continue;
 
-        const title = isMention
-          ? tr.chatMention(sender.firstName)
-          : tr.chatNewMessage(sender.firstName);
+        const title = isAllMention
+          ? tr.chatAllMention(sender.firstName)
+          : isPersonalMention
+            ? tr.chatMention(sender.firstName)
+            : tr.chatNewMessage(sender.firstName);
+
+        const notificationType = isAllMention
+          ? 'chat_mention'
+          : isPersonalMention ? 'chat_mention' : 'chat_message';
 
         messages.push({
           to: tokenData.token,
@@ -440,7 +457,7 @@ export const onChatMessageCreated = functions.firestore
           title,
           body: message.content.substring(0, 100),
           data: {
-            type: isMention ? 'chat_mention' : 'chat_message',
+            type: notificationType,
             targetScreen: userData.role === 'admin' ? '/(admin)/chat' : '/(employee)/chat',
             entityId: context.params.messageId,
             userId: message.userId,

@@ -96,7 +96,7 @@ export default function ProfileScreen() {
         setCompanyTaxId(companyData.taxId || '');
       }
     } catch (error) {
-      console.log('Error loading company:', error);
+      console.error('Error loading company:', error);
     } finally {
       setIsLoading(false);
     }

@@ -116,11 +116,14 @@ service cloud.firestore {
       // All authenticated users can read messages (team chat)
       allow read: if isAuthenticated();
 
-      // Users can create their own messages
+      // Users can create their own messages with content limit
       allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() <= 500 &&
+        request.resource.data.roomId is string;
 
-      // Users can update their own messages (soft delete)
+      // Users can update their own messages (soft delete), admins can update all
       allow update: if isAuthenticated() &&
         (resource.data.userId == request.auth.uid || isAdmin());
 
@@ -145,14 +148,21 @@ service cloud.firestore {
     // ============================================
 
     match /invites/{inviteId} {
-      // Admins can read all invites
-      allow read: if isAdmin();
+      // Admins can read/list all invites
+      allow list: if isAdmin();
 
-      // Allow reading invite by token (unauthenticated, for invite acceptance)
+      // Allow reading single invite (for invite acceptance via token)
+      // get = single document read, list = collection query
       allow get: if true;
 
-      // Only admins can create/update/delete invites
-      allow create, update, delete: if isAdmin();
+      // Only admins can create invites
+      allow create: if isAdmin();
+
+      // Admins can update/delete, authenticated users can accept (update status)
+      allow update: if isAdmin() || isAuthenticated();
+
+      // Only admins can delete invites
+      allow delete: if isAdmin();
     }
 
     // ============================================

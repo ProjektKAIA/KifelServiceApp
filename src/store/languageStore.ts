@@ -34,7 +34,7 @@ export const useLanguageStore = create<LanguageState>()(
           await usersCollection.update(user.id, {
             language: get().language,
           });
-          console.log('[LanguageStore] Language synced to Firestore:', get().language);
+
         } catch (error) {
           logError(error, 'LanguageStore:syncLanguageToFirestore');
         }

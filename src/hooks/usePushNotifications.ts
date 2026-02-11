@@ -69,8 +69,6 @@ export function usePushNotifications() {
   const handleNotificationNavigation = useCallback((response: NotificationTapResponse) => {
     const { type, targetScreen, entityId } = response;
 
-    console.log('[usePushNotifications] Navigating for notification type:', type);
-
     switch (type) {
       case 'vacation_request_created':
         // Admin goes to requests screen

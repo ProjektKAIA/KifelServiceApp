@@ -17,7 +17,7 @@ export interface PasswordValidation {
   errors: string[];
 }
 
-export const validatePassword = (password: string, minLength = 6): PasswordValidation => {
+export const validatePassword = (password: string, minLength = 10): PasswordValidation => {
   const errors: string[] = [];
 
   if (password.length < minLength) {
@@ -30,6 +30,10 @@ export const validatePassword = (password: string, minLength = 6): PasswordValid
 
   if (!/[0-9]/.test(password)) {
     errors.push('Mindestens eine Zahl erforderlich');
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Mindestens ein Sonderzeichen erforderlich');
   }
 
   return {

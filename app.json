@@ -15,10 +15,15 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Kifel Service benoetigt Ihren Standort fuer die Zeiterfassung.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Kifel Service erfasst Ihren Standort waehrend der Arbeitszeit auch im Hintergrund.",
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {
+      "package": "com.amelkantarevic.KifelServiceApp",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/kifel-service-logo.png"
@@ -68,8 +73,18 @@
           "color": "#1a73e8",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
+    "extra": {
+      "eas": {
+        "projectId": "EAS_PROJECT_ID"
+      }
+    },
+    "owner": "amelkantarevic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

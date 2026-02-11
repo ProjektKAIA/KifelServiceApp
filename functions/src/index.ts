@@ -49,6 +49,14 @@ const translations: Record<Language, {
   // Invite
   inviteAccepted: string;
   inviteAcceptedBody: (name: string) => string;
+
+  // Time Entry Approval
+  timeEntryFlagged: string;
+  timeEntryFlaggedBody: (name: string) => string;
+  timeEntryApproved: string;
+  timeEntryApprovedBody: (date: string) => string;
+  timeEntryRejected: string;
+  timeEntryRejectedBody: (date: string) => string;
 }> = {
   // German (Default)
   de: {
@@ -72,6 +80,13 @@ const translations: Record<Language, {
 
     inviteAccepted: 'Einladung angenommen',
     inviteAcceptedBody: (name) => `${name} ist dem Team beigetreten`,
+
+    timeEntryFlagged: 'Zeiteintrag zur Prüfung',
+    timeEntryFlaggedBody: (name) => `${name} hat sich am falschen Standort eingestempelt`,
+    timeEntryApproved: 'Zeiteintrag genehmigt',
+    timeEntryApprovedBody: (date) => `Ihr Zeiteintrag vom ${date} wurde genehmigt`,
+    timeEntryRejected: 'Zeiteintrag abgelehnt',
+    timeEntryRejectedBody: (date) => `Ihr Zeiteintrag vom ${date} wurde abgelehnt`,
   },
 
   // English
@@ -96,6 +111,13 @@ const translations: Record<Language, {
 
     inviteAccepted: 'Invitation accepted',
     inviteAcceptedBody: (name) => `${name} has joined the team`,
+
+    timeEntryFlagged: 'Time entry flagged for review',
+    timeEntryFlaggedBody: (name) => `${name} clocked in at the wrong location`,
+    timeEntryApproved: 'Time entry approved',
+    timeEntryApprovedBody: (date) => `Your time entry from ${date} has been approved`,
+    timeEntryRejected: 'Time entry rejected',
+    timeEntryRejectedBody: (date) => `Your time entry from ${date} has been rejected`,
   },
 
   // Turkish
@@ -120,6 +142,13 @@ const translations: Record<Language, {
 
     inviteAccepted: 'Davet kabul edildi',
     inviteAcceptedBody: (name) => `${name} takıma katıldı`,
+
+    timeEntryFlagged: 'Zaman kaydı inceleme bekliyor',
+    timeEntryFlaggedBody: (name) => `${name} yanlış konumda giriş yaptı`,
+    timeEntryApproved: 'Zaman kaydı onaylandı',
+    timeEntryApprovedBody: (date) => `${date} tarihli zaman kaydınız onaylandı`,
+    timeEntryRejected: 'Zaman kaydı reddedildi',
+    timeEntryRejectedBody: (date) => `${date} tarihli zaman kaydınız reddedildi`,
   },
 
   // Russian
@@ -144,6 +173,13 @@ const translations: Record<Language, {
 
     inviteAccepted: 'Приглашение принято',
     inviteAcceptedBody: (name) => `${name} присоединился(-ась) к команде`,
+
+    timeEntryFlagged: 'Запись времени на проверке',
+    timeEntryFlaggedBody: (name) => `${name} отметился(-ась) не на том месте`,
+    timeEntryApproved: 'Запись времени одобрена',
+    timeEntryApprovedBody: (date) => `Ваша запись времени от ${date} была одобрена`,
+    timeEntryRejected: 'Запись времени отклонена',
+    timeEntryRejectedBody: (date) => `Ваша запись времени от ${date} была отклонена`,
   },
 };
 
@@ -693,5 +729,119 @@ export const onAdminNotificationCreated = functions.firestore
     if (messages.length > 0) {
       await sendPushNotifications(messages);
       console.log(`Sent ${messages.length} admin notification push messages`);
+    }
+  });
+
+// =============================================================================
+// TIME ENTRY APPROVAL TRIGGERS
+// =============================================================================
+
+/**
+ * Notify admins when a time entry is created with pending approval status
+ * (i.e., employee clocked in at wrong location)
+ */
+export const onTimeEntryCreated = functions.firestore
+  .document('timeEntries/{entryId}')
+  .onCreate(async (snapshot, context) => {
+    const entry = snapshot.data();
+
+    // Only notify if the entry requires approval
+    if (entry.approvalStatus !== 'pending') return;
+
+    const user = await getUser(entry.userId);
+    if (!user) return;
+
+    const admins = await getAdminUsers();
+    const messages: ExpoPushMessage[] = [];
+    const userName = `${user.firstName} ${user.lastName}`;
+
+    for (const adminUser of admins) {
+      const tokens = await getActiveTokensForUser(adminUser.id);
+      const lang = await getUserLanguage(adminUser.id);
+      const tr = t(lang);
+
+      for (const tokenData of tokens) {
+        if (!Expo.isExpoPushToken(tokenData.token)) continue;
+
+        messages.push({
+          to: tokenData.token,
+          sound: 'default',
+          title: tr.timeEntryFlagged,
+          body: tr.timeEntryFlaggedBody(userName),
+          data: {
+            type: 'time_entry_flagged',
+            targetScreen: '/(admin)/reports',
+            entityId: context.params.entryId,
+            userId: entry.userId,
+          },
+          channelId: 'system',
+        });
+      }
+    }
+
+    // Also create an admin notification document
+    if (messages.length > 0) {
+      await db.collection('adminNotifications').add({
+        type: 'time_entry_flagged',
+        title: translations.de.timeEntryFlagged,
+        message: translations.de.timeEntryFlaggedBody(userName),
+        userId: entry.userId,
+        entityId: context.params.entryId,
+        status: 'unread',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await sendPushNotifications(messages);
+      console.log(`Sent ${messages.length} time entry flagged notifications`);
+    }
+  });
+
+/**
+ * Notify employee when their time entry approval status changes
+ */
+export const onTimeEntryApprovalChanged = functions.firestore
+  .document('timeEntries/{entryId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Only trigger on approvalStatus change
+    if (before.approvalStatus === after.approvalStatus) return;
+
+    // Only notify on approved or rejected
+    if (after.approvalStatus !== 'approved' && after.approvalStatus !== 'rejected') return;
+
+    const tokens = await getActiveTokensForUser(after.userId);
+    const lang = await getUserLanguage(after.userId);
+    const tr = t(lang);
+    const messages: ExpoPushMessage[] = [];
+
+    const entryDate = after.date || (after.clockIn ? new Date(after.clockIn).toLocaleDateString('de-DE') : '');
+    const isApproved = after.approvalStatus === 'approved';
+    const title = isApproved ? tr.timeEntryApproved : tr.timeEntryRejected;
+    const body = isApproved
+      ? tr.timeEntryApprovedBody(entryDate)
+      : tr.timeEntryRejectedBody(entryDate);
+
+    for (const tokenData of tokens) {
+      if (!Expo.isExpoPushToken(tokenData.token)) continue;
+
+      messages.push({
+        to: tokenData.token,
+        sound: 'default',
+        title,
+        body,
+        data: {
+          type: isApproved ? 'time_entry_approved' : 'time_entry_rejected',
+          targetScreen: '/(employee)/reports',
+          entityId: context.params.entryId,
+        },
+        channelId: 'system',
+      });
+    }
+
+    if (messages.length > 0) {
+      await sendPushNotifications(messages);
+      console.log(`Sent ${messages.length} time entry approval notifications`);
     }
   });

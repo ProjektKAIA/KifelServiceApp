@@ -307,7 +307,7 @@ export default function ScheduleScreen() {
         onRequestClose={() => setShowExportModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
-          <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.background }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
               <TouchableOpacity onPress={() => setShowExportModal(false)}>

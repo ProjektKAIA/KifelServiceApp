@@ -486,9 +486,14 @@ export default function TimeTrackingScreen() {
                     : t('timetracking.wrongLocation')}
                 </Typography>
                 {!locationValidation.isValid && (
-                  <Typography variant="caption" color="muted">
-                    {locationValidation.expectedLocationName} · {locationValidation.distanceMeters}m {t('timetracking.fromExpected')}
-                  </Typography>
+                  <>
+                    <Typography variant="caption" color="muted">
+                      {locationValidation.expectedLocationName} · {locationValidation.distanceMeters}m {t('timetracking.fromExpected')}
+                    </Typography>
+                    <Typography variant="caption" style={{ color: theme.warning, marginTop: 4, fontSize: 11 }}>
+                      {t('approval.pendingInfo')}
+                    </Typography>
+                  </>
                 )}
               </View>
             </View>

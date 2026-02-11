@@ -14,7 +14,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp, Download, FileText, FileSpreadsheet, X, Target, AlertTriangle } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Clock, Calendar, TrendingUp, Download, FileText, FileSpreadsheet, X, Target, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react-native';
 import {
   format,
   startOfDay,
@@ -211,6 +211,8 @@ export default function EmployeeReportsScreen() {
           let breakMinutes = 0;
 
           dayEntries.forEach(entry => {
+            // Abgelehnte Einträge nicht in Stundensumme zählen
+            if (entry.approvalStatus === 'rejected') return;
             const hours = calculateHours(entry);
             totalMinutes += hours.grossMinutes;
             breakMinutes += hours.breakMinutes;
@@ -510,6 +512,8 @@ export default function EmployeeReportsScreen() {
               {/* Individual entries for the day */}
               {day.entries.map((entry, index) => {
                 const hours = calculateHours(entry);
+                const isRejected = entry.approvalStatus === 'rejected';
+                const isPending = entry.approvalStatus === 'pending';
                 return (
                   <View
                     key={entry.id}
@@ -517,10 +521,11 @@ export default function EmployeeReportsScreen() {
                       styles.entryRow,
                       { borderTopColor: theme.borderLight },
                       index === 0 && { borderTopWidth: 1 },
+                      isRejected && { opacity: 0.45 },
                     ]}
                   >
                     <View style={styles.entryTimes}>
-                      <View style={[styles.timeDot, { backgroundColor: theme.success }]} />
+                      <View style={[styles.timeDot, { backgroundColor: isRejected ? theme.danger : isPending ? theme.warning : theme.success }]} />
                       <Text style={[styles.entryTime, { color: theme.textSecondary }]}>
                         {formatTime(entry.clockIn)}
                       </Text>
@@ -528,6 +533,19 @@ export default function EmployeeReportsScreen() {
                       <Text style={[styles.entryTime, { color: theme.textSecondary }]}>
                         {entry.clockOut ? formatTime(entry.clockOut) : t('reports.running')}
                       </Text>
+                      {/* Status Badge */}
+                      {(isPending || isRejected) && (
+                        <View style={[styles.approvalBadge, { backgroundColor: isPending ? theme.warning + '20' : theme.danger + '20' }]}>
+                          {isPending ? (
+                            <AlertCircle size={10} color={theme.warning} />
+                          ) : (
+                            <AlertCircle size={10} color={theme.danger} />
+                          )}
+                          <Text style={[styles.approvalBadgeText, { color: isPending ? theme.warning : theme.danger }]}>
+                            {isPending ? t('approval.pending') : t('approval.rejected')}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.entryStats}>
                       {entry.breakMinutes > 0 && (
@@ -535,7 +553,7 @@ export default function EmployeeReportsScreen() {
                           -{entry.breakMinutes} {t('reports.minBreak')}
                         </Text>
                       )}
-                      <Text style={[styles.entryHours, { color: theme.text }]}>
+                      <Text style={[styles.entryHours, { color: isRejected ? theme.textMuted : theme.text, textDecorationLine: isRejected ? 'line-through' : 'none' }]}>
                         {formatHoursMinutes(hours.grossMinutes - hours.breakMinutes)} h
                       </Text>
                     </View>
@@ -573,7 +591,7 @@ export default function EmployeeReportsScreen() {
         onRequestClose={() => setShowExportModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
-          <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.background }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
               <TouchableOpacity onPress={() => setShowExportModal(false)}>
@@ -889,5 +907,18 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  approvalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  approvalBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

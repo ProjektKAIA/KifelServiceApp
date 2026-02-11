@@ -4,11 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Calendar, Users, Check, X, Bell, ChevronRight, User } from 'lucide-react-native';
+import { Calendar, Users, Check, X, Bell, ChevronRight, User, AlertCircle } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
-import { vacationRequestsCollection, statsCollection, usersCollection, adminNotificationsCollection } from '@/src/lib/firestore';
+import { vacationRequestsCollection, statsCollection, usersCollection, adminNotificationsCollection, timeEntriesCollection } from '@/src/lib/firestore';
 import { VacationRequest, User as UserType, AdminStats, AdminNotification } from '@/src/types';
 import { useAuthStore } from '@/src/store/authStore';
 import { format } from 'date-fns';
@@ -54,21 +54,24 @@ export default function AdminDashboardScreen() {
   });
   const [openRequests, setOpenRequests] = useState<OpenRequest[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [pendingEntriesCount, setPendingEntriesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       // Load stats, pending requests, and notifications in parallel
-      const [adminStats, pendingRequests, employees, adminNotifications] = await Promise.all([
+      const [adminStats, pendingRequests, employees, adminNotifications, pendingEntries] = await Promise.all([
         statsCollection.getAdminStats(),
         vacationRequestsCollection.getAll('pending'),
         usersCollection.getAll(),
         user ? adminNotificationsCollection.getUnread(user.id) : Promise.resolve([]),
+        timeEntriesCollection.getPendingApproval(),
       ]);
 
       setStats(adminStats);
       setNotifications(adminNotifications);
+      setPendingEntriesCount(pendingEntries.length);
 
       // Map requests with employee names
       const requestsWithNames = pendingRequests.map(req => {
@@ -342,6 +345,28 @@ export default function AdminDashboardScreen() {
           <Text style={[styles.menuButtonText, { color: theme.text }]}>{t('adminDashboard.manageEmployees')}</Text>
         </TouchableOpacity>
 
+        {/* Pending Time Entries */}
+        {pendingEntriesCount > 0 && (
+          <TouchableOpacity
+            style={[styles.pendingEntriesCard, { backgroundColor: theme.warning + '15', borderColor: theme.warning + '40' }]}
+            onPress={() => router.push('/(admin)/reports')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.pendingEntriesIcon, { backgroundColor: theme.warning + '25' }]}>
+              <AlertCircle size={20} color={theme.warning} />
+            </View>
+            <View style={styles.pendingEntriesInfo}>
+              <Text style={[styles.pendingEntriesTitle, { color: theme.warning }]}>
+                {t('approval.pendingEntries')}
+              </Text>
+              <Text style={[styles.pendingEntriesCount, { color: theme.textSecondary }]}>
+                {pendingEntriesCount} {pendingEntriesCount === 1 ? 'Eintrag' : 'Einträge'}
+              </Text>
+            </View>
+            <ChevronRight size={20} color={theme.warning} />
+          </TouchableOpacity>
+        )}
+
         {/* Open Requests */}
         <Text style={[styles.sectionLabel, { color: theme.textMuted, marginTop: spacing.lg }]}>
           {t('adminDashboard.openRequestsSection')} ({openRequests.length})
@@ -583,5 +608,32 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pendingEntriesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  pendingEntriesIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingEntriesInfo: {
+    flex: 1,
+  },
+  pendingEntriesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pendingEntriesCount: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });

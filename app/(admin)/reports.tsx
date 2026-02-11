@@ -12,7 +12,10 @@ import {
   Alert,
   Modal,
   Pressable,
+  Platform,
+  TextInput,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
@@ -34,6 +37,8 @@ import {
   Route,
   Target,
   AlertTriangle,
+  Check,
+  AlertCircle,
 } from 'lucide-react-native';
 import {
   format,
@@ -60,6 +65,7 @@ import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { timeEntriesCollection, usersCollection, TimeEntry } from '@/src/lib/firestore';
 import { User } from '@/src/types';
+import { useAuthStore } from '@/src/store/authStore';
 import { exportReport, exportLocationReport, ExportFormat, ExportEmployeeData, ExportLocationData } from '@/src/utils/exportUtils';
 import { isFieldEntry, calculateTotalDistance, formatDistance } from '@/src/utils/locationUtils';
 import {
@@ -72,7 +78,7 @@ import {
 } from '@/src/utils/hoursUtils';
 import RouteMap from '@/src/components/organisms/RouteMap';
 
-type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year';
+type PeriodType = 'day' | 'week' | 'month' | 'quarter' | 'halfyear' | 'year' | 'custom';
 type ReportTab = 'stunden' | 'standort';
 type LocationFilter = 'alle' | 'aussen' | 'innen';
 
@@ -92,6 +98,7 @@ interface EmployeeStats {
   isOvertime?: boolean;
   formattedDifference?: string;
   breakCompliance?: PeriodBreakComplianceResult;
+  pendingCount: number;
 }
 
 interface EmployeeLocationStats {
@@ -109,11 +116,13 @@ export default function AdminReportsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { user: adminUser } = useAuthStore();
 
   const PERIOD_OPTIONS: { key: PeriodType; label: string }[] = useMemo(() => [
     { key: 'day', label: t('reports.periodDay') },
     { key: 'week', label: t('reports.periodWeek') },
     { key: 'month', label: t('reports.periodMonth') },
+    { key: 'custom', label: t('reports.periodCustom') },
     { key: 'quarter', label: t('reports.periodQuarter') },
     { key: 'halfyear', label: t('reports.periodHalfYear') },
     { key: 'year', label: t('reports.periodYear') },
@@ -138,6 +147,16 @@ export default function AdminReportsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailEmployee, setDetailEmployee] = useState<{ user: User; stats: EmployeeStats } | null>(null);
+
+  // Custom date range state
+  const [customStart, setCustomStart] = useState<Date>(() => startOfMonth(new Date()));
+  const [customEnd, setCustomEnd] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
+
+  // Reject modal state
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectEntryId, setRejectEntryId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
 
   // Standort-Tab state
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('alle');
@@ -169,8 +188,10 @@ export default function AdminReportsScreen() {
         }
       case 'year':
         return { start: startOfYear(date), end: endOfYear(date) };
+      case 'custom':
+        return { start: startOfDay(customStart), end: endOfDay(customEnd) };
     }
-  }, []);
+  }, [customStart, customEnd]);
 
   // Navigate to previous/next period
   const navigatePeriod = (direction: 'prev' | 'next') => {
@@ -215,8 +236,10 @@ export default function AdminReportsScreen() {
         return `${h}. ${t('reports.halfYearLabel')} ${format(start, 'yyyy')}`;
       case 'year':
         return format(start, 'yyyy');
+      case 'custom':
+        return `${format(customStart, 'd. MMM yyyy', { locale: de })} – ${format(customEnd, 'd. MMM yyyy', { locale: de })}`;
     }
-  }, [currentDate, periodType, getDateRange]);
+  }, [currentDate, periodType, getDateRange, customStart, customEnd]);
 
   // Calculate hours from time entry
   const calculateHours = (entry: TimeEntry): { grossMinutes: number; breakMinutes: number } => {
@@ -262,13 +285,24 @@ export default function AdminReportsScreen() {
           netMinutes: 0,
           entriesCount: 0,
           entries: [],
+          pendingCount: 0,
         });
       });
 
-      // Calculate stats from entries
+      // Calculate stats from entries (rejected entries don't count towards hours)
       entriesData.forEach(entry => {
         const stats = statsMap.get(entry.userId);
         if (!stats) return;
+
+        stats.entries.push(entry);
+        stats.entriesCount += 1;
+
+        if (entry.approvalStatus === 'pending') {
+          stats.pendingCount += 1;
+        }
+
+        // Rejected entries don't contribute to hour calculations
+        if (entry.approvalStatus === 'rejected') return;
 
         const { grossMinutes, breakMinutes } = calculateHours(entry);
         const netMinutes = grossMinutes - breakMinutes;
@@ -276,8 +310,6 @@ export default function AdminReportsScreen() {
         stats.totalMinutes += grossMinutes;
         stats.breakMinutes += breakMinutes;
         stats.netMinutes += netMinutes;
-        stats.entriesCount += 1;
-        stats.entries.push(entry);
       });
 
       // Convert to hours, compute target/difference and break compliance
@@ -438,6 +470,40 @@ export default function AdminReportsScreen() {
     if (user) {
       setDetailEmployee({ user, stats });
       setShowDetailModal(true);
+    }
+  };
+
+  // Approve time entry
+  const handleApproveEntry = async (entryId: string) => {
+    if (!adminUser) return;
+    try {
+      await timeEntriesCollection.updateApprovalStatus(entryId, 'approved', adminUser.id);
+      Alert.alert(t('approval.approvedTitle'), t('approval.approvedMessage'));
+      loadData();
+    } catch (error) {
+      Alert.alert(t('common.error'), t('approval.approveError'));
+    }
+  };
+
+  // Open reject modal
+  const handleOpenRejectModal = (entryId: string) => {
+    setRejectEntryId(entryId);
+    setRejectNote('');
+    setShowRejectModal(true);
+  };
+
+  // Confirm rejection
+  const handleConfirmReject = async () => {
+    if (!adminUser || !rejectEntryId) return;
+    try {
+      await timeEntriesCollection.updateApprovalStatus(rejectEntryId, 'rejected', adminUser.id, rejectNote || undefined);
+      setShowRejectModal(false);
+      setRejectEntryId(null);
+      setRejectNote('');
+      Alert.alert(t('approval.rejectedTitle'), t('approval.rejectedMessage'));
+      loadData();
+    } catch (error) {
+      Alert.alert(t('common.error'), t('approval.rejectError'));
     }
   };
 
@@ -666,21 +732,100 @@ export default function AdminReportsScreen() {
         </ScrollView>
 
         {/* Period Navigation */}
-        <View style={styles.periodNav}>
-          <TouchableOpacity
-            style={[styles.navButton, { backgroundColor: theme.surface }]}
-            onPress={() => navigatePeriod('prev')}
-          >
-            <ChevronLeft size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-          <Text style={[styles.periodLabel, { color: theme.text }]}>{getPeriodLabel()}</Text>
-          <TouchableOpacity
-            style={[styles.navButton, { backgroundColor: theme.surface }]}
-            onPress={() => navigatePeriod('next')}
-          >
-            <ChevronRight size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        {periodType === 'custom' ? (
+          <View style={styles.customDateContainer}>
+            <TouchableOpacity
+              style={[styles.datePickerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={() => setShowDatePicker('start')}
+            >
+              <Calendar size={16} color={theme.primary} />
+              <View>
+                <Text style={[styles.datePickerLabel, { color: theme.textMuted }]}>{t('reports.customFrom')}</Text>
+                <Text style={[styles.datePickerValue, { color: theme.text }]}>
+                  {format(customStart, 'dd.MM.yyyy')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <Text style={[styles.datePickerDash, { color: theme.textMuted }]}>–</Text>
+            <TouchableOpacity
+              style={[styles.datePickerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={() => setShowDatePicker('end')}
+            >
+              <Calendar size={16} color={theme.primary} />
+              <View>
+                <Text style={[styles.datePickerLabel, { color: theme.textMuted }]}>{t('reports.customTo')}</Text>
+                <Text style={[styles.datePickerValue, { color: theme.text }]}>
+                  {format(customEnd, 'dd.MM.yyyy')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.periodNav}>
+            <TouchableOpacity
+              style={[styles.navButton, { backgroundColor: theme.surface }]}
+              onPress={() => navigatePeriod('prev')}
+            >
+              <ChevronLeft size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.periodLabel, { color: theme.text }]}>{getPeriodLabel()}</Text>
+            <TouchableOpacity
+              style={[styles.navButton, { backgroundColor: theme.surface }]}
+              onPress={() => navigatePeriod('next')}
+            >
+              <ChevronRight size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Date Picker Modal */}
+        {showDatePicker && (
+          Platform.OS === 'ios' ? (
+            <Modal transparent animationType="fade" onRequestClose={() => setShowDatePicker(null)}>
+              <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(null)}>
+                <Pressable style={[styles.datePickerModal, { backgroundColor: theme.background }]} onPress={() => {}}>
+                  <View style={styles.datePickerModalHeader}>
+                    <Text style={[styles.datePickerModalTitle, { color: theme.text }]}>
+                      {showDatePicker === 'start' ? t('reports.customFrom') : t('reports.customTo')}
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowDatePicker(null)}>
+                      <Text style={[styles.datePickerDone, { color: theme.primary }]}>{t('common.ok')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={showDatePicker === 'start' ? customStart : customEnd}
+                    mode="date"
+                    display="spinner"
+                    maximumDate={showDatePicker === 'start' ? customEnd : new Date()}
+                    minimumDate={showDatePicker === 'end' ? customStart : undefined}
+                    onChange={(_: DateTimePickerEvent, date?: Date) => {
+                      if (date) {
+                        if (showDatePicker === 'start') setCustomStart(date);
+                        else setCustomEnd(date);
+                      }
+                    }}
+                    locale="de"
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={showDatePicker === 'start' ? customStart : customEnd}
+              mode="date"
+              display="default"
+              maximumDate={showDatePicker === 'start' ? customEnd : new Date()}
+              minimumDate={showDatePicker === 'end' ? customStart : undefined}
+              onChange={(_: DateTimePickerEvent, date?: Date) => {
+                setShowDatePicker(null);
+                if (date) {
+                  if (showDatePicker === 'start') setCustomStart(date);
+                  else setCustomEnd(date);
+                }
+              }}
+            />
+          )
+        )}
 
         {/* ============================================================ */}
         {/* STUNDEN TAB */}
@@ -820,6 +965,9 @@ export default function AdminReportsScreen() {
                       <Text style={[styles.statsName, { color: theme.text }]}>{stats.userName}</Text>
                       <Text style={[styles.statsSubtext, { color: theme.textMuted }]}>
                         {stats.entriesCount} {stats.entriesCount === 1 ? t('reports.entry') : t('reports.entries')}
+                        {stats.pendingCount > 0 && (
+                          ` · ${stats.pendingCount} ${t('approval.pending')}`
+                        )}
                       </Text>
                     </View>
                     <View style={styles.statsHours}>
@@ -1035,7 +1183,7 @@ export default function AdminReportsScreen() {
         onRequestClose={() => setShowExportModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowExportModal(false)}>
-          <Pressable style={[styles.modalContent, { backgroundColor: theme.cardBackground }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.background }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>{t('adminReports.chooseExportFormat')}</Text>
               <TouchableOpacity onPress={() => setShowExportModal(false)}>
@@ -1205,14 +1353,39 @@ export default function AdminReportsScreen() {
                   .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime())
                   .map((entry, index) => {
                     const formatted = formatTimeEntry(entry);
+                    const status = entry.approvalStatus || 'approved';
+                    const isRejected = status === 'rejected';
+                    const isPending = status === 'pending';
                     return (
                       <View
                         key={entry.id || index}
-                        style={[styles.detailEntryCard, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+                        style={[
+                          styles.detailEntryCard,
+                          {
+                            backgroundColor: theme.cardBackground,
+                            borderColor: isPending ? theme.warning : isRejected ? theme.danger + '60' : theme.cardBorder,
+                            opacity: isRejected ? 0.6 : 1,
+                          },
+                        ]}
                       >
                         <View style={styles.detailEntryHeader}>
-                          <Text style={[styles.detailEntryDate, { color: theme.text }]}>{formatted.date}</Text>
-                          <Text style={[styles.detailEntryHours, { color: theme.primary }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                            <Text style={[styles.detailEntryDate, { color: theme.text }]}>{formatted.date}</Text>
+                            {/* Approval Status Badge */}
+                            {isPending && (
+                              <View style={[styles.approvalBadge, { backgroundColor: theme.warning + '20' }]}>
+                                <AlertCircle size={10} color={theme.warning} />
+                                <Text style={[styles.approvalBadgeText, { color: theme.warning }]}>{t('approval.pending')}</Text>
+                              </View>
+                            )}
+                            {isRejected && (
+                              <View style={[styles.approvalBadge, { backgroundColor: theme.danger + '20' }]}>
+                                <X size={10} color={theme.danger} />
+                                <Text style={[styles.approvalBadgeText, { color: theme.danger }]}>{t('approval.rejected')}</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={[styles.detailEntryHours, { color: isRejected ? theme.textMuted : theme.primary }]}>
                             {formatHoursMinutes(formatted.netHours, formatted.netMins)}h
                           </Text>
                         </View>
@@ -1258,6 +1431,34 @@ export default function AdminReportsScreen() {
                             </Text>
                           </View>
                         )}
+                        {/* Rejection note */}
+                        {isRejected && entry.approvalNote && (
+                          <View style={[styles.detailEntryLocation, { borderTopColor: theme.danger + '30', backgroundColor: theme.danger + '08' }]}>
+                            <AlertCircle size={12} color={theme.danger} />
+                            <Text style={[styles.detailEntryLocationText, { color: theme.danger }]} numberOfLines={2}>
+                              {entry.approvalNote}
+                            </Text>
+                          </View>
+                        )}
+                        {/* Approve / Reject Buttons */}
+                        {isPending && (
+                          <View style={[styles.approvalActions, { borderTopColor: theme.borderLight }]}>
+                            <TouchableOpacity
+                              style={[styles.approvalButton, { backgroundColor: theme.success + '15' }]}
+                              onPress={() => handleApproveEntry(entry.id)}
+                            >
+                              <Check size={14} color={theme.success} />
+                              <Text style={[styles.approvalButtonText, { color: theme.success }]}>{t('approval.approve')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.approvalButton, { backgroundColor: theme.danger + '15' }]}
+                              onPress={() => handleOpenRejectModal(entry.id)}
+                            >
+                              <X size={14} color={theme.danger} />
+                              <Text style={[styles.approvalButtonText, { color: theme.danger }]}>{t('approval.reject')}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
                       </View>
                     );
                   })
@@ -1265,6 +1466,52 @@ export default function AdminReportsScreen() {
             </ScrollView>
           )}
         </View>
+      </Modal>
+
+      {/* Rejection Note Modal */}
+      <Modal
+        visible={showRejectModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRejectModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowRejectModal(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.background }]} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>{t('approval.rejectTitle')}</Text>
+              <TouchableOpacity onPress={() => setShowRejectModal(false)}>
+                <X size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: theme.textMuted }]}>
+              {t('approval.rejectMessage')}
+            </Text>
+            <TextInput
+              style={[styles.rejectInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
+              placeholder={t('approval.notePlaceholder')}
+              placeholderTextColor={theme.textMuted}
+              value={rejectNote}
+              onChangeText={setRejectNote}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <View style={styles.rejectActions}>
+              <TouchableOpacity
+                style={[styles.rejectCancelButton, { borderColor: theme.border }]}
+                onPress={() => setShowRejectModal(false)}
+              >
+                <Text style={[styles.rejectCancelText, { color: theme.textSecondary }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.rejectConfirmButton, { backgroundColor: theme.danger }]}
+                onPress={handleConfirmReject}
+              >
+                <Text style={[styles.rejectConfirmText, { color: theme.textInverse }]}>{t('approval.reject')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Location Detail Modal (Standort) */}
@@ -1496,6 +1743,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     flex: 1,
+  },
+  customDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  datePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+  },
+  datePickerLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  datePickerValue: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  datePickerDash: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  datePickerModal: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.lg,
+    paddingBottom: spacing['3xl'],
+  },
+  datePickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  datePickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  datePickerDone: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   sectionLabel: {
     fontSize: 11,
@@ -1884,5 +2178,71 @@ const styles = StyleSheet.create({
   complianceBoxText: {
     fontSize: 13,
     marginLeft: 26,
+  },
+  // Approval styles
+  approvalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  approvalBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  approvalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderTopWidth: 1,
+  },
+  approvalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  approvalButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rejectInput: {
+    borderWidth: 1,
+    borderRadius: borderRadius.card,
+    padding: spacing.md,
+    fontSize: 14,
+    minHeight: 80,
+    marginBottom: spacing.lg,
+  },
+  rejectActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  rejectCancelButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+  },
+  rejectCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  rejectConfirmButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: borderRadius.card,
+  },
+  rejectConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

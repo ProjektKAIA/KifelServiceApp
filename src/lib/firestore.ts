@@ -347,6 +347,10 @@ export interface TimeEntry {
   }>;
   locationValidation?: LocationValidation;
   notes?: string;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
+  approvalNote?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
 }
 
 export const timeEntriesCollection = {
@@ -375,6 +379,10 @@ export const timeEntriesCollection = {
             locationHistory: data.locationHistory,
             locationValidation: data.locationValidation,
             notes: data.notes,
+            approvalStatus: data.approvalStatus || 'approved',
+            approvalNote: data.approvalNote,
+            reviewedBy: data.reviewedBy,
+            reviewedAt: data.reviewedAt ? toISOString(data.reviewedAt) : undefined,
           } as TimeEntry;
         });
       },
@@ -391,12 +399,15 @@ export const timeEntriesCollection = {
   ): Promise<string> => {
     return safeFirestoreOp(
       async () => {
+        const approvalStatus = locationValidation && !locationValidation.isValid ? 'pending' : 'approved';
+
         const entryData: Record<string, unknown> = {
           userId,
           clockIn: Timestamp.now(),
           clockOut: null,
           breakMinutes: 0,
           clockInLocation: location || null,
+          approvalStatus,
         };
 
         if (locationValidation) {
@@ -463,6 +474,10 @@ export const timeEntriesCollection = {
               locationHistory: data.locationHistory,
               locationValidation: data.locationValidation,
               notes: data.notes,
+              approvalStatus: data.approvalStatus || 'approved',
+              approvalNote: data.approvalNote,
+              reviewedBy: data.reviewedBy,
+              reviewedAt: data.reviewedAt ? toISOString(data.reviewedAt) : undefined,
             } as TimeEntry;
           })
           .filter(entry => {
@@ -499,6 +514,10 @@ export const timeEntriesCollection = {
               locationHistory: data.locationHistory,
               locationValidation: data.locationValidation,
               notes: data.notes,
+              approvalStatus: data.approvalStatus || 'approved',
+              approvalNote: data.approvalNote,
+              reviewedBy: data.reviewedBy,
+              reviewedAt: data.reviewedAt ? toISOString(data.reviewedAt) : undefined,
             } as TimeEntry;
           })
           .filter(entry => {
@@ -537,6 +556,67 @@ export const timeEntriesCollection = {
       },
       undefined,
       'timeEntries.updateLocationHistory'
+    );
+  },
+
+  // Update approval status (admin only)
+  updateApprovalStatus: async (
+    entryId: string,
+    status: 'approved' | 'rejected',
+    reviewedBy: string,
+    note?: string
+  ): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.TIME_ENTRIES, entryId);
+        const updateData: Record<string, unknown> = {
+          approvalStatus: status,
+          reviewedBy,
+          reviewedAt: serverTimestamp(),
+        };
+        if (note) {
+          updateData.approvalNote = note;
+        }
+        await updateDoc(docRef, updateData);
+      },
+      undefined,
+      'timeEntries.updateApprovalStatus'
+    );
+  },
+
+  // Get all pending approval entries
+  getPendingApproval: async (): Promise<TimeEntry[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.TIME_ENTRIES),
+          where('approvalStatus', '==', 'pending'),
+          orderBy('clockIn', 'desc')
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            clockIn: toISOString(data.clockIn),
+            clockOut: data.clockOut ? toISOString(data.clockOut) : null,
+            breakMinutes: data.breakMinutes || 0,
+            clockInLocation: data.clockInLocation,
+            clockOutLocation: data.clockOutLocation,
+            locationHistory: data.locationHistory,
+            locationValidation: data.locationValidation,
+            notes: data.notes,
+            approvalStatus: data.approvalStatus || 'approved',
+            approvalNote: data.approvalNote,
+            reviewedBy: data.reviewedBy,
+            reviewedAt: data.reviewedAt ? toISOString(data.reviewedAt) : undefined,
+          } as TimeEntry;
+        });
+      },
+      [],
+      'timeEntries.getPendingApproval'
     );
   },
 

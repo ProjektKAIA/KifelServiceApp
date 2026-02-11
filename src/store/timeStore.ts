@@ -28,6 +28,7 @@ export interface TimeEntry {
   status: 'active' | 'completed' | 'pending_review';
   shiftId?: string;
   locationValidation?: LocationValidation;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
   /** Firestore-ID nach erfolgreicher Synchronisation */
   firestoreEntryId?: string;
   /** Markiert ob noch synchronisiert werden muss */

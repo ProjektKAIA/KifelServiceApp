@@ -64,9 +64,18 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.userId == request.auth.uid;
 
-      // Users can update their own entries, admins can update all
+      // Users can update their own entries (but NOT approval fields), admins can update all
       allow update: if isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+        (
+          (resource.data.userId == request.auth.uid &&
+            // Employees dürfen Approval-Felder nicht ändern
+            request.resource.data.approvalStatus == resource.data.approvalStatus &&
+            request.resource.data.approvalNote == resource.data.approvalNote &&
+            request.resource.data.reviewedBy == resource.data.reviewedBy &&
+            request.resource.data.reviewedAt == resource.data.reviewedAt
+          )
+          || isAdmin()
+        );
 
       // Only admins can delete entries
       allow delete: if isAdmin();

@@ -37,8 +37,8 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   const { theme } = useTheme();
 
   const typeConfig = {
-    vacation: { icon: Palmtree, label: 'Urlaub', color: '#f59e0b' },
-    sick: { icon: Thermometer, label: 'Krank', color: '#ef4444' },
+    vacation: { icon: Palmtree, label: 'Urlaub', color: theme.warning },
+    sick: { icon: Thermometer, label: 'Krank', color: theme.danger },
   };
 
   const statusConfig = {
@@ -68,7 +68,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
       
       {reason && (
         <Typography variant="caption" color="muted" style={styles.reason}>
-          „{reason}"
+          {`\u201E${reason}\u201C`}
         </Typography>
       )}
 
@@ -88,7 +88,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             variant="primary"
             size="sm"
             onPress={onApprove || (() => {})}
-            style={[styles.actionButton, { backgroundColor: '#22c55e' }]}
+            style={[styles.actionButton, { backgroundColor: theme.success }]}
           />
         </View>
       )}

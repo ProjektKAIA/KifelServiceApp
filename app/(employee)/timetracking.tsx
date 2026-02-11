@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ScrollView, View, StyleSheet, Alert, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Play, Square, Coffee, MapPin, Clock, AlertCircle, Pause, Timer, CheckCircle, AlertTriangle } from 'lucide-react-native';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 import { Typography, Button, LoadingSpinner } from '@/src/components/atoms';
@@ -66,12 +66,32 @@ export default function TimeTrackingScreen() {
   // Location validation state
   const [locationValidation, setLocationValidationState] = useState<LocationValidation | null>(null);
 
+  // Actual weekly hours from Firestore
+  const [weeklyHours, setWeeklyHours] = useState<number>(0);
+
   // Fetch locations on mount for validation
   useEffect(() => {
     if (locationValidationEnabled) {
       fetchLocations();
     }
   }, [locationValidationEnabled, fetchLocations]);
+
+  // Load actual weekly hours from Firestore
+  useEffect(() => {
+    if (!user?.id) return;
+    const now = new Date();
+    const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    timeEntriesCollection.getForUserInRange(user.id, weekStart, weekEnd).then(entries => {
+      let totalMinutes = 0;
+      for (const entry of entries) {
+        if (!entry.clockOut || entry.approvalStatus === 'rejected') continue;
+        const diff = new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime();
+        totalMinutes += Math.round(diff / 60000) - (entry.breakMinutes || 0);
+      }
+      setWeeklyHours(Math.round((totalMinutes / 60) * 10) / 10);
+    }).catch(() => {});
+  }, [user?.id, isWorking]);
 
   // Permission modal state
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -144,7 +164,7 @@ export default function TimeTrackingScreen() {
 
   const stats = [
     { value: todayHours.toFixed(1), label: t('timetracking.hoursToday'), icon: Clock },
-    { value: '38.5', label: t('timetracking.thisWeek'), icon: Clock },
+    { value: weeklyHours.toFixed(1), label: t('timetracking.thisWeek'), icon: Clock },
   ];
 
   // Start/stop GPS tracking when working status changes

@@ -68,8 +68,6 @@ export default function RootLayout() {
     if (isLoading) return;
 
     const currentSegment = segments[0];
-    const inAuthGroup = currentSegment === '(auth)';
-    const inPublicGroup = currentSegment === '(public)';
     const inEmployeeGroup = currentSegment === '(employee)';
     const inAdminGroup = currentSegment === '(admin)';
 

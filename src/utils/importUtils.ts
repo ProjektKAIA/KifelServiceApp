@@ -40,12 +40,28 @@ export interface ImportResult {
 }
 
 /**
- * Converts Excel serial date number to JavaScript Date
+ * Tries to parse a cell value as a Date.
+ * Supports Excel serial numbers (e.g. 44713), Date objects (from Numbers),
+ * and ISO strings (e.g. "2022-06-01T00:00:00.000Z").
  */
-function excelDateToJS(serial: number): Date {
-  // Excel dates are days since 1900-01-01 (with a bug treating 1900 as leap year)
-  // JS dates start from 1970-01-01
-  return new Date((serial - 25569) * 86400 * 1000);
+function parseCellDate(value: any): Date | null {
+  // Date object (Numbers files return native Date objects)
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value;
+  }
+  // Excel serial number
+  if (typeof value === 'number' && value > 40000 && value < 50000) {
+    return new Date((value - 25569) * 86400 * 1000);
+  }
+  // ISO date string
+  if (typeof value === 'string') {
+    const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}T/);
+    if (isoMatch) {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
 }
 
 /**
@@ -200,33 +216,19 @@ export function parseScheduleExcel(workbook: XLSX.WorkBook): ImportResult {
         continue;
       }
 
-      // Check if first cell is a date (Excel serial number)
+      // Check if first cell is a date (Excel serial number or ISO string from Numbers)
       const firstCell = row[0];
-      if (typeof firstCell === 'number' && firstCell > 40000 && firstCell < 50000) {
-        currentDate = excelDateToJS(firstCell);
+      const parsedDate = parseCellDate(firstCell);
+      if (parsedDate) {
+        currentDate = parsedDate;
         currentDayOfWeek = String(row[1] || '');
       }
 
-      // Look for time range in the row
-      let timeRange: { start: string; end: string } | null = null;
-      let hoursCell: number | null = null;
-      let clientCell = '';
-      let addressCell = '';
-
-      // Different column positions based on whether this row has a date
-      if (typeof firstCell === 'number' && firstCell > 40000) {
-        // Row with date: columns are [date, day, time, hours, client, _, address]
-        timeRange = parseTimeRange(String(row[2] || ''));
-        hoursCell = typeof row[3] === 'number' ? row[3] : null;
-        clientCell = String(row[4] || '');
-        addressCell = String(row[6] || '').replace(/\r\n/g, ', ');
-      } else {
-        // Row without date (continuation): columns are [_, _, time, hours, client, _, address]
-        timeRange = parseTimeRange(String(row[2] || ''));
-        hoursCell = typeof row[3] === 'number' ? row[3] : null;
-        clientCell = String(row[4] || '');
-        addressCell = String(row[6] || '').replace(/\r\n/g, ', ');
-      }
+      // Parse time, hours, client, address (same columns for date rows and continuation rows)
+      const timeRange = parseTimeRange(String(row[2] || ''));
+      const hoursCell = typeof row[3] === 'number' ? row[3] : null;
+      const clientCell = String(row[4] || '');
+      const addressCell = String(row[6] || '').replace(/\r?\n/g, ', ');
 
       // Only add if we have valid time data
       if (timeRange && currentDate && hoursCell !== null && hoursCell > 0) {

@@ -16,6 +16,7 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
+*.keystore
 *.mobileprovision
 
 # Metro
@@ -44,6 +45,10 @@ google-service-account.json
 *.tsbuildinfo
 
 app-example
+
+# test/import data files
+*.numbers
+*.xlsx
 
 # generated native folders
 /ios

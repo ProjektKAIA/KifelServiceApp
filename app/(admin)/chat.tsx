@@ -281,7 +281,7 @@ export default function AdminChatScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -291,7 +291,7 @@ export default function AdminChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}
+      style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.bottom > 0 ? 60 : 30) : 30}
     >

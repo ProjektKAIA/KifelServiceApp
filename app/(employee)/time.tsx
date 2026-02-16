@@ -135,7 +135,7 @@ export default function TimeTrackingScreen() {
   const hasLocation = currentLocation && !locationError;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>

@@ -138,7 +138,7 @@ export default function NotificationSettingsScreen() {
   // Show feature not available message
   if (!isFeatureAvailable) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={24} color={theme.text} />
@@ -164,7 +164,7 @@ export default function NotificationSettingsScreen() {
   // Show enable button if not enabled
   if (!isEnabled && permissionStatus !== 'granted') {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={24} color={theme.text} />
@@ -200,7 +200,7 @@ export default function NotificationSettingsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

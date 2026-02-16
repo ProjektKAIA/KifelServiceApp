@@ -156,7 +156,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.headerSmall, { color: theme.textMuted }]}>{t('settings.admin')}</Text>

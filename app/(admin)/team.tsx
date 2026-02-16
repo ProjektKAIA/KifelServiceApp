@@ -531,7 +531,7 @@ export default function TeamManagementScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <Typography variant="body" color="muted" style={{ marginTop: spacing.md }}>
           {t('adminTeam.loading')}
@@ -541,7 +541,7 @@ export default function TeamManagementScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

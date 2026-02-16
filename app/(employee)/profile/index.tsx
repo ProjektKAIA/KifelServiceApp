@@ -44,7 +44,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Badge */}
         <View style={[styles.badge, { backgroundColor: theme.pillInfo }]}>

@@ -20,7 +20,7 @@ import { useNotificationStore } from '@/src/store/notificationStore';
 import { pushNotificationService } from '@/src/services/pushNotificationService';
 
 export default function RootLayout() {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
@@ -92,15 +92,15 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary showDetails={__DEV__}>
-      <SafeAreaProvider>
-        {/* Offline-Indikator am oberen Bildschirmrand */}
-        {isFeatureEnabled('offlineMode') && <OfflineIndicatorWrapper />}
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+      <SafeAreaProvider style={{ backgroundColor: theme.background }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
           <Stack.Screen name="(public)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(employee)" />
           <Stack.Screen name="(admin)" />
         </Stack>
+        {/* Offline-Indikator als Overlay ueber dem Content */}
+        {isFeatureEnabled('offlineMode') && <OfflineIndicatorWrapper />}
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <Toast config={toastConfig} position="top" topOffset={50} />
       </SafeAreaProvider>
@@ -109,13 +109,13 @@ export default function RootLayout() {
 }
 
 /**
- * Wrapper-Komponente fuer OfflineIndicator mit SafeArea-Unterstuetzung
+ * Wrapper-Komponente fuer OfflineIndicator als Overlay (nimmt keinen Platz im Layout ein)
  */
 function OfflineIndicatorWrapper() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{ paddingTop: insets.top }}>
+    <View style={{ position: 'absolute', top: insets.top, left: 0, right: 0, zIndex: 100 }}>
       <OfflineIndicator />
     </View>
   );

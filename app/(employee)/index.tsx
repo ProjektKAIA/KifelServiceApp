@@ -87,7 +87,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top - 20 }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

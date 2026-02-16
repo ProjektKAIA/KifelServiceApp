@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, MapPin, Upload, Download, FileSpreadsheet, FileText, CheckCircle, AlertCircle, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, Clock, MapPin, Upload, Download, FileSpreadsheet, FileText, CheckCircle, AlertCircle, X } from 'lucide-react-native';
 import {
   format,
   addWeeks,
@@ -45,7 +45,7 @@ interface DisplayShift extends Shift {
   employeeName: string;
 }
 
-type ViewMode = 'day' | 'week' | 'month' | 'year';
+type ViewMode = 'day' | 'week' | 'month' | 'year' | 'custom';
 
 export default function ScheduleManagementScreen() {
   const { theme } = useTheme();
@@ -58,6 +58,7 @@ export default function ScheduleManagementScreen() {
     week: t('adminSchedules.viewWeek'),
     month: t('adminSchedules.viewMonth'),
     year: t('adminSchedules.viewYear'),
+    custom: t('adminSchedules.viewCustom'),
   };
 
   const EXPORT_OPTIONS: { key: ExportFormat; label: string; icon: any; description: string }[] = [
@@ -76,12 +77,27 @@ export default function ScheduleManagementScreen() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Edit shift state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editLocationId, setEditLocationId] = useState<string | null>(null);
+  const [editEmployeeId, setEditEmployeeId] = useState<string | null>(null);
+
   // Import state
   const [importData, setImportData] = useState<ImportedSchedule | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedImportUserId, setSelectedImportUserId] = useState<string | null>(null);
+  const [editableImportShifts, setEditableImportShifts] = useState<ImportedShift[]>([]);
+
+  // Custom date range state
+  const [customFromStr, setCustomFromStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [customToStr, setCustomToStr] = useState(() => format(new Date(), 'yyyy-MM-dd'));
 
   // Export state
   const [showExportModal, setShowExportModal] = useState(false);
@@ -140,8 +156,24 @@ export default function ScheduleManagementScreen() {
           days: [], // For year view, we'll group by month
         };
       }
+      case 'custom': {
+        const cStart = parseISO(customFromStr);
+        const cEnd = parseISO(customToStr);
+        if (cEnd >= cStart) {
+          return {
+            startStr: customFromStr,
+            endStr: customToStr,
+            days: eachDayOfInterval({ start: cStart, end: cEnd }),
+          };
+        }
+        return {
+          startStr: customFromStr,
+          endStr: customFromStr,
+          days: [cStart],
+        };
+      }
     }
-  }, [viewMode, currentDateStr, currentDate]);
+  }, [viewMode, currentDateStr, currentDate, customFromStr, customToStr]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -190,6 +222,8 @@ export default function ScheduleManagementScreen() {
       case 'year':
         setCurrentDate(subYears(currentDate, 1));
         break;
+      case 'custom':
+        break; // No navigation for custom range
     }
   };
 
@@ -207,6 +241,8 @@ export default function ScheduleManagementScreen() {
       case 'year':
         setCurrentDate(addYears(currentDate, 1));
         break;
+      case 'custom':
+        break; // No navigation for custom range
     }
   };
 
@@ -222,6 +258,8 @@ export default function ScheduleManagementScreen() {
         return format(currentDate, 'MMMM yyyy', { locale: de });
       case 'year':
         return format(currentDate, 'yyyy');
+      case 'custom':
+        return `${format(parseISO(customFromStr), 'd. MMM', { locale: de })} - ${format(parseISO(customToStr), 'd. MMM yyyy', { locale: de })}`;
     }
   };
 
@@ -312,12 +350,54 @@ export default function ScheduleManagementScreen() {
     setShowAddModal(true);
   };
 
+  // === EDIT SHIFT FUNCTIONS ===
+
+  const openEditModal = (shift: DisplayShift) => {
+    setEditingShift(shift);
+    setEditDate(shift.date);
+    setEditStartTime(shift.startTime);
+    setEditEndTime(shift.endTime);
+    setEditLocation(shift.location || '');
+    setEditLocationId(shift.locationId || null);
+    setEditEmployeeId(shift.userId);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateShift = async () => {
+    if (!editingShift || !editEmployeeId) return;
+
+    const employee = employees.find((e) => e.id === editEmployeeId);
+    if (!employee) return;
+
+    try {
+      const selectedLoc = savedLocations.find(l => l.id === editLocationId);
+      const locationName = selectedLoc ? selectedLoc.name : (editLocation || t('adminSchedules.defaultLocation'));
+
+      await shiftsCollection.update(editingShift.id, {
+        userId: editEmployeeId,
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        date: editDate,
+        startTime: editStartTime,
+        endTime: editEndTime,
+        location: locationName,
+        locationId: editLocationId || undefined,
+      });
+      setShowEditModal(false);
+      setEditingShift(null);
+      loadData();
+      Alert.alert(t('adminSchedules.success'), t('adminSchedules.shiftUpdated'));
+    } catch (error) {
+      console.error('Error updating shift:', error);
+      Alert.alert(t('common.error'), t('adminSchedules.shiftUpdateError'));
+    }
+  };
+
   // === IMPORT FUNCTIONS ===
 
   const handlePickFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+        type: '*/*',
         copyToCacheDirectory: true,
       });
 
@@ -336,6 +416,7 @@ export default function ScheduleManagementScreen() {
 
       if (importResult.success && importResult.data) {
         setImportData(importResult.data);
+        setEditableImportShifts([...importResult.data.shifts]);
         setImportWarnings(importResult.warnings);
         setShowImportModal(true);
 
@@ -360,7 +441,7 @@ export default function ScheduleManagementScreen() {
   };
 
   const handleConfirmImport = async () => {
-    if (!importData || !selectedImportUserId) {
+    if (!importData || !selectedImportUserId || editableImportShifts.length === 0) {
       Alert.alert(t('common.error'), t('adminSchedules.importSelectEmployee'));
       return;
     }
@@ -374,7 +455,7 @@ export default function ScheduleManagementScreen() {
       let successCount = 0;
       let errorCount = 0;
 
-      for (const shift of importData.shifts) {
+      for (const shift of editableImportShifts) {
         try {
           const newShift: Omit<Shift, 'id'> = {
             userId: selectedImportUserId,
@@ -395,6 +476,7 @@ export default function ScheduleManagementScreen() {
 
       setShowImportModal(false);
       setImportData(null);
+      setEditableImportShifts([]);
       loadData();
 
       if (errorCount === 0) {
@@ -501,8 +583,13 @@ export default function ScheduleManagementScreen() {
         </View>
 
         {/* View Mode Filter */}
-        <View style={styles.filterRow}>
-          {(['day', 'week', 'month', 'year'] as ViewMode[]).map((mode) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterRow}
+        >
+          {(['day', 'week', 'month', 'year', 'custom'] as ViewMode[]).map((mode) => (
             <TouchableOpacity
               key={mode}
               style={[
@@ -525,10 +612,40 @@ export default function ScheduleManagementScreen() {
               </Typography>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
+
+        {/* Custom Date Range Picker */}
+        {viewMode === 'custom' && (
+          <View style={styles.customDateRow}>
+            <View style={styles.customDateInput}>
+              <Typography variant="caption" color="muted">{t('adminSchedules.customFrom')}</Typography>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                value={customFromStr}
+                onChangeText={(text) => {
+                  setCustomFromStr(text);
+                }}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.textMuted}
+              />
+            </View>
+            <View style={styles.customDateInput}>
+              <Typography variant="caption" color="muted">{t('adminSchedules.customTo')}</Typography>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                value={customToStr}
+                onChangeText={(text) => {
+                  setCustomToStr(text);
+                }}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.textMuted}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Date Navigation */}
-        <View style={styles.weekNav}>
+        {viewMode !== 'custom' && <View style={styles.weekNav}>
           <TouchableOpacity
             style={[styles.navButton, { backgroundColor: theme.surface }]}
             onPress={navigatePrevious}
@@ -546,7 +663,7 @@ export default function ScheduleManagementScreen() {
           >
             <ChevronRight size={20} color={theme.textSecondary} />
           </TouchableOpacity>
-        </View>
+        </View>}
 
         {/* Content based on view mode */}
         {viewMode === 'year' ? (
@@ -636,9 +753,14 @@ export default function ScheduleManagementScreen() {
                               </View>
                             )}
                           </View>
-                          <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
-                            <Trash2 size={18} color={theme.danger} />
-                          </TouchableOpacity>
+                          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                            <TouchableOpacity onPress={() => openEditModal(shift)}>
+                              <Edit2 size={18} color={theme.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleDeleteShift(shift.id)}>
+                              <Trash2 size={18} color={theme.danger} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </Card>
                     ))
@@ -788,29 +910,152 @@ export default function ScheduleManagementScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Edit Modal */}
+      <Modal
+        visible={showEditModal}
+        onClose={() => { setShowEditModal(false); setEditingShift(null); }}
+        title={t('adminSchedules.editShift')}
+        subtitle={editingShift?.employeeName || ''}
+      >
+        {editingShift && (
+          <>
+            <Typography variant="overline" color="muted" style={styles.modalLabel}>{t('adminSchedules.editDate')}</Typography>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              value={editDate}
+              onChangeText={setEditDate}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Typography variant="overline" color="muted" style={styles.modalLabel}>{t('adminSchedules.selectEmployeeSection')}</Typography>
+            <ScrollView style={styles.employeeList} nestedScrollEnabled>
+              {employees.map((emp) => (
+                <TouchableOpacity
+                  key={emp.id}
+                  style={[
+                    styles.employeeOption,
+                    {
+                      backgroundColor: editEmployeeId === emp.id ? theme.primary + '20' : theme.surface,
+                      borderColor: editEmployeeId === emp.id ? theme.primary : theme.border,
+                    },
+                  ]}
+                  onPress={() => setEditEmployeeId(emp.id)}
+                >
+                  <Avatar name={`${emp.firstName} ${emp.lastName}`} size="sm" />
+                  <Typography variant="body" style={styles.employeeOptionText}>{emp.firstName} {emp.lastName}</Typography>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>{t('adminSchedules.timeSection')}</Typography>
+            <View style={styles.timeRow}>
+              <View style={styles.timeInput}>
+                <Typography variant="caption" color="muted">{t('adminSchedules.timeFrom')}</Typography>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                  value={editStartTime}
+                  onChangeText={setEditStartTime}
+                  placeholder="08:00"
+                  placeholderTextColor={theme.textMuted}
+                />
+              </View>
+              <View style={styles.timeInput}>
+                <Typography variant="caption" color="muted">{t('adminSchedules.timeTo')}</Typography>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                  value={editEndTime}
+                  onChangeText={setEditEndTime}
+                  placeholder="16:00"
+                  placeholderTextColor={theme.textMuted}
+                />
+              </View>
+            </View>
+
+            <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.lg }}>
+              {t('adminSchedules.selectLocation')}
+            </Typography>
+            {savedLocations.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.locationPickerRow}>
+                {savedLocations.map((loc) => (
+                  <TouchableOpacity
+                    key={loc.id}
+                    style={[
+                      styles.locationPill,
+                      {
+                        backgroundColor: editLocationId === loc.id ? theme.primary + '20' : theme.surface,
+                        borderColor: editLocationId === loc.id ? theme.primary : theme.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (editLocationId === loc.id) {
+                        setEditLocationId(null);
+                      } else {
+                        setEditLocationId(loc.id);
+                        setEditLocation('');
+                      }
+                    }}
+                  >
+                    <MapPin size={12} color={editLocationId === loc.id ? theme.primary : theme.textMuted} />
+                    <Typography
+                      variant="caption"
+                      style={{
+                        color: editLocationId === loc.id ? theme.primary : theme.textSecondary,
+                        fontWeight: editLocationId === loc.id ? '600' : '400',
+                        marginLeft: 4,
+                      }}
+                    >
+                      {loc.name}
+                    </Typography>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text, marginTop: spacing.sm }]}
+              value={editLocation}
+              onChangeText={(text) => {
+                setEditLocation(text);
+                if (text) setEditLocationId(null);
+              }}
+              placeholder={savedLocations.length > 0 ? t('adminSchedules.locationFreetext') : t('adminSchedules.locationPlaceholder')}
+              placeholderTextColor={theme.textMuted}
+              editable={!editLocationId}
+            />
+
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: theme.primary }]}
+              onPress={handleUpdateShift}
+            >
+              <Typography variant="label" style={{ color: theme.textInverse }}>{t('common.save')}</Typography>
+            </TouchableOpacity>
+          </>
+        )}
+      </Modal>
+
       {/* Import Modal */}
       <Modal
         visible={showImportModal}
-        onClose={() => { setShowImportModal(false); setImportData(null); }}
+        onClose={() => { setShowImportModal(false); setImportData(null); setEditableImportShifts([]); }}
         title={t('adminSchedules.importTitle')}
         subtitle={importData ? `${importData.employee.firstName} ${importData.employee.lastName}` : ''}
       >
         {importData && (
           <>
-            {/* Summary */}
+            {/* Summary - computed from editableImportShifts */}
             <View style={[styles.importSummary, { backgroundColor: theme.pillInfo, borderColor: theme.primary }]}>
               <View style={styles.importSummaryRow}>
                 <FileSpreadsheet size={20} color={theme.primary} />
                 <View style={styles.importSummaryText}>
-                  <Typography variant="label">{importData.shifts.length} {t('adminSchedules.shifts')}</Typography>
+                  <Typography variant="label">{editableImportShifts.length} {t('adminSchedules.shifts')}</Typography>
                   <Typography variant="caption" color="muted">
-                    {importData.totalHours} {t('adminSchedules.hoursShort')} | {importData.workDays} {t('adminSchedules.days')}
+                    {Math.round(editableImportShifts.reduce((sum, s) => sum + s.hours, 0) * 10) / 10} {t('adminSchedules.hoursShort')} | {new Set(editableImportShifts.map(s => s.date)).size} {t('adminSchedules.days')}
                   </Typography>
                 </View>
               </View>
               <Typography variant="caption" color="muted" style={styles.importPeriod}>
-                {importData.periodStart && importData.periodEnd
-                  ? `${format(parseISO(importData.periodStart), 'd. MMM', { locale: de })} - ${format(parseISO(importData.periodEnd), 'd. MMM yyyy', { locale: de })}`
+                {editableImportShifts.length > 0
+                  ? `${format(parseISO(editableImportShifts[0].date), 'd. MMM', { locale: de })} - ${format(parseISO(editableImportShifts[editableImportShifts.length - 1].date), 'd. MMM yyyy', { locale: de })}`
                   : t('adminSchedules.importPeriodUnknown')}
               </Typography>
             </View>
@@ -859,23 +1104,75 @@ export default function ScheduleManagementScreen() {
               ))}
             </ScrollView>
 
-            {/* Preview */}
+            {/* Editable Shifts List */}
             <Typography variant="overline" color="muted" style={{ ...styles.modalLabel, marginTop: spacing.md }}>
-              {t('adminSchedules.importPreview')}
+              {t('adminSchedules.importShiftsList')}
             </Typography>
-            {importData.shifts.slice(0, 3).map((shift, idx) => (
-              <View key={idx} style={[styles.previewShift, { borderColor: theme.border }]}>
-                <Typography variant="caption" color="muted">
-                  {format(parseISO(shift.date), 'EEE d. MMM', { locale: de })}
-                </Typography>
-                <Typography variant="body">
-                  {shift.startTime} - {shift.endTime} ({shift.hours}h)
-                </Typography>
-                <Typography variant="caption" color="muted" numberOfLines={1}>
-                  {shift.client}
-                </Typography>
-              </View>
-            ))}
+            <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled>
+              {editableImportShifts.map((shift, idx) => (
+                <View key={idx} style={[styles.previewShift, { borderColor: theme.border }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        style={[styles.inlineInput, { color: theme.textSecondary, borderColor: theme.border }]}
+                        value={shift.date}
+                        onChangeText={(text) => {
+                          const updated = [...editableImportShifts];
+                          updated[idx] = { ...updated[idx], date: text };
+                          setEditableImportShifts(updated);
+                        }}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor={theme.textMuted}
+                      />
+                      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: 4 }}>
+                        <TextInput
+                          style={[styles.inlineInput, { flex: 1, color: theme.text, borderColor: theme.border }]}
+                          value={shift.startTime}
+                          onChangeText={(text) => {
+                            const updated = [...editableImportShifts];
+                            updated[idx] = { ...updated[idx], startTime: text };
+                            setEditableImportShifts(updated);
+                          }}
+                          placeholder="08:00"
+                          placeholderTextColor={theme.textMuted}
+                        />
+                        <Typography variant="body" style={{ alignSelf: 'center' }}>-</Typography>
+                        <TextInput
+                          style={[styles.inlineInput, { flex: 1, color: theme.text, borderColor: theme.border }]}
+                          value={shift.endTime}
+                          onChangeText={(text) => {
+                            const updated = [...editableImportShifts];
+                            updated[idx] = { ...updated[idx], endTime: text };
+                            setEditableImportShifts(updated);
+                          }}
+                          placeholder="16:00"
+                          placeholderTextColor={theme.textMuted}
+                        />
+                      </View>
+                      <TextInput
+                        style={[styles.inlineInput, { color: theme.textSecondary, borderColor: theme.border, marginTop: 4 }]}
+                        value={shift.client || ''}
+                        onChangeText={(text) => {
+                          const updated = [...editableImportShifts];
+                          updated[idx] = { ...updated[idx], client: text };
+                          setEditableImportShifts(updated);
+                        }}
+                        placeholder={t('adminSchedules.locationPlaceholder')}
+                        placeholderTextColor={theme.textMuted}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={{ padding: spacing.xs, marginLeft: spacing.sm }}
+                      onPress={() => {
+                        setEditableImportShifts(editableImportShifts.filter((_, i) => i !== idx));
+                      }}
+                    >
+                      <X size={18} color={theme.danger} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
 
             {/* Import Button */}
             <TouchableOpacity
@@ -883,17 +1180,17 @@ export default function ScheduleManagementScreen() {
                 styles.submitButton,
                 {
                   backgroundColor: theme.primary,
-                  opacity: selectedImportUserId && !isImporting ? 1 : 0.5,
+                  opacity: selectedImportUserId && !isImporting && editableImportShifts.length > 0 ? 1 : 0.5,
                 },
               ]}
               onPress={handleConfirmImport}
-              disabled={!selectedImportUserId || isImporting}
+              disabled={!selectedImportUserId || isImporting || editableImportShifts.length === 0}
             >
               {isImporting ? (
                 <ActivityIndicator size="small" color={theme.textInverse} />
               ) : (
                 <Typography variant="label" style={{ color: theme.textInverse }}>
-                  {t('adminSchedules.importShiftsButton').replace('{count}', String(importData.shifts.length))}
+                  {t('adminSchedules.importShiftsButton').replace('{count}', String(editableImportShifts.length))}
                 </Typography>
               )}
             </TouchableOpacity>
@@ -947,18 +1244,28 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: spacing.lg, paddingTop: 0, paddingBottom: spacing['3xl'] },
   // Filter
+  filterScroll: {
+    marginBottom: spacing.lg,
+    flexGrow: 0,
+  },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.lg,
   },
   filterPill: {
-    flex: 1,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  customDateInput: {
+    flex: 1,
   },
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
   navButton: { padding: spacing.sm, borderRadius: 10 },
@@ -1107,6 +1414,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: spacing.xs,
+  },
+  inlineInput: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    fontSize: 14,
   },
   locationPickerRow: {
     flexDirection: 'row',

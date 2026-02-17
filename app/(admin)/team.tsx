@@ -12,8 +12,8 @@ import { ScreenHeader } from '@/src/components/organisms';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { spacing } from '@/src/constants/spacing';
-import { User, Invite } from '@/src/types';
-import { usersCollection, invitesCollection, timeEntriesCollection, TimeEntry } from '@/src/lib/firestore';
+import { User, Invite, DeletionRequest } from '@/src/types';
+import { usersCollection, invitesCollection, timeEntriesCollection, deletionRequestsCollection, adminNotificationsCollection, TimeEntry } from '@/src/lib/firestore';
 import { isFirebaseConfigured } from '@/src/lib/firebase';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -468,22 +468,83 @@ export default function TeamManagementScreen() {
 
   const handleDeleteEmployee = (employee: User) => {
     Alert.alert(
-      t('adminTeam.deleteEmployee'),
-      t('adminTeam.deleteEmployeeConfirm').replace('{name}', `${employee.firstName} ${employee.lastName}`),
+      t('deletion.deleteAccount'),
+      t('deletion.deleteAccountConfirm').replace('{name}', `${employee.firstName} ${employee.lastName}`),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            // Note: This only deletes the Firestore profile, not the Auth user
-            // For full deletion, you'd need a Cloud Function
             try {
-              await usersCollection.update(employee.id, { status: 'deleted' } as any);
+              await usersCollection.deleteAccount(employee.id);
               setShowDetailModal(false);
               loadEmployees();
+              Alert.alert(t('common.success'), t('deletion.deleteAccountSuccess'));
             } catch (error) {
-              Alert.alert(t('common.error'), t('adminTeam.deleteEmployeeError'));
+              Alert.alert(t('common.error'), t('deletion.deleteAccountError'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleApproveDeletionRequest = (notification: any) => {
+    const userName = notification.userName;
+    const userId = notification.userId;
+    const entityId = notification.entityId;
+
+    Alert.alert(
+      t('deletion.approveRequest'),
+      t('deletion.approveConfirm').replace('{name}', userName),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await usersCollection.deleteAccount(userId);
+              if (entityId) {
+                await deletionRequestsCollection.updateStatus(entityId, 'approved');
+              }
+              if (currentUser) {
+                await adminNotificationsCollection.markAsRead(notification.id, currentUser.id);
+              }
+              loadEmployees();
+              Alert.alert(t('common.success'), t('deletion.approved'));
+            } catch (error) {
+              Alert.alert(t('common.error'), t('deletion.deleteAccountError'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectDeletionRequest = (notification: any) => {
+    const userName = notification.userName;
+    const entityId = notification.entityId;
+
+    Alert.alert(
+      t('deletion.rejectRequest'),
+      t('deletion.rejectConfirm').replace('{name}', userName),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          onPress: async () => {
+            try {
+              if (entityId) {
+                await deletionRequestsCollection.updateStatus(entityId, 'rejected');
+              }
+              if (currentUser) {
+                await adminNotificationsCollection.markAsRead(notification.id, currentUser.id);
+              }
+              Alert.alert(t('common.success'), t('deletion.rejected'));
+            } catch (error) {
+              Alert.alert(t('common.error'), t('common.error'));
             }
           },
         },
@@ -893,6 +954,13 @@ export default function TeamManagementScreen() {
                     style={styles.actionButton}
                   />
                 </View>
+                <Button
+                  title={t('deletion.deleteAccount')}
+                  icon={Trash2}
+                  variant="danger"
+                  onPress={() => handleDeleteEmployee(selectedEmployee)}
+                  style={{ marginTop: spacing.sm }}
+                />
               </>
             )}
           </ScrollView>

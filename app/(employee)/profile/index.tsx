@@ -1,15 +1,16 @@
 // app/(employee)/profile/index.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera, Bell } from 'lucide-react-native';
+import { User, Mail, Phone, MapPin, Calendar, Clock, LogOut, ChevronRight, Sun, Moon, Smartphone, Camera, Bell, Trash2 } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useAuthStore } from '@/src/store/authStore';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
 import { ThemePreference } from '@/src/store/themeStore';
+import { deletionRequestsCollection, adminNotificationsCollection } from '@/src/lib/firestore';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -19,9 +20,58 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
 
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
+  const [hasPendingDeletion, setHasPendingDeletion] = useState(false);
 
   const userName = `${user?.firstName || 'Max'} ${user?.lastName || 'Mustermann'}`;
   const userInitials = `${user?.firstName?.[0] || 'M'}${user?.lastName?.[0] || 'M'}`;
+
+  // Check if there's a pending deletion request
+  useEffect(() => {
+    if (user?.id) {
+      deletionRequestsCollection.getForUser(user.id).then((request) => {
+        setHasPendingDeletion(!!request);
+      });
+    }
+  }, [user?.id]);
+
+  const handleRequestDeletion = () => {
+    if (!user) return;
+
+    Alert.alert(
+      t('deletion.requestTitle'),
+      t('deletion.requestConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const fullName = `${user.firstName} ${user.lastName}`;
+              const request = await deletionRequestsCollection.create({
+                userId: user.id,
+                userName: fullName,
+              });
+
+              await adminNotificationsCollection.create({
+                type: 'deletion_request',
+                userId: user.id,
+                userName: fullName,
+                title: t('deletion.notificationTitle'),
+                message: t('deletion.notificationMessage').replace('{name}', fullName),
+                entityId: request.id,
+              });
+
+              setHasPendingDeletion(true);
+              Alert.alert(t('common.success'), t('deletion.requestSent'));
+            } catch (error) {
+              Alert.alert(t('common.error'), t('deletion.requestFailed'));
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const themeOptions: { value: ThemePreference; label: string; icon: any }[] = [
     { value: 'light', label: t('empProfile.themeLight'), icon: Sun },
@@ -160,6 +210,29 @@ export default function ProfileScreen() {
           </View>
           <ChevronRight size={18} color={theme.textMuted} />
         </TouchableOpacity>
+
+        {/* Deletion Request */}
+        {hasPendingDeletion ? (
+          <View style={[styles.deletionPendingBanner, { backgroundColor: theme.warning + '15', borderColor: theme.warning + '40' }]}>
+            <Trash2 size={18} color={theme.warning} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.menuButtonText, { color: theme.warning }]}>{t('deletion.requestPending')}</Text>
+              <Text style={[{ fontSize: 12, color: theme.textMuted, marginTop: 2 }]}>{t('deletion.requestPendingDesc')}</Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.menuButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
+            onPress={handleRequestDeletion}
+            activeOpacity={0.7}
+          >
+            <View style={styles.menuButtonLeft}>
+              <Trash2 size={20} color={theme.danger} />
+              <Text style={[styles.menuButtonText, { color: theme.danger }]}>{t('deletion.requestButton')}</Text>
+            </View>
+            <ChevronRight size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
 
         {/* Logout */}
         <TouchableOpacity
@@ -357,6 +430,14 @@ const styles = StyleSheet.create({
   },
   menuButtonValue: {
     fontSize: 14,
+  },
+  deletionPendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
   },
   logoutButton: {
     flexDirection: 'row',

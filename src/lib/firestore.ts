@@ -20,7 +20,7 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification, Location as AppLocation, LocationValidation } from '../types';
+import { User, Shift, VacationRequest, ChatMessage, ChatRoom, Company, Invite, AdminNotification, DeletionRequest, Location as AppLocation, LocationValidation } from '../types';
 import type { PushToken, NotificationPreferences } from '../types/notifications';
 import { logError } from '../utils/errorHandler';
 
@@ -44,6 +44,7 @@ const COLLECTIONS = {
   ADMIN_NOTIFICATIONS: 'adminNotifications',
   PUSH_TOKENS: 'pushTokens',
   NOTIFICATION_PREFERENCES: 'notificationPreferences',
+  DELETION_REQUESTS: 'deletionRequests',
 } as const;
 
 // Helper: Convert Firestore timestamp or string to ISO string
@@ -172,6 +173,62 @@ export const usersCollection = {
       },
       [],
       'users.getAll'
+    );
+  },
+
+  // Hard-delete user account and all associated data
+  deleteAccount: async (userId: string): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        // Helper to delete all docs matching a query
+        const deleteQueryDocs = async (q: ReturnType<typeof query>) => {
+          const snapshot = await getDocs(q);
+          await Promise.all(snapshot.docs.map(d => deleteDoc(d.ref)));
+        };
+
+        // Delete time entries
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.TIME_ENTRIES), where('userId', '==', userId))
+        );
+
+        // Delete vacation requests
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.VACATION_REQUESTS), where('userId', '==', userId))
+        );
+
+        // Delete chat messages
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.CHAT_MESSAGES), where('userId', '==', userId))
+        );
+
+        // Delete push tokens
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.PUSH_TOKENS), where('userId', '==', userId))
+        );
+
+        // Delete notification preferences
+        const notifPrefRef = doc(getDb(), COLLECTIONS.NOTIFICATION_PREFERENCES, userId);
+        const notifPrefSnap = await getDoc(notifPrefRef);
+        if (notifPrefSnap.exists()) {
+          await deleteDoc(notifPrefRef);
+        }
+
+        // Delete shifts
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.SHIFTS), where('userId', '==', userId))
+        );
+
+        // Delete deletion requests
+        await deleteQueryDocs(
+          query(collection(getDb(), COLLECTIONS.DELETION_REQUESTS), where('userId', '==', userId))
+        );
+
+        // Delete user document
+        const userRef = doc(getDb(), COLLECTIONS.USERS, userId);
+        await deleteDoc(userRef);
+      },
+      undefined,
+      'users.deleteAccount'
     );
   },
 
@@ -1368,6 +1425,7 @@ export const adminNotificationsCollection = {
     title: string;
     message: string;
     changes?: Record<string, { old: string; new: string }>;
+    entityId?: string;
   }): Promise<AdminNotification> => {
     return safeFirestoreOp(
       async () => {
@@ -1648,5 +1706,104 @@ export const notificationPreferencesCollection = {
     );
   },
 
+};
+
+// ============================================================================
+// DELETION REQUESTS (Account-Löschung)
+// ============================================================================
+
+export const deletionRequestsCollection = {
+  // Create a new deletion request
+  create: async (requestData: {
+    userId: string;
+    userName: string;
+  }): Promise<DeletionRequest> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = await addDoc(collection(getDb(), COLLECTIONS.DELETION_REQUESTS), {
+          ...requestData,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+        });
+
+        return {
+          id: docRef.id,
+          ...requestData,
+          status: 'pending' as const,
+          createdAt: new Date().toISOString(),
+        };
+      },
+      null as any,
+      'deletionRequests.create'
+    );
+  },
+
+  // Get all pending deletion requests
+  getPending: async (): Promise<DeletionRequest[]> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.DELETION_REQUESTS),
+          where('status', '==', 'pending'),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            userName: data.userName,
+            status: data.status,
+            createdAt: toISOString(data.createdAt),
+          } as DeletionRequest;
+        });
+      },
+      [],
+      'deletionRequests.getPending'
+    );
+  },
+
+  // Update status (approve/reject)
+  updateStatus: async (requestId: string, status: 'approved' | 'rejected'): Promise<void> => {
+    return safeFirestoreOp(
+      async () => {
+        const docRef = doc(getDb(), COLLECTIONS.DELETION_REQUESTS, requestId);
+        await updateDoc(docRef, { status });
+      },
+      undefined,
+      'deletionRequests.updateStatus'
+    );
+  },
+
+  // Get request for a specific user
+  getForUser: async (userId: string): Promise<DeletionRequest | null> => {
+    return safeFirestoreOp(
+      async () => {
+        const q = query(
+          collection(getDb(), COLLECTIONS.DELETION_REQUESTS),
+          where('userId', '==', userId),
+          where('status', '==', 'pending'),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) return null;
+
+        const docData = snapshot.docs[0];
+        const data = docData.data();
+        return {
+          id: docData.id,
+          userId: data.userId,
+          userName: data.userName,
+          status: data.status,
+          createdAt: toISOString(data.createdAt),
+        } as DeletionRequest;
+      },
+      null,
+      'deletionRequests.getForUser'
+    );
+  },
 };
 

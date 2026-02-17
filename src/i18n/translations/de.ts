@@ -984,6 +984,30 @@ export const de = {
   'settingsPrivacy.asOf': 'Stand',
   'settingsPrivacy.validSince': 'Gültig ab',
   'settingsPrivacy.versionLabel': 'Version',
+
+  // Account Deletion
+  'deletion.requestTitle': 'Datenlöschung beantragen',
+  'deletion.requestButton': 'Datenlöschung beantragen',
+  'deletion.requestDesc': 'Ihr Antrag wird an den Arbeitgeber gesendet. Nach Bestätigung werden alle Ihre Daten unwiderruflich gelöscht.',
+  'deletion.requestConfirm': 'Möchten Sie wirklich die Löschung Ihres Accounts und aller Daten beantragen?',
+  'deletion.requestSent': 'Ihr Löschantrag wurde an den Administrator gesendet.',
+  'deletion.requestFailed': 'Löschantrag konnte nicht gesendet werden.',
+  'deletion.requestPending': 'Löschantrag ausstehend',
+  'deletion.requestPendingDesc': 'Ihr Löschantrag wird vom Administrator bearbeitet.',
+  'deletion.deleteAccount': 'Account löschen',
+  'deletion.deleteAccountConfirm': 'Alle Daten von {name} werden unwiderruflich gelöscht: Zeiteinträge, Urlaubsanträge, Chat-Nachrichten und Profildata. Diese Aktion kann nicht rückgängig gemacht werden.',
+  'deletion.deleteAccountSuccess': 'Account wurde gelöscht.',
+  'deletion.deleteAccountError': 'Account konnte nicht gelöscht werden.',
+  'deletion.approveRequest': 'Löschantrag genehmigen',
+  'deletion.approveConfirm': 'Alle Daten von {name} werden unwiderruflich gelöscht. Fortfahren?',
+  'deletion.approved': 'Löschantrag wurde genehmigt und Account gelöscht.',
+  'deletion.rejectRequest': 'Löschantrag ablehnen',
+  'deletion.rejectConfirm': 'Den Löschantrag von {name} ablehnen?',
+  'deletion.rejected': 'Löschantrag wurde abgelehnt.',
+  'deletion.notificationTitle': 'Löschantrag',
+  'deletion.notificationMessage': '{name} hat die Löschung des Accounts beantragt.',
+  'deletion.approve': 'Genehmigen',
+  'deletion.reject': 'Ablehnen',
 } as const;
 
 export type TranslationKey = keyof typeof de;

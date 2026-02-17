@@ -4,11 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Calendar, Users, Check, X, Bell, ChevronRight, User, AlertCircle } from 'lucide-react-native';
+import { Calendar, Users, Check, X, Bell, ChevronRight, User, AlertCircle, Trash2 } from 'lucide-react-native';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useTheme } from '@/src/hooks/useTheme';
 import { useTranslation } from '@/src/hooks/useTranslation';
-import { vacationRequestsCollection, statsCollection, usersCollection, adminNotificationsCollection, timeEntriesCollection } from '@/src/lib/firestore';
+import { vacationRequestsCollection, statsCollection, usersCollection, adminNotificationsCollection, timeEntriesCollection, deletionRequestsCollection } from '@/src/lib/firestore';
 import { VacationRequest, User as UserType, AdminStats, AdminNotification } from '@/src/types';
 import { useAuthStore } from '@/src/store/authStore';
 import { format } from 'date-fns';
@@ -182,6 +182,68 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const handleApproveDeletionRequest = (notification: AdminNotification) => {
+    const userName = notification.userName;
+    const userId = notification.userId;
+    const entityId = notification.entityId;
+    Alert.alert(
+      t('deletion.approveRequest'),
+      t('deletion.approveConfirm').replace('{name}', userName),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('deletion.approveRequest'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await usersCollection.deleteAccount(userId);
+              if (entityId) {
+                await deletionRequestsCollection.updateStatus(entityId, 'approved');
+              }
+              if (user) {
+                await adminNotificationsCollection.markAsRead(notification.id, user.id);
+              }
+              setNotifications(prev => prev.filter(n => n.id !== notification.id));
+              toast.success(t('deletion.approved'));
+            } catch (error) {
+              toast.error(error, t('common.error'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectDeletionRequest = (notification: AdminNotification) => {
+    const userName = notification.userName;
+    const entityId = notification.entityId;
+    Alert.alert(
+      t('deletion.rejectRequest'),
+      t('deletion.rejectConfirm').replace('{name}', userName),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('deletion.rejectRequest'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (entityId) {
+                await deletionRequestsCollection.updateStatus(entityId, 'rejected');
+              }
+              if (user) {
+                await adminNotificationsCollection.markAsRead(notification.id, user.id);
+              }
+              setNotifications(prev => prev.filter(n => n.id !== notification.id));
+              toast.success(t('deletion.rejected'));
+            } catch (error) {
+              toast.error(error, t('common.error'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const formatNotificationTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -280,12 +342,16 @@ export default function AdminDashboardScreen() {
             {notifications.slice(0, 3).map((notification) => (
               <TouchableOpacity
                 key={notification.id}
-                style={[styles.notificationCard, { backgroundColor: theme.cardBackground, borderColor: theme.primary }]}
-                onPress={() => handleMarkNotificationAsRead(notification.id)}
-                activeOpacity={0.7}
+                style={[styles.notificationCard, { backgroundColor: theme.cardBackground, borderColor: notification.type === 'deletion_request' ? theme.danger : theme.primary }]}
+                onPress={() => notification.type !== 'deletion_request' && handleMarkNotificationAsRead(notification.id)}
+                activeOpacity={notification.type === 'deletion_request' ? 1 : 0.7}
               >
-                <View style={[styles.notificationIcon, { backgroundColor: theme.pillInfo }]}>
-                  <User size={16} color={theme.pillInfoText} />
+                <View style={[styles.notificationIcon, { backgroundColor: notification.type === 'deletion_request' ? theme.danger + '20' : theme.pillInfo }]}>
+                  {notification.type === 'deletion_request' ? (
+                    <Trash2 size={16} color={theme.danger} />
+                  ) : (
+                    <User size={16} color={theme.pillInfoText} />
+                  )}
                 </View>
                 <View style={styles.notificationContent}>
                   <Text style={[styles.notificationTitle, { color: theme.text }]} numberOfLines={1}>
@@ -294,6 +360,24 @@ export default function AdminDashboardScreen() {
                   <Text style={[styles.notificationMessage, { color: theme.textSecondary }]} numberOfLines={2}>
                     {notification.message}
                   </Text>
+                  {notification.type === 'deletion_request' && (
+                    <View style={styles.deletionActions}>
+                      <TouchableOpacity
+                        style={[styles.deletionButton, { backgroundColor: theme.danger }]}
+                        onPress={() => handleApproveDeletionRequest(notification)}
+                      >
+                        <Check size={14} color="#fff" />
+                        <Text style={styles.deletionButtonText}>{t('deletion.approve')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.deletionButton, { backgroundColor: theme.textMuted }]}
+                        onPress={() => handleRejectDeletionRequest(notification)}
+                      >
+                        <X size={14} color="#fff" />
+                        <Text style={styles.deletionButtonText}>{t('deletion.reject')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                   {notification.changes && (
                     <View style={styles.changesContainer}>
                       {Object.entries(notification.changes).slice(0, 2).map(([field, change]) => (
@@ -312,7 +396,9 @@ export default function AdminDashboardScreen() {
                     {formatNotificationTime(notification.createdAt)}
                   </Text>
                 </View>
-                <ChevronRight size={16} color={theme.textMuted} />
+                {notification.type !== 'deletion_request' && (
+                  <ChevronRight size={16} color={theme.textMuted} />
+                )}
               </TouchableOpacity>
             ))}
 
@@ -533,6 +619,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
+  },
+  deletionActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  deletionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.button,
+  },
+  deletionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   changesContainer: {
     marginTop: 4,

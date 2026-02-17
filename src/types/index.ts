@@ -141,16 +141,25 @@ export interface AdminStats {
 // Admin-Benachrichtigungen (z.B. Profil-Änderungen)
 export interface AdminNotification {
   id: string;
-  type: 'profile_change' | 'vacation_request' | 'sick_leave' | 'system' | 'time_entry_flagged';
+  type: 'profile_change' | 'vacation_request' | 'sick_leave' | 'system' | 'time_entry_flagged' | 'deletion_request';
   userId: string; // Wer hat die Änderung gemacht
   userName: string;
   title: string;
   message: string;
   changes?: Record<string, { old: string; new: string }>; // Was wurde geändert
-  entityId?: string; // Verknüpfung zu z.B. TimeEntry-ID
+  entityId?: string; // Verknüpfung zu z.B. TimeEntry-ID oder DeletionRequest-ID
   createdAt: string;
   readBy: string[]; // Welche Admins haben es gelesen
   isRead?: boolean; // Für UI
+}
+
+// Löschanfrage (Mitarbeiter beantragt Account-Löschung)
+export interface DeletionRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 // Einladungs-System

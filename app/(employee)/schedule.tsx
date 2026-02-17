@@ -1,6 +1,6 @@
 // app/(employee)/schedule.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, MapPin, Download, FileText, FileSpreadsheet, X } from 'lucide-react-native';
@@ -135,7 +135,7 @@ export default function ScheduleScreen() {
     return isSameDay(shiftDate, today) && shift.status !== 'completed' && shift.status !== 'cancelled';
   };
 
-  const upcomingShifts = shifts
+  const upcomingShifts = useMemo(() => shifts
     .filter((s) => {
       const shiftDate = new Date(s.date);
       const today = new Date();
@@ -143,7 +143,7 @@ export default function ScheduleScreen() {
       return shiftDate >= today && s.status !== 'cancelled';
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+    .slice(0, 5), [shifts]);
 
   if (isLoading) {
     return (

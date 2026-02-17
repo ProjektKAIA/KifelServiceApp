@@ -24,8 +24,8 @@ export default function DashboardScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { user } = useAuthStore();
-  const { isTracking } = useTimeStore();
+  const user = useAuthStore((s) => s.user);
+  const isTracking = useTimeStore((s) => s.isTracking);
 
   const [stats, setStats] = useState<DashboardStats>({ hoursThisMonth: 0, remainingVacationDays: 0 });
   const [todayShift, setTodayShift] = useState<Shift | null>(null);

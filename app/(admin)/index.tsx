@@ -1,6 +1,6 @@
 // app/(admin)/index.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,12 +24,11 @@ export default function AdminDashboardScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
-  const greeting = getGreeting();
   const userName = user?.firstName || 'Admin';
 
-  function getGreeting(): string {
+  const greeting = useMemo(() => {
     const hour = new Date().getHours();
     const random = Math.random();
 
@@ -43,7 +42,7 @@ export default function AdminDashboardScreen() {
 
     const greetings = t(key as any).split('|');
     return greetings[Math.floor(random * greetings.length)];
-  }
+  }, [t]);
 
   const [stats, setStats] = useState<AdminStats>({
     totalEmployees: 0,

@@ -1,6 +1,6 @@
 // app/(admin)/schedules.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, Clock, MapPin, Upload, Download, FileSpreadsheet, FileText, CheckCircle, AlertCircle, X } from 'lucide-react-native';
@@ -264,7 +264,7 @@ export default function ScheduleManagementScreen() {
   };
 
   // Get shifts grouped by month for year view
-  const getShiftsByMonth = () => {
+  const shiftsByMonth = useMemo(() => {
     const months: { [key: string]: DisplayShift[] } = {};
     shifts.forEach(shift => {
       const monthKey = shift.date.substring(0, 7); // YYYY-MM
@@ -274,7 +274,7 @@ export default function ScheduleManagementScreen() {
       months[monthKey].push(shift);
     });
     return months;
-  };
+  }, [shifts]);
 
   const getShiftsForDay = (day: Date): DisplayShift[] => {
     const dayStr = format(day, 'yyyy-MM-dd');
@@ -672,7 +672,7 @@ export default function ScheduleManagementScreen() {
             {Array.from({ length: 12 }, (_, i) => {
               const monthDate = new Date(currentDate.getFullYear(), i, 1);
               const monthKey = format(monthDate, 'yyyy-MM');
-              const monthShifts = getShiftsByMonth()[monthKey] || [];
+              const monthShifts = shiftsByMonth[monthKey] || [];
               const totalHours = monthShifts.reduce((sum, s) => {
                 const [startH, startM] = s.startTime.split(':').map(Number);
                 const [endH, endM] = s.endTime.split(':').map(Number);

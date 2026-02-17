@@ -1,6 +1,6 @@
 // app/(admin)/team.tsx
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, Plus, Mail, Phone, Trash2, Edit, Shield, ShieldCheck, UserX, UserCheck, MapPin, Link, Copy, Send, Clock, RefreshCw, Calendar, Coffee, ChevronRight } from 'lucide-react-native';
@@ -106,17 +106,17 @@ export default function TeamManagementScreen() {
   };
 
   // Filter employees - exclude deleted users and apply search
-  const filteredEmployees = employees
-    .filter((e) => e.status !== 'deleted') // Exclude deleted users
+  const filteredEmployees = useMemo(() => employees
+    .filter((e) => e.status !== 'deleted')
     .filter((e) =>
       `${e.firstName} ${e.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    ), [employees, searchQuery]);
 
   // Active employees: status is 'active' or undefined (treat undefined as active)
-  const activeEmployees = filteredEmployees.filter((e) => e.status !== 'inactive');
+  const activeEmployees = useMemo(() => filteredEmployees.filter((e) => e.status !== 'inactive'), [filteredEmployees]);
   // Inactive employees: status is explicitly 'inactive'
-  const inactiveEmployees = filteredEmployees.filter((e) => e.status === 'inactive');
+  const inactiveEmployees = useMemo(() => filteredEmployees.filter((e) => e.status === 'inactive'), [filteredEmployees]);
 
   // Handlers
   const handleEmployeePress = async (employee: User) => {
@@ -144,7 +144,7 @@ export default function TeamManagementScreen() {
   };
 
   // Calculate employee stats from time entries
-  const calculateEmployeeStats = () => {
+  const employeeStats = useMemo(() => {
     let totalMinutes = 0;
     let breakMinutes = 0;
 
@@ -167,10 +167,10 @@ export default function TeamManagementScreen() {
       netMins: netMinutes % 60,
       entriesCount: employeeTimeEntries.length,
     };
-  };
+  }, [employeeTimeEntries]);
 
   // Format time entry for display
-  const formatTimeEntry = (entry: TimeEntry) => {
+  const formatTimeEntry = useCallback((entry: TimeEntry) => {
     const clockIn = new Date(entry.clockIn);
     const clockOut = entry.clockOut ? new Date(entry.clockOut) : null;
     let netHours = 0, netMins = 0;
@@ -190,7 +190,7 @@ export default function TeamManagementScreen() {
       netMins,
       breakMins: entry.breakMinutes || 0,
     };
-  };
+  }, []);
 
   // Start editing in detail view
   const handleStartDetailEdit = () => {
@@ -878,19 +878,19 @@ export default function TeamManagementScreen() {
                         <View style={styles.statItem}>
                           <Clock size={16} color={theme.primary} />
                           <Typography variant="h3" style={{ color: theme.primary }}>
-                            {calculateEmployeeStats().netHours}:{calculateEmployeeStats().netMins.toString().padStart(2, '0')}h
+                            {employeeStats.netHours}:{employeeStats.netMins.toString().padStart(2, '0')}h
                           </Typography>
                           <Typography variant="caption" color="muted">{t('adminTeam.netLabel')}</Typography>
                         </View>
                         <View style={styles.statItem}>
                           <Calendar size={16} color={theme.textSecondary} />
-                          <Typography variant="h3">{calculateEmployeeStats().entriesCount}</Typography>
+                          <Typography variant="h3">{employeeStats.entriesCount}</Typography>
                           <Typography variant="caption" color="muted">{t('adminTeam.entriesLabel')}</Typography>
                         </View>
                         <View style={styles.statItem}>
                           <Coffee size={16} color={theme.textSecondary} />
                           <Typography variant="h3">
-                            {calculateEmployeeStats().breakHours}:{calculateEmployeeStats().breakMins.toString().padStart(2, '0')}h
+                            {employeeStats.breakHours}:{employeeStats.breakMins.toString().padStart(2, '0')}h
                           </Typography>
                           <Typography variant="caption" color="muted">{t('adminTeam.breakLabel')}</Typography>
                         </View>

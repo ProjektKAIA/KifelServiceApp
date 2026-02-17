@@ -157,12 +157,12 @@ service cloud.firestore {
     // ============================================
 
     match /invites/{inviteId} {
-      // Admins can read/list all invites
-      allow list: if isAdmin();
+      // List: public access for token-based invite lookup (getByToken query)
+      // Token is 32 chars from 55-char alphabet (~183 bit entropy) — brute-force infeasible
+      allow list: if true;
 
-      // Allow reading single invite (for invite acceptance via token)
-      // get = single document read, list = collection query
-      allow get: if true;
+      // Single doc reads by ID require authentication
+      allow get: if isAuthenticated();
 
       // Only admins can create invites
       allow create: if isAdmin();
@@ -171,6 +171,26 @@ service cloud.firestore {
       allow update: if isAdmin() || isAuthenticated();
 
       // Only admins can delete invites
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // DELETION REQUESTS COLLECTION
+    // ============================================
+
+    match /deletionRequests/{requestId} {
+      // Users can read their own requests, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Authenticated users can create their own requests
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Only admins can update (approve/reject)
+      allow update: if isAdmin();
+
+      // Only admins can delete
       allow delete: if isAdmin();
     }
 

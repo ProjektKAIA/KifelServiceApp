@@ -642,13 +642,14 @@ export const timeEntriesCollection = {
   },
 
   // Get all pending approval entries
-  getPendingApproval: async (): Promise<TimeEntry[]> => {
+  getPendingApproval: async (limitCount: number = 100): Promise<TimeEntry[]> => {
     return safeFirestoreOp(
       async () => {
         const q = query(
           collection(getDb(), COLLECTIONS.TIME_ENTRIES),
           where('approvalStatus', '==', 'pending'),
-          orderBy('clockIn', 'desc')
+          orderBy('clockIn', 'desc'),
+          limit(limitCount)
         );
         const snapshot = await getDocs(q);
 
@@ -1176,12 +1177,14 @@ export const companyCollection = {
 // INVITES (Einladungs-System)
 // ============================================================================
 
-// Generate a random token
+// Generate a cryptographically secure random token
 const generateInviteToken = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const randomValues = new Uint8Array(32);
+  crypto.getRandomValues(randomValues);
   let token = '';
   for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
+    token += chars.charAt(randomValues[i] % chars.length);
   }
   return token;
 };

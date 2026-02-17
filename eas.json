@@ -32,7 +32,7 @@
     "production": {
       "ios": {
         "appleId": "info@kifel-service.de",
-        "ascAppId": "APPLE_APP_STORE_CONNECT_APP_ID",
+        "ascAppId": "6759290060",
         "appleTeamId": "B66382YV72"
       },
       "android": {

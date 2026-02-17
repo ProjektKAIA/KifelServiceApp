@@ -3,7 +3,7 @@
 ## Vor App-Store-Veröffentlichung
 
 ### Apple (iOS)
-- [ ] `ascAppId` in `eas.json` eintragen (App Store Connect → App-Informationen → Apple ID)
+- [x] `ascAppId` in `eas.json` eintragen (App Store Connect → App-Informationen → Apple ID)
 - [ ] APNs Key in EAS hochladen (`eas credentials`)
 
 ### Google (Android)
@@ -11,8 +11,8 @@
 - [ ] `google-services.json` von Firebase Console herunterladen und ins Projekt-Root legen
 
 ### EAS / Expo
-- [ ] `eas init` ausführen
-- [ ] `"owner"` in `app.json` auf euren EAS Dev-Account ändern (aktuell: `"amelkantarevic"`)
+- [x] `eas init` ausführen
+- [x] `"owner"` in `app.json` auf euren EAS Dev-Account ändern (`"amelkantarevic"`)
 
 ### Optional
-- [ ] Google Maps API Key erstellen (Cloud Console → Maps Static API) und in `.env` eintragen — nur nötig für PDF-Export mit Routen-Karten
+- [x] Google Maps API Key erstellen (Cloud Console → Maps Static API) und in `.env` eintragen — nur nötig für PDF-Export mit Routen-Karten

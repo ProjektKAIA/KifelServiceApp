@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.amelkantarevic.KifelServiceApp",
+      "bundleIdentifier": "com.amelkantarevic.kifelserviceapp",
       "appleTeamId": "B66382YV72",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Kifel Service benoetigt Ihren Standort fuer die Zeiterfassung.",
@@ -18,12 +18,16 @@
         "UIBackgroundModes": [
           "location",
           "fetch",
+          "remote-notification",
+          "location",
+          "fetch",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.amelkantarevic.KifelServiceApp",
+      "package": "com.amelkantarevic.kifelserviceapp",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/kifel-service-logo.png"
@@ -36,7 +40,12 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -78,8 +87,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "EAS_PROJECT_ID"
-      }
+        "projectId": "fe360bbf-83ba-40a9-b3e3-9403fb0560cf"
+      },
+      "router": {}
     },
     "owner": "amelkantarevic",
     "runtimeVersion": {
